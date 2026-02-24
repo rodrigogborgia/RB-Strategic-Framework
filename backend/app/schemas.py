@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from .models import CaseStatus, FeedbackMode
+from .models import CaseStatus, CohortStatus, FeedbackMode, UserRole
 
 MAX_CHAR = 280
 
@@ -12,6 +13,74 @@ MAX_CHAR = 280
 class CaseCreate(BaseModel):
     title: str = Field(min_length=3, max_length=120)
     mode: FeedbackMode = FeedbackMode.PROFESIONAL
+
+
+class LoginInput(BaseModel):
+    email: str
+    password: str
+
+
+class UserProfile(BaseModel):
+    id: int
+    email: str
+    full_name: str
+    role: UserRole
+    effective_mode: str = "sparring"
+    can_access_live_session: bool = False
+    can_access_sparring: bool = True
+    active_cohort_id: int | None = None
+    active_cohort_name: str | None = None
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: UserProfile
+
+
+class AdminUserCreate(BaseModel):
+    email: str
+    password: str
+    full_name: str = ""
+    role: UserRole = UserRole.STUDENT
+
+
+class AdminUserRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    email: str
+    full_name: str
+    role: UserRole
+    is_active: bool
+
+
+class CohortCreate(BaseModel):
+    name: str
+    start_date: datetime
+    end_date: datetime
+    status: CohortStatus = CohortStatus.DRAFT
+
+
+class CohortUpdate(BaseModel):
+    name: str | None = None
+    start_date: datetime | None = None
+    end_date: datetime | None = None
+    status: CohortStatus | None = None
+
+
+class CohortRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    start_date: datetime
+    end_date: datetime
+    status: CohortStatus
+
+
+class CohortMembershipAdd(BaseModel):
+    user_ids: list[int]
 
 
 class ContextBlock(BaseModel):

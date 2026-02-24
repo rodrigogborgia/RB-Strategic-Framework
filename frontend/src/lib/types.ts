@@ -6,6 +6,44 @@ export type CaseStatus =
 
 export type FeedbackMode = "curso" | "profesional";
 
+export type UserRole = "admin" | "student";
+
+export interface UserProfile {
+  id: number;
+  email: string;
+  full_name: string;
+  role: UserRole;
+  effective_mode: "sesion_en_vivo" | "sparring";
+  can_access_live_session: boolean;
+  can_access_sparring: boolean;
+  active_cohort_id: number | null;
+  active_cohort_name: string | null;
+}
+
+export interface TokenResponse {
+  access_token: string;
+  token_type: "bearer";
+  user: UserProfile;
+}
+
+export type CohortStatus = "draft" | "active" | "finished";
+
+export interface AdminUserRead {
+  id: number;
+  email: string;
+  full_name: string;
+  role: UserRole;
+  is_active: boolean;
+}
+
+export interface CohortRead {
+  id: number;
+  name: string;
+  start_date: string;
+  end_date: string;
+  status: CohortStatus;
+}
+
 export interface PreparationInput {
   context: {
     negotiation_type: string;

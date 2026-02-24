@@ -1,16 +1,19 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
-import { api } from "./lib/api";
+import { api, getAuthToken, setAuthToken } from "./lib/api";
 import brandLogo from "./assets/rb-logo.svg";
 import type {
+  AdminUserRead,
   AnalysisOutput,
   CaseListItem,
   CaseRead,
   CaseStatus,
   CaseTemplate,
+  CohortRead,
+  CohortStatus,
   DebriefInput,
-  FeedbackMode,
   PreparationInput,
+  UserProfile,
 } from "./lib/types";
 
 const emptyPreparation: PreparationInput = {
@@ -93,15 +96,48 @@ const classPlan4x2 = [
   { title: "Clase 4 · Cierre y seguimiento", minutes: 120, hint: "Cierre, implementación y plan de mejora personal." },
 ];
 
+type ExperienceMode = "sesion_en_vivo" | "sparring";
+type AdminViewMode = "profesor" | "alumno";
+type TeacherSectionKey = "admin" | "users" | "cohorts" | "members";
+
 function App() {
+  const mainScrollRef = useRef<HTMLElement | null>(null);
+  const [authUser, setAuthUser] = useState<UserProfile | null>(null);
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authChecking, setAuthChecking] = useState(true);
+
+  const [adminUsers, setAdminUsers] = useState<AdminUserRead[]>([]);
+  const [adminCohorts, setAdminCohorts] = useState<CohortRead[]>([]);
+  const [adminLoading, setAdminLoading] = useState(false);
+  const [newUserEmail, setNewUserEmail] = useState("");
+  const [newUserPassword, setNewUserPassword] = useState("");
+  const [newUserName, setNewUserName] = useState("");
+  const [newUserRole, setNewUserRole] = useState<"admin" | "student">("student");
+  const [newCohortName, setNewCohortName] = useState("");
+  const [newCohortStart, setNewCohortStart] = useState("");
+  const [newCohortEnd, setNewCohortEnd] = useState("");
+  const [newCohortStatus, setNewCohortStatus] = useState<CohortStatus>("draft");
+  const [assignCohortId, setAssignCohortId] = useState<number | null>(null);
+  const [assignUserId, setAssignUserId] = useState<number | null>(null);
+  const [adminViewMode, setAdminViewMode] = useState<AdminViewMode>("profesor");
+  const [membersCohortId, setMembersCohortId] = useState<number | null>(null);
+  const [cohortMembers, setCohortMembers] = useState<AdminUserRead[]>([]);
+  const [teacherSections, setTeacherSections] = useState<Record<TeacherSectionKey, boolean>>({
+    admin: true,
+    users: false,
+    cohorts: false,
+    members: false,
+  });
+
   const [cases, setCases] = useState<CaseListItem[]>([]);
   const [templates, setTemplates] = useState<CaseTemplate[]>([]);
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("__blank__");
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [selectedCase, setSelectedCase] = useState<CaseRead | null>(null);
 
   const [title, setTitle] = useState("");
-  const [mode, setMode] = useState<FeedbackMode>("profesional");
 
   const [preparation, setPreparation] = useState<PreparationInput>(emptyPreparation);
   const [analysis, setAnalysis] = useState<AnalysisOutput | null>(null);
@@ -117,15 +153,34 @@ function App() {
   const [showFullAnalysis, setShowFullAnalysis] = useState(false);
   const [classWrapUp, setClassWrapUp] = useState<string[]>([]);
   const [classWrapUpLoading, setClassWrapUpLoading] = useState(false);
+  const [experienceMode, setExperienceMode] = useState<ExperienceMode>("sesion_en_vivo");
+  const [highlightStep, setHighlightStep] = useState<CaseStatus | "cerrado" | null>(null);
+
+  const canAccessLiveSession = authUser?.can_access_live_session ?? false;
+  const canAccessSparring = authUser?.can_access_sparring ?? true;
 
   const canExecute = selectedCase?.status === "preparado";
-  const canDebrief = selectedCase?.status === "ejecutado_pendiente_debrief" || selectedCase?.status === "cerrado";
+  const canDebrief = selectedCase?.status === "ejecutado_pendiente_debrief";
   const canClose = selectedCase?.status === "ejecutado_pendiente_debrief";
+  const isCaseClosed = selectedCase?.status === "cerrado";
+  const isPreparationLocked = selectedCase?.status !== "en_preparacion";
+  const canSubmitDebrief =
+    debrief.real_result.explicit_objective_achieved.trim().length > 0 &&
+    debrief.transferable_lesson.trim().length >= 3;
+  const isAdmin = authUser?.role === "admin";
+  const currentExperienceMode: ExperienceMode = isAdmin ? "sesion_en_vivo" : experienceMode;
+  const isLiveSession = currentExperienceMode === "sesion_en_vivo";
+  const isTeacherPanel = isAdmin && adminViewMode === "profesor";
+  const contextLabel = isTeacherPanel ? "Panel Profesor" : "Panel Alumno";
+
+  const totalStudents = adminUsers.filter((item) => item.role === "student").length;
+  const activeCohorts = adminCohorts.filter((item) => item.status === "active").length;
+  const pendingDebriefCases = cases.filter((item) => item.status === "ejecutado_pendiente_debrief").length;
 
   function toHumanStatus(status: CaseStatus): string {
     return {
       en_preparacion: "En preparación",
-      preparado: "Listo para simular",
+      preparado: "Listo para ejecutar",
       ejecutado_pendiente_debrief: "Falta debrief",
       cerrado: "Cerrado",
     }[status];
@@ -134,9 +189,18 @@ function App() {
   function nextStepLabel(status: CaseStatus): string {
     return {
       en_preparacion: "Guardar preparación",
-      preparado: "Marcar ejecutado",
-      ejecutado_pendiente_debrief: "Guardar debrief",
+      preparado: "Confirmar ejecución",
+      ejecutado_pendiente_debrief: "Registrar debrief",
       cerrado: "Revisar memo final",
+    }[status];
+  }
+
+  function statusRank(status: CaseStatus): number {
+    return {
+      en_preparacion: 0,
+      preparado: 1,
+      ejecutado_pendiente_debrief: 2,
+      cerrado: 3,
     }[status];
   }
 
@@ -144,11 +208,6 @@ function App() {
     if (!selectedCase) return "";
     return toHumanStatus(selectedCase.status);
   }, [selectedCase]);
-
-  const selectedTemplate = useMemo(
-    () => templates.find((template) => template.id === selectedTemplateId) ?? null,
-    [templates, selectedTemplateId],
-  );
 
   const analysisTopPriorities = useMemo(() => {
     if (!analysis) return [];
@@ -161,6 +220,30 @@ function App() {
     return ordered.slice(0, 3);
   }, [analysis]);
 
+  const selectedTemplate = useMemo(
+    () => templates.find((template) => template.id === selectedTemplateId) ?? null,
+    [templates, selectedTemplateId],
+  );
+
+  const hasSavedDebrief = useMemo(() => {
+    if (!selectedCase) return false;
+    const rawDebrief = (selectedCase.debrief ?? {}) as {
+      real_result?: { explicit_objective_achieved?: string };
+      transferable_lesson?: string;
+    };
+    const objective = rawDebrief.real_result?.explicit_objective_achieved?.trim() ?? "";
+    const lesson = rawDebrief.transferable_lesson?.trim() ?? "";
+    return objective.length > 0 && lesson.length >= 3;
+  }, [selectedCase]);
+
+  const activeWorkflowStep = useMemo<CaseStatus | "cerrado" | null>(() => {
+    if (!selectedCase) return null;
+    if (selectedCase.status === "ejecutado_pendiente_debrief" && hasSavedDebrief) {
+      return "cerrado";
+    }
+    return selectedCase.status;
+  }, [selectedCase, hasSavedDebrief]);
+
   const primaryAction = useMemo(() => {
     if (!selectedCase) {
       return { label: "Sin caso seleccionado", disabled: true, key: "none" as const };
@@ -171,15 +254,18 @@ function App() {
     }
 
     if (selectedCase.status === "preparado") {
-      return { label: "Marcar ejecutado", disabled: loading, key: "execute" as const };
+      return { label: "Confirmar ejecución", disabled: loading, key: "execute" as const };
     }
 
     if (selectedCase.status === "ejecutado_pendiente_debrief") {
-      return { label: "Guardar debrief", disabled: loading, key: "save_debrief" as const };
+      if (hasSavedDebrief) {
+        return { label: "Cerrar caso", disabled: loading || !canClose, key: "close" as const };
+      }
+      return { label: "Registrar debrief", disabled: loading || !canSubmitDebrief, key: "save_debrief" as const };
     }
 
     return { label: "Caso cerrado", disabled: true, key: "closed" as const };
-  }, [selectedCase, loading]);
+  }, [selectedCase, loading, hasSavedDebrief, canClose, canSubmitDebrief]);
 
   async function handlePrimaryAction() {
     if (!selectedCase) return;
@@ -197,6 +283,10 @@ function App() {
     if (primaryAction.key === "save_debrief") {
       await handleSaveDebrief();
       return;
+    }
+
+    if (primaryAction.key === "close") {
+      await handleCloseCase();
     }
   }
 
@@ -217,66 +307,253 @@ function App() {
     setShowFullAnalysis(false);
   }
 
-  async function loadTemplates() {
-    const data = await api.listCaseTemplates();
-    setTemplates(data);
-    if (!selectedTemplateId && data.length > 0) {
-      setSelectedTemplateId(data[0].id);
+  async function loadAdminPanel() {
+    if (!isAdmin) return;
+    const [users, cohorts] = await Promise.all([api.adminListUsers(), api.adminListCohorts()]);
+    setAdminUsers(users);
+    setAdminCohorts(cohorts);
+    if (!assignUserId && users.length > 0) {
+      setAssignUserId(users[0].id);
+    }
+    if (!assignCohortId && cohorts.length > 0) {
+      setAssignCohortId(cohorts[0].id);
+    }
+    if (!membersCohortId && cohorts.length > 0) {
+      setMembersCohortId(cohorts[0].id);
     }
   }
 
+  async function loadTemplates() {
+    const data = await api.listCaseTemplates();
+    setTemplates(data);
+  }
+
+  async function loadCohortMembers(cohortId: number | null) {
+    if (!isAdmin || !cohortId) {
+      setCohortMembers([]);
+      return;
+    }
+    const data = await api.adminListCohortMembers(cohortId);
+    setCohortMembers(data);
+  }
+
   useEffect(() => {
-    loadCases().catch((e) => setError(e.message));
-    loadTemplates().catch((e) => setError(e.message));
+    const token = getAuthToken();
+    if (!token) {
+      setAuthChecking(false);
+      return;
+    }
+
+    api
+      .me()
+      .then((user) => {
+        setAuthUser(user);
+        setExperienceMode(user.role === "admin" ? "sesion_en_vivo" : user.effective_mode);
+      })
+      .catch(() => setAuthToken(null))
+      .finally(() => setAuthChecking(false));
   }, []);
 
   useEffect(() => {
-    if (selectedId) {
+    if (!authUser) return;
+
+    if (authUser.role === "admin") {
+      if (experienceMode !== "sesion_en_vivo") {
+        setExperienceMode("sesion_en_vivo");
+      }
+      return;
+    }
+
+    if (experienceMode === "sesion_en_vivo" && !canAccessLiveSession) {
+      setExperienceMode("sparring");
+    }
+
+    if (experienceMode === "sparring" && !canAccessSparring) {
+      setExperienceMode("sesion_en_vivo");
+    }
+  }, [authUser, experienceMode, canAccessLiveSession, canAccessSparring]);
+
+  useEffect(() => {
+    if (!authUser) return;
+    loadCases().catch((e) => setError(e.message));
+    loadTemplates().catch((e) => setError(e.message));
+    if (authUser.role === "admin") {
+      loadAdminPanel().catch((e) => setError(e.message));
+    }
+  }, [authUser]);
+
+  useEffect(() => {
+    if (authUser?.role === "admin") {
+      setAdminViewMode("profesor");
+    } else {
+      setAdminViewMode("alumno");
+    }
+  }, [authUser]);
+
+  useEffect(() => {
+    if (authUser && selectedId) {
       loadCase(selectedId).catch((e) => setError(e.message));
     }
-  }, [selectedId]);
+  }, [authUser, selectedId]);
 
-  async function handleCreateCase() {
-    if (!title.trim()) {
-      setError("Ingresá un título de caso");
-      setSuccess("");
+  useEffect(() => {
+    if (!activeWorkflowStep) return;
+    setHighlightStep(activeWorkflowStep);
+    const timer = window.setTimeout(() => setHighlightStep(null), 1400);
+    return () => window.clearTimeout(timer);
+  }, [activeWorkflowStep, selectedCase?.id]);
+
+  useEffect(() => {
+    loadCohortMembers(membersCohortId).catch((e) => setError(e.message));
+  }, [membersCohortId, isAdmin]);
+
+  async function handleLogin() {
+    if (!authEmail.trim() || !authPassword.trim()) {
+      setError("Completá email y contraseña.");
       return;
     }
 
     try {
+      setAuthLoading(true);
+      setError("");
+      const response = await api.login(authEmail.trim(), authPassword);
+      setAuthToken(response.access_token);
+      setAuthUser(response.user);
+      setExperienceMode(response.user.role === "admin" ? "sesion_en_vivo" : response.user.effective_mode);
+      setAuthPassword("");
+      setSuccess("");
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setAuthLoading(false);
+    }
+  }
+
+  function handleLogout() {
+    setAuthToken(null);
+    setAuthUser(null);
+    setCases([]);
+    setSelectedCase(null);
+    setSelectedId(null);
+    setAnalysis(null);
+    setDebrief(emptyDebrief);
+    setPreparation(emptyPreparation);
+    setError("");
+    setSuccess("");
+    setExperienceMode("sesion_en_vivo");
+    setAdminUsers([]);
+    setAdminCohorts([]);
+    setAdminViewMode("alumno");
+  }
+
+  function formatDateLabel(value: string): string {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleDateString("es-AR");
+  }
+
+  function toggleTeacherSection(section: TeacherSectionKey) {
+    setTeacherSections((prev) => ({ ...prev, [section]: !prev[section] }));
+  }
+
+  async function handleAdminCreateUser() {
+    if (!newUserEmail.trim() || !newUserPassword.trim()) {
+      setError("Para crear usuario, completá email y contraseña.");
+      return;
+    }
+    try {
+      setAdminLoading(true);
+      setError("");
+      setSuccess("");
+      await api.adminCreateUser({
+        email: newUserEmail.trim(),
+        password: newUserPassword,
+        full_name: newUserName.trim(),
+        role: newUserRole,
+      });
+      setNewUserEmail("");
+      setNewUserPassword("");
+      setNewUserName("");
+      await loadAdminPanel();
+      setSuccess("Usuario creado correctamente.");
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setAdminLoading(false);
+    }
+  }
+
+  async function handleAdminCreateCohort() {
+    if (!newCohortName.trim() || !newCohortStart || !newCohortEnd) {
+      setError("Completá nombre, fecha de inicio y fecha de fin de cohorte.");
+      return;
+    }
+    try {
+      setAdminLoading(true);
+      setError("");
+      setSuccess("");
+      await api.adminCreateCohort({
+        name: newCohortName.trim(),
+        start_date: new Date(`${newCohortStart}T00:00:00`).toISOString(),
+        end_date: new Date(`${newCohortEnd}T23:59:59`).toISOString(),
+        status: newCohortStatus,
+      });
+      setNewCohortName("");
+      setNewCohortStart("");
+      setNewCohortEnd("");
+      setNewCohortStatus("draft");
+      await loadAdminPanel();
+      setSuccess("Cohorte creada correctamente.");
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setAdminLoading(false);
+    }
+  }
+
+  async function handleAdminAssignMembership() {
+    if (!assignCohortId || !assignUserId) {
+      setError("Seleccioná cohorte y usuario para asignar.");
+      return;
+    }
+    try {
+      setAdminLoading(true);
+      setError("");
+      setSuccess("");
+      await api.adminAddCohortMembers(assignCohortId, [assignUserId]);
+      if (membersCohortId === assignCohortId) {
+        await loadCohortMembers(assignCohortId);
+      }
+      setSuccess("Usuario asignado a cohorte.");
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setAdminLoading(false);
+    }
+  }
+
+  async function handleCreateCase() {
+    try {
       setLoading(true);
       setError("");
       setSuccess("");
-      const created = await api.createCase(title, mode);
-      setTitle("");
+      let created: CaseRead;
+      if (selectedTemplateId === "__blank__") {
+        if (!title.trim()) {
+          setError("Ingresá un título de caso");
+          setSuccess("");
+          return;
+        }
+        const modeForCase = currentExperienceMode === "sesion_en_vivo" ? "curso" : "profesional";
+        created = await api.createCase(title, modeForCase);
+        setTitle("");
+      } else {
+        created = await api.createCaseFromTemplate(selectedTemplateId);
+      }
       await loadCases();
       setSelectedId(created.id);
       await loadCase(created.id);
       setSuccess("Caso creado correctamente.");
-    } catch (e) {
-      setError((e as Error).message);
-      setSuccess("");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleCreateFromTemplate() {
-    if (!selectedTemplateId) {
-      setError("Seleccioná una plantilla");
-      setSuccess("");
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError("");
-      setSuccess("");
-      const created = await api.createCaseFromTemplate(selectedTemplateId);
-      await loadCases();
-      setSelectedId(created.id);
-      await loadCase(created.id);
-      setSuccess("Caso creado desde plantilla.");
     } catch (e) {
       setError((e as Error).message);
       setSuccess("");
@@ -336,13 +613,32 @@ function App() {
 
   async function handleSaveDebrief() {
     if (!selectedCase) return;
+
+    const explicitObjective = debrief.real_result.explicit_objective_achieved.trim();
+    const transferableLesson = debrief.transferable_lesson.trim();
+
+    if (!explicitObjective || transferableLesson.length < 3) {
+      setError("Para registrar el debrief completá objetivo explícito y una lección transferible de al menos 3 caracteres.");
+      setSuccess("");
+      return;
+    }
+
     try {
       setLoading(true);
       setError("");
       setSuccess("");
-      await api.saveDebrief(selectedCase.id, debrief);
+      await api.saveDebrief(selectedCase.id, {
+        ...debrief,
+        real_result: {
+          ...debrief.real_result,
+          explicit_objective_achieved: explicitObjective,
+        },
+        transferable_lesson: transferableLesson,
+      });
       await loadCase(selectedCase.id);
       await loadCases();
+      setSuccess("Debrief registrado correctamente.");
+      mainScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -497,6 +793,55 @@ function App() {
     setDebrief((prev) => ({ ...prev, [group]: value }));
   }
 
+  if (authChecking) {
+    return (
+      <div className="page" style={{ gridTemplateColumns: "1fr" }}>
+        <main className="main">
+          <div className="card">Validando sesión...</div>
+        </main>
+      </div>
+    );
+  }
+
+  if (!authUser) {
+    return (
+      <div className="page" style={{ gridTemplateColumns: "1fr" }}>
+        <main className="main" style={{ maxWidth: 520, margin: "0 auto", width: "100%", paddingTop: 56 }}>
+          {error && <div className="error">{error}</div>}
+          <div className="card">
+            <div className="brand-block">
+              <img src={brandLogo} alt="RB logo" className="brand-logo" />
+              <h2 className="brand-title">RB Strategic Framework</h2>
+              <p className="brand-subtitle">Strategic Preparation &amp; Review System</p>
+            </div>
+            <p className="small" style={{ marginBottom: 12 }}>Ingresá con tu email y contraseña.</p>
+            <input
+              placeholder="Email"
+              value={authEmail}
+              onChange={(e) => setAuthEmail(e.target.value)}
+            />
+            <div style={{ height: 8 }} />
+            <input
+              type="password"
+              placeholder="Contraseña"
+              value={authPassword}
+              onChange={(e) => setAuthPassword(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleLogin().catch(() => undefined);
+                }
+              }}
+            />
+            <div style={{ height: 10 }} />
+            <button onClick={() => handleLogin().catch(() => undefined)} disabled={authLoading}>
+              {authLoading ? "Ingresando..." : "Ingresar"}
+            </button>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="page">
       <aside className="sidebar">
@@ -506,66 +851,311 @@ function App() {
             <h2 className="brand-title">RB Strategic Framework</h2>
             <p className="brand-subtitle">Strategic Preparation &amp; Review System</p>
           </div>
-          <input
-            placeholder="Título del caso"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-          />
-          <div style={{ height: 8 }} />
-          <select value={mode} onChange={(e) => setMode(e.target.value as FeedbackMode)}>
-            <option value="profesional">Modo Profesional</option>
-            <option value="curso">Modo Curso</option>
-          </select>
-          <div style={{ height: 8 }} />
-          <button disabled={loading} onClick={handleCreateCase}>
-            Crear caso
-          </button>
-          <div style={{ height: 8 }} />
-          <select
-            value={selectedTemplateId}
-            onChange={(e) => setSelectedTemplateId(e.target.value)}
-          >
-            {templates.map((template) => (
-              <option key={template.id} value={template.id}>
-                {template.title}
-              </option>
-            ))}
-          </select>
-          {selectedTemplate?.ideal_for && (
-            <p className="small" style={{ marginTop: 8 }}>
-              Ideal para: {selectedTemplate.ideal_for}
+          {!isAdmin && (
+            <div className="actions mode-switch" style={{ marginBottom: 10 }}>
+              <button
+                className={currentExperienceMode === "sesion_en_vivo" ? "" : "secondary"}
+                onClick={() => setExperienceMode("sesion_en_vivo")}
+                disabled={!canAccessLiveSession}
+              >
+                Clase
+              </button>
+              <button
+                className={currentExperienceMode === "sparring" ? "" : "secondary"}
+                onClick={() => setExperienceMode("sparring")}
+                disabled={!canAccessSparring}
+              >
+                Sparring
+              </button>
+            </div>
+          )}
+          <p className="small" style={{ marginBottom: 8 }}>
+            Usuario: {authUser.full_name || authUser.email} · {authUser.role}
+          </p>
+          <div className={`context-badge ${isTeacherPanel ? "teacher" : "student"}`}>
+            {contextLabel}
+          </div>
+          {authUser.active_cohort_name && (
+            <p className="small" style={{ marginBottom: 8 }}>
+              Cohorte activa: {authUser.active_cohort_name}
             </p>
           )}
-          <div style={{ height: 8 }} />
-          <button className="secondary" disabled={loading || !selectedTemplateId} onClick={handleCreateFromTemplate}>
-            Crear desde caso modelo
-          </button>
+          {isAdmin && (
+            <div className="actions" style={{ marginTop: 8 }}>
+              <button
+                className={adminViewMode === "profesor" ? "" : "secondary"}
+                onClick={() => setAdminViewMode("profesor")}
+              >
+                Panel Profesor
+              </button>
+              <button
+                className={adminViewMode === "alumno" ? "" : "secondary"}
+                onClick={() => setAdminViewMode("alumno")}
+              >
+                Ver Alumno
+              </button>
+            </div>
+          )}
+          {!isTeacherPanel && (
+            <>
+              <div style={{ height: 10 }} />
+              <input
+                placeholder="Título del caso (solo para desde cero)"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
+              <div style={{ height: 8 }} />
+              <p className="small" style={{ marginBottom: 6 }}>
+                Tipo de inicio del caso
+              </p>
+              <select
+                value={selectedTemplateId}
+                onChange={(e) => setSelectedTemplateId(e.target.value)}
+              >
+                <option value="__blank__">Desde cero (en blanco)</option>
+                {templates.map((template) => (
+                  <option key={template.id} value={template.id}>
+                    {template.title}
+                  </option>
+                ))}
+              </select>
+              {selectedTemplate?.ideal_for && (
+                <p className="small" style={{ marginTop: 8 }}>
+                  Ideal para: {selectedTemplate.ideal_for}
+                </p>
+              )}
+              <div style={{ height: 8 }} />
+              <button disabled={loading} onClick={handleCreateCase}>
+                Crear caso
+              </button>
+            </>
+          )}
         </div>
 
-        <h3>Casos</h3>
-        {cases.map((item) => (
-          <div
-            key={item.id}
-            className={`list-item ${selectedId === item.id ? "active" : ""}`}
-            onClick={() => setSelectedId(item.id)}
-          >
-            <strong>{item.title}</strong>
-            <div className="small">{toHumanStatus(item.status)}</div>
-            <div className="small">Siguiente paso: {nextStepLabel(item.status)}</div>
-            <div className="small">
-              Claridad: {item.clarity_score} · Incoherencias: {item.inconsistency_count}
-            </div>
-          </div>
-        ))}
+        {!isTeacherPanel && (
+          <>
+            <h3>Casos</h3>
+            {cases.map((item) => (
+              <div
+                key={item.id}
+                className={`list-item ${selectedId === item.id ? "active" : ""}`}
+                onClick={() => setSelectedId(item.id)}
+              >
+                <strong>{item.title}</strong>
+                <div className="small">{toHumanStatus(item.status)}</div>
+                <div className="small">Siguiente paso: {nextStepLabel(item.status)}</div>
+                <div className="small">
+                  Claridad: {item.clarity_score} · Falta de alineamiento: {item.inconsistency_count}
+                </div>
+              </div>
+            ))}
+          </>
+        )}
+
+        <div className="sidebar-footer">
+          <button className="secondary" onClick={handleLogout}>
+            Cerrar sesión
+          </button>
+        </div>
       </aside>
 
-      <main className="main">
+      <main className="main" ref={mainScrollRef}>
         {error && <div className="error">{error}</div>}
         {success && <div className="small" style={{ color: "#166534", marginBottom: 12 }}>{success}</div>}
 
+        {isTeacherPanel ? (
+          <div className="teacher-grid">
+            <div className="card teacher-summary">
+              <h2>Panel Profesor</h2>
+              <p className="small">Vista exclusiva de administración y seguimiento de cohortes.</p>
+              <div className="actions">
+                <span className="status-pill active">Alumnos: {totalStudents}</span>
+                <span className="status-pill">Cohortes activas: {activeCohorts}</span>
+                <span className="status-pill">Debrief pendiente: {pendingDebriefCases}</span>
+              </div>
+            </div>
+
+            <div className="card">
+              <div className="section-header" onClick={() => toggleTeacherSection("admin")}>
+                <h2>Panel Admin (MVP)</h2>
+                <button className="secondary" type="button">
+                  {teacherSections.admin ? "Contraer" : "Expandir"}
+                </button>
+              </div>
+              {teacherSections.admin && (
+                <>
+                  <p className="small">Alta de usuarios, cohortes y asignación de estudiantes.</p>
+
+                  <p><strong>Crear usuario</strong></p>
+                  <div className="row">
+                    <input placeholder="Email" value={newUserEmail} onChange={(e) => setNewUserEmail(e.target.value)} />
+                    <input placeholder="Nombre completo" value={newUserName} onChange={(e) => setNewUserName(e.target.value)} />
+                    <input
+                      type="password"
+                      placeholder="Contraseña"
+                      value={newUserPassword}
+                      onChange={(e) => setNewUserPassword(e.target.value)}
+                    />
+                    <select value={newUserRole} onChange={(e) => setNewUserRole(e.target.value as "admin" | "student")}>
+                      <option value="student">Alumno</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </div>
+                  <div className="actions" style={{ marginTop: 8 }}>
+                    <button className="secondary" onClick={() => handleAdminCreateUser().catch(() => undefined)} disabled={adminLoading}>
+                      Crear usuario
+                    </button>
+                  </div>
+
+                  <p style={{ marginTop: 16 }}><strong>Crear cohorte</strong></p>
+                  <div className="row">
+                    <input placeholder="Nombre cohorte" value={newCohortName} onChange={(e) => setNewCohortName(e.target.value)} />
+                    <select value={newCohortStatus} onChange={(e) => setNewCohortStatus(e.target.value as CohortStatus)}>
+                      <option value="draft">Borrador</option>
+                      <option value="active">Activa</option>
+                      <option value="finished">Finalizada</option>
+                    </select>
+                    <input type="date" value={newCohortStart} onChange={(e) => setNewCohortStart(e.target.value)} />
+                    <input type="date" value={newCohortEnd} onChange={(e) => setNewCohortEnd(e.target.value)} />
+                  </div>
+                  <div className="actions" style={{ marginTop: 8 }}>
+                    <button className="secondary" onClick={() => handleAdminCreateCohort().catch(() => undefined)} disabled={adminLoading}>
+                      Crear cohorte
+                    </button>
+                  </div>
+
+                  <p style={{ marginTop: 16 }}><strong>Asignar alumno a cohorte</strong></p>
+                  <div className="row">
+                    <select
+                      value={assignUserId ?? ""}
+                      onChange={(e) => setAssignUserId(e.target.value ? Number(e.target.value) : null)}
+                    >
+                      {adminUsers
+                        .filter((item) => item.role === "student")
+                        .map((item) => (
+                          <option key={item.id} value={item.id}>
+                            {item.full_name || item.email}
+                          </option>
+                        ))}
+                    </select>
+                    <select
+                      value={assignCohortId ?? ""}
+                      onChange={(e) => setAssignCohortId(e.target.value ? Number(e.target.value) : null)}
+                    >
+                      {adminCohorts.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.name} ({item.status})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="actions" style={{ marginTop: 8 }}>
+                    <button className="secondary" onClick={() => handleAdminAssignMembership().catch(() => undefined)} disabled={adminLoading}>
+                      Asignar
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="card">
+              <div className="section-header" onClick={() => toggleTeacherSection("users")}>
+                <h2>Usuarios</h2>
+                <button className="secondary" type="button">
+                  {teacherSections.users ? "Contraer" : "Expandir"}
+                </button>
+              </div>
+              {teacherSections.users && (
+                <>
+                  {adminUsers.length === 0 ? (
+                    <p className="small">No hay usuarios cargados.</p>
+                  ) : (
+                    <ul>
+                      {adminUsers.map((user) => (
+                        <li key={user.id}>
+                          {user.full_name || user.email} · {user.role} · {user.is_active ? "activo" : "inactivo"}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </>
+              )}
+            </div>
+
+            <div className="card">
+              <div className="section-header" onClick={() => toggleTeacherSection("cohorts")}>
+                <h2>Cohortes</h2>
+                <button className="secondary" type="button">
+                  {teacherSections.cohorts ? "Contraer" : "Expandir"}
+                </button>
+              </div>
+              {teacherSections.cohorts && (
+                <>
+                  {adminCohorts.length === 0 ? (
+                    <p className="small">No hay cohortes cargadas.</p>
+                  ) : (
+                    <ul>
+                      {adminCohorts.map((cohort) => (
+                        <li key={cohort.id}>
+                          {cohort.name} · {cohort.status} · {formatDateLabel(cohort.start_date)} a {formatDateLabel(cohort.end_date)}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </>
+              )}
+            </div>
+
+            <div className="card">
+              <div className="section-header" onClick={() => toggleTeacherSection("members")}>
+                <h2>Miembros por cohorte</h2>
+                <button className="secondary" type="button">
+                  {teacherSections.members ? "Contraer" : "Expandir"}
+                </button>
+              </div>
+              {teacherSections.members && (
+                <>
+                  {adminCohorts.length === 0 ? (
+                    <p className="small">Creá una cohorte para ver sus miembros.</p>
+                  ) : (
+                    <>
+                      <select
+                        value={membersCohortId ?? ""}
+                        onChange={(e) => setMembersCohortId(e.target.value ? Number(e.target.value) : null)}
+                      >
+                        {adminCohorts.map((cohort) => (
+                          <option key={cohort.id} value={cohort.id}>
+                            {cohort.name}
+                          </option>
+                        ))}
+                      </select>
+                      <div style={{ height: 8 }} />
+                      {cohortMembers.length === 0 ? (
+                        <p className="small">Esta cohorte no tiene miembros activos.</p>
+                      ) : (
+                        <ul>
+                          {cohortMembers.map((member) => (
+                            <li key={member.id}>
+                              {member.full_name || member.email} · {member.email}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        ) : (
+          <>
         <div className="card">
           <h2>Modo Curso 4x2h</h2>
-          <p className="small">Guía ejecutiva para conducir las 4 clases sin fricción.</p>
+          <p className="small">
+            {isLiveSession
+              ? "Guía ejecutiva para conducir las 4 clases sin fricción."
+              : "Plan de referencia para seguir entrenando luego del curso."}
+          </p>
           <div className="actions">
             <button className="secondary" onClick={() => setClassMode90((v) => !v)}>
               {classMode90 ? "Ocultar plan del curso" : "Ver plan del curso"}
@@ -640,40 +1230,92 @@ function App() {
               <p className="small">
                 Estado: {statusLabel} · Modo: {selectedCase.mode}
               </p>
+              <p className="small" style={{ marginBottom: 12 }}>
+                Confirmar ejecución = confirmás que la negociación ya ocurrió. Registrar debrief = cargás resultado y aprendizaje. Cerrar caso = genera el memo final y cierra el ciclo.
+              </p>
+              <div className="workflow-track" style={{ marginBottom: 12 }}>
+                {[
+                  { key: "en_preparacion", label: "Preparación", actionKey: "save_preparation" },
+                  { key: "preparado", label: "Ejecución", actionKey: "execute" },
+                  { key: "ejecutado_pendiente_debrief", label: "Debrief", actionKey: "save_debrief" },
+                  { key: "cerrado", label: "Cierre", actionKey: "close" },
+                ].map((step) => {
+                  const active =
+                    (step.key === selectedCase.status && !(step.key === "ejecutado_pendiente_debrief" && hasSavedDebrief)) ||
+                    (step.key === "cerrado" && selectedCase.status === "ejecutado_pendiente_debrief" && hasSavedDebrief);
+                  const done =
+                    statusRank(step.key as CaseStatus) < statusRank(selectedCase.status) ||
+                    (step.key === "ejecutado_pendiente_debrief" &&
+                      selectedCase.status === "ejecutado_pendiente_debrief" &&
+                      hasSavedDebrief);
+                  const showAction = primaryAction.key === step.actionKey;
+                  return (
+                    <div key={step.key} className={`workflow-step ${active ? "active" : ""} ${done ? "done" : ""} ${highlightStep === step.key ? "pulse" : ""}`}>
+                      <div className="workflow-title">{step.label}</div>
+                      <div className="small">
+                        {active ? "En curso" : done ? "Completado" : "Pendiente"}
+                      </div>
+                      <div className="workflow-action">
+                        {showAction ? (
+                          <button onClick={handlePrimaryAction} disabled={primaryAction.disabled}>
+                            {primaryAction.label}
+                          </button>
+                        ) : (
+                          <div className="small">&nbsp;</div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              {selectedCase.status === "ejecutado_pendiente_debrief" && (
+                <div className="final-close-cta" style={{ marginBottom: 12 }}>
+                  {hasSavedDebrief ? (
+                    <>
+                      <p className="small" style={{ marginBottom: 8 }}>
+                        Último paso: cerrá el caso para generar el memo ejecutivo final.
+                      </p>
+                      <button onClick={handleCloseCase} disabled={primaryAction.disabled}>
+                        Cerrar caso y generar memo
+                      </button>
+                    </>
+                  ) : (
+                    <p className="small" style={{ marginBottom: 0 }}>
+                      Para habilitar el cierre, primero registrá el debrief (objetivo explícito + lección transferible).
+                    </p>
+                  )}
+                </div>
+              )}
               <div className="actions">
-                <button onClick={handlePrimaryAction} disabled={primaryAction.disabled}>
-                  {primaryAction.label}
-                </button>
-                <button className="secondary" onClick={handleDeleteCase} disabled={loading}>
+                {(selectedCase.status === "en_preparacion" || selectedCase.status === "preparado") && (
+                  <button className="secondary" onClick={handleAnalyze} disabled={loading}>
+                    Analizar preparación
+                  </button>
+                )}
+                <button className="danger" onClick={handleDeleteCase} disabled={loading}>
                   Borrar caso
                 </button>
-                {primaryAction.key !== "save_preparation" && selectedCase.status !== "cerrado" && (
-                  <button className="secondary" onClick={handleSavePreparation} disabled={loading}>
-                    Guardar preparación
-                  </button>
-                )}
-                <button className="secondary" onClick={handleAnalyze} disabled={loading || selectedCase.status === "cerrado"}>
-                  Analizar
-                </button>
-                {primaryAction.key !== "execute" && (
-                  <button className="secondary" onClick={handleExecute} disabled={!canExecute || loading}>
-                    Marcar ejecutado
-                  </button>
-                )}
-                {primaryAction.key !== "save_debrief" && (
-                  <button className="secondary" onClick={handleSaveDebrief} disabled={!canDebrief || loading || selectedCase.status === "cerrado"}>
-                    Guardar debrief
-                  </button>
-                )}
-                <button className="secondary" onClick={handleCloseCase} disabled={!canClose || loading}>
-                  Cerrar caso
-                </button>
               </div>
+              {(selectedCase.status === "en_preparacion" || selectedCase.status === "preparado") && (
+                <p className="small" style={{ marginTop: 8 }}>
+                  Analizar preparación revisa claridad, inconsistencias y próximos pasos antes de ejecutar.
+                </p>
+              )}
             </div>
 
             <div className="card">
               <h2>Preparación</h2>
+              {isCaseClosed && <span className="readonly-badge">Solo lectura</span>}
               <p className="small">Carga rápida: completá 4 campos clave y analizá. El resto es opcional.</p>
+              {isPreparationLocked && (
+                <p className="small" style={{ marginBottom: 12 }}>
+                  Preparación bloqueada: esta etapa ya se completó para este caso.
+                </p>
+              )}
+              <fieldset
+                disabled={isPreparationLocked || loading}
+                style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}
+              >
               <div className="row">
                 <select
                   value={preparation.context.negotiation_type}
@@ -722,16 +1364,18 @@ function App() {
                   onChange={(e) => updatePreparation("risk.main_risk", e.target.value)}
                 />
               </div>
-              <div style={{ marginTop: 12 }}>
-                <button
-                  className="secondary"
-                  onClick={() => setShowAdvancedPreparation((v) => !v)}
-                  disabled={loading}
-                >
-                  {showAdvancedPreparation ? "Ocultar campos avanzados" : "Mostrar campos avanzados"}
-                </button>
-              </div>
-              {showAdvancedPreparation && (
+              {!isLiveSession && (
+                <div style={{ marginTop: 12 }}>
+                  <button
+                    className="secondary"
+                    onClick={() => setShowAdvancedPreparation((v) => !v)}
+                    disabled={loading || isPreparationLocked}
+                  >
+                    {showAdvancedPreparation ? "Ocultar campos avanzados" : "Mostrar campos avanzados"}
+                  </button>
+                </div>
+              )}
+              {showAdvancedPreparation && !isLiveSession && (
                 <div className="row" style={{ marginTop: 12 }}>
                   <select
                     value={preparation.context.impact_level}
@@ -800,10 +1444,17 @@ function App() {
                 />
               </div>
               )}
+              </fieldset>
             </div>
 
             <div className="card">
               <h2>Análisis</h2>
+              {isCaseClosed && <span className="readonly-badge">Solo lectura</span>}
+              {isCaseClosed && (
+                <p className="small" style={{ marginBottom: 12 }}>
+                  Análisis congelado: este caso está cerrado y se muestra solo para revisión.
+                </p>
+              )}
               {!analysis ? (
                 <p className="small">Aún no generado.</p>
               ) : (
@@ -823,10 +1474,12 @@ function App() {
                       ))}
                     </ul>
                   )}
-                  <button className="secondary" onClick={() => setShowFullAnalysis((v) => !v)}>
-                    {showFullAnalysis ? "Ocultar análisis completo" : "Ver análisis completo"}
-                  </button>
-                  {showFullAnalysis && (
+                  {!isLiveSession && (
+                    <button className="secondary" onClick={() => setShowFullAnalysis((v) => !v)}>
+                      {showFullAnalysis ? "Ocultar análisis completo" : "Ver análisis completo"}
+                    </button>
+                  )}
+                  {showFullAnalysis && !isLiveSession && (
                     <>
                       <p>
                         <strong>Preguntas de aclaración</strong>
@@ -837,7 +1490,7 @@ function App() {
                         ))}
                       </ul>
                       <p>
-                        <strong>Incoherencias</strong>
+                        <strong>Falta de alineamiento</strong>
                       </p>
                       <ul>
                         {analysis.inconsistencies.map((item) => (
@@ -858,10 +1511,20 @@ function App() {
               )}
             </div>
 
-            {canDebrief && (
+            {(selectedCase.status === "ejecutado_pendiente_debrief" || selectedCase.status === "cerrado") && (
               <div className="card">
                 <h2>Debrief</h2>
+                {isCaseClosed && <span className="readonly-badge">Solo lectura</span>}
                 <p className="small">Carga rápida: estado del objetivo explícito + lección transferible.</p>
+                {selectedCase.status === "cerrado" && (
+                  <p className="small" style={{ marginBottom: 12 }}>
+                    Caso cerrado: podés revisar el debrief y el memo final. Para seguir, creá un nuevo caso.
+                  </p>
+                )}
+                <fieldset
+                  disabled={selectedCase.status === "cerrado" || loading}
+                  style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}
+                >
                 <div className="row">
                   <select
                     value={debrief.real_result.explicit_objective_achieved}
@@ -880,16 +1543,18 @@ function App() {
                     onChange={(e) => updateDebrief("transferable_lesson", e.target.value)}
                   />
                 </div>
-                <div style={{ marginTop: 12 }}>
-                  <button
-                    className="secondary"
-                    onClick={() => setShowAdvancedDebrief((v) => !v)}
-                    disabled={loading}
-                  >
-                    {showAdvancedDebrief ? "Ocultar debrief avanzado" : "Mostrar debrief avanzado"}
-                  </button>
-                </div>
-                {showAdvancedDebrief && (
+                {!isLiveSession && (
+                  <div style={{ marginTop: 12 }}>
+                    <button
+                      className="secondary"
+                      onClick={() => setShowAdvancedDebrief((v) => !v)}
+                      disabled={loading}
+                    >
+                      {showAdvancedDebrief ? "Ocultar debrief avanzado" : "Mostrar debrief avanzado"}
+                    </button>
+                  </div>
+                )}
+                {showAdvancedDebrief && !isLiveSession && (
                   <div className="row" style={{ marginTop: 12 }}>
                   <select
                     value={debrief.real_result.real_objective_achieved}
@@ -947,11 +1612,19 @@ function App() {
                   />
                 </div>
                 )}
-                <div style={{ marginTop: 12 }}>
-                  <button onClick={handleSaveDebrief} disabled={loading}>
-                    Guardar debrief
-                  </button>
-                </div>
+                </fieldset>
+                {selectedCase.status !== "cerrado" && (
+                  <div style={{ marginTop: 12 }}>
+                    <button onClick={handleSaveDebrief} disabled={loading || !canSubmitDebrief}>
+                      Registrar debrief
+                    </button>
+                    {!canSubmitDebrief && (
+                      <p className="small" style={{ marginTop: 8 }}>
+                        Completá objetivo explícito y lección transferible para habilitar el guardado.
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
@@ -968,6 +1641,8 @@ function App() {
                 </p>
               </div>
             )}
+          </>
+        )}
           </>
         )}
       </main>
