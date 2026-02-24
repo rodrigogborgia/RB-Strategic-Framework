@@ -68,9 +68,29 @@ cd backend
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-# crear/editar .env con tu OPENAI_API_KEY
+# preferido: usar archivo externo de secrets fuera del repo
 uvicorn app.main:app --reload --port 8000
 ```
+
+### Secrets fuera del repo (recomendado)
+```bash
+mkdir -p ~/.rb-secrets
+cat > ~/.rb-secrets/backend.env << 'EOF'
+OPENAI_API_KEY=tu_key
+OPENAI_MODEL=gpt-4.1-mini
+ANALYSIS_PROVIDER=openai
+JWT_SECRET_KEY=change_this_in_production
+JWT_ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=720
+FRONTEND_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,http://localhost:4173,http://127.0.0.1:4173,http://localhost:4174,http://127.0.0.1:4174
+BOOTSTRAP_ADMIN_EMAIL=admin@rb.local
+BOOTSTRAP_ADMIN_PASSWORD=admin1234
+BOOTSTRAP_ADMIN_FULL_NAME=Administrador RB
+EOF
+chmod 600 ~/.rb-secrets/backend.env
+```
+
+El backend carga variables en este orden: `RB_ENV_FILE` (si está definido) → `~/.rb-secrets/backend.env` → `backend/.env`.
 
 ### Variables de entorno backend
 - `OPENAI_API_KEY`: requerida para análisis IA real.
