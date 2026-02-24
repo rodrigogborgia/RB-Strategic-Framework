@@ -2,10 +2,12 @@ version: 2
 updates:
   - package-ecosystem: "pip"
     directory: "/backend"
+    target-branch: "main"
     schedule:
       interval: "weekly"
       day: "monday"
       time: "09:00"
+      timezone: "America/Argentina/Buenos_Aires"
     open-pull-requests-limit: 5
     labels:
       - "dependencies"
@@ -14,18 +16,23 @@ updates:
       prefix: "deps"
       include: "scope"
     groups:
-      backend-patch-and-minor:
+      backend-patch:
+        applies-to: version-updates
+        update-types:
+          - "patch"
+      backend-minor:
         applies-to: version-updates
         update-types:
           - "minor"
-          - "patch"
 
   - package-ecosystem: "npm"
     directory: "/frontend"
+    target-branch: "main"
     schedule:
       interval: "weekly"
       day: "monday"
       time: "09:15"
+      timezone: "America/Argentina/Buenos_Aires"
     open-pull-requests-limit: 5
     labels:
       - "dependencies"
@@ -34,8 +41,11 @@ updates:
       prefix: "deps"
       include: "scope"
     groups:
-      frontend-patch-and-minor:
+      frontend-patch:
+        applies-to: version-updates
+        update-types:
+          - "patch"
+      frontend-minor:
         applies-to: version-updates
         update-types:
           - "minor"
-          - "patch"
