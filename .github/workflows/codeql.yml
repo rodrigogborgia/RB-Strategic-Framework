@@ -1,4 +1,4 @@
-name: CodeQL Security Scan
+name: 02 - CodeQL Security Scan
 
 on:
   push:
@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   analyze:
-    name: Analyze (${{ matrix.language }})
+    name: 1 - Analyze (${{ matrix.language }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
