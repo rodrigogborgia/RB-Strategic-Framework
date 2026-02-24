@@ -13,6 +13,11 @@ MAX_CHAR = 280
 class CaseCreate(BaseModel):
     title: str = Field(min_length=3, max_length=120)
     mode: FeedbackMode = FeedbackMode.PROFESIONAL
+    confidence_start: int | None = Field(default=None, ge=1, le=10)
+
+
+class CaseFromTemplateCreate(BaseModel):
+    confidence_start: int | None = Field(default=None, ge=1, le=10)
 
 
 class LoginInput(BaseModel):
@@ -164,6 +169,13 @@ class FinalMemo(BaseModel):
     consolidated_transferable_principle: str
 
 
+class CloseCaseInput(BaseModel):
+    confidence_end: int = Field(ge=1, le=10)
+    agreement_quality_result: int = Field(ge=1, le=5)
+    agreement_quality_relationship: int = Field(ge=1, le=5)
+    agreement_quality_sustainability: int = Field(ge=1, le=5)
+
+
 class CaseRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -177,6 +189,13 @@ class CaseRead(BaseModel):
     final_memo: dict[str, Any]
     clarity_score: int
     inconsistency_count: int
+    created_at: datetime
+    closed_at: datetime | None = None
+    confidence_start: int | None = None
+    confidence_end: int | None = None
+    agreement_quality_result: int | None = None
+    agreement_quality_relationship: int | None = None
+    agreement_quality_sustainability: int | None = None
 
 
 class CaseListItem(BaseModel):
@@ -188,6 +207,13 @@ class CaseListItem(BaseModel):
     status: CaseStatus
     clarity_score: int
     inconsistency_count: int
+    created_at: datetime
+    closed_at: datetime | None = None
+    confidence_start: int | None = None
+    confidence_end: int | None = None
+    agreement_quality_result: int | None = None
+    agreement_quality_relationship: int | None = None
+    agreement_quality_sustainability: int | None = None
 
 
 class CaseTemplate(BaseModel):
@@ -195,3 +221,64 @@ class CaseTemplate(BaseModel):
     title: str
     mode: FeedbackMode
     ideal_for: str
+
+
+class MetricsTrendPoint(BaseModel):
+    period: str
+    confidence_delta_avg: float
+    cases_count: int
+
+
+class StudentMetricsSummary(BaseModel):
+    cases_total: int
+    cases_closed: int
+    close_rate: float
+    cycle_days_avg: float | None = None
+    agreement_quality_avg: float | None = None
+    confidence_delta_avg: float | None = None
+    confidence_delta_trend: list[MetricsTrendPoint]
+
+
+class AdminAnonymousMetricsSummary(BaseModel):
+    cohort_id: int | None = None
+    cases_total: int
+    cases_closed: int
+    close_rate: float
+    cycle_days_avg: float | None = None
+    agreement_quality_avg: float | None = None
+    confidence_delta_avg: float | None = None
+    confidence_delta_trend: list[MetricsTrendPoint]
+    active_students_with_cases: int
+
+
+class LeaderEvaluationCreate(BaseModel):
+    target_user_id: int
+    cohort_id: int | None = None
+    follow_up_date: datetime | None = None
+    period_label: str | None = Field(default=None, min_length=7, max_length=7)
+    preparation_score: int = Field(default=3, ge=1, le=5)
+    execution_score: int = Field(default=3, ge=1, le=5)
+    collaboration_score: int = Field(default=3, ge=1, le=5)
+    autonomy_score: int = Field(default=3, ge=1, le=5)
+    confidence_score: int = Field(default=3, ge=1, le=5)
+    summary_note: str = Field(default="", max_length=600)
+    next_action: str = Field(default="", max_length=280)
+
+
+class LeaderEvaluationRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    evaluator_user_id: int
+    target_user_id: int
+    cohort_id: int | None = None
+    follow_up_date: datetime | None = None
+    period_label: str
+    preparation_score: int
+    execution_score: int
+    collaboration_score: int
+    autonomy_score: int
+    confidence_score: int
+    summary_note: str
+    next_action: str
+    created_at: datetime

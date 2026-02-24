@@ -1,15 +1,20 @@
 import type {
+  AdminAnonymousMetricsSummary,
   AdminUserRead,
   AnalysisOutput,
   CaseListItem,
   CaseRead,
   CaseTemplate,
+  CloseCaseInput,
   CohortRead,
   CohortStatus,
   DebriefInput,
   FeedbackMode,
   FinalMemo,
+  LeaderEvaluationCreate,
+  LeaderEvaluationRead,
   PreparationInput,
+  StudentMetricsSummary,
   TokenResponse,
   UserProfile,
 } from "./types";
@@ -83,14 +88,15 @@ export const api = {
   listCaseTemplates: () => request<CaseTemplate[]>("/case-templates"),
   listCases: () => request<CaseListItem[]>("/cases"),
   getCase: (id: number) => request<CaseRead>(`/cases/${id}`),
-  createCase: (title: string, mode: FeedbackMode) =>
+  createCase: (title: string, mode: FeedbackMode, confidenceStart?: number) =>
     request<CaseRead>("/cases", {
       method: "POST",
-      body: JSON.stringify({ title, mode }),
+      body: JSON.stringify({ title, mode, confidence_start: confidenceStart ?? null }),
     }),
-  createCaseFromTemplate: (templateId: string) =>
+  createCaseFromTemplate: (templateId: string, confidenceStart?: number) =>
     request<CaseRead>(`/cases/from-template/${templateId}`, {
       method: "POST",
+      body: JSON.stringify({ confidence_start: confidenceStart ?? null }),
     }),
   deleteCase: (id: number) =>
     request<{ ok: boolean }>(`/cases/${id}`, {
@@ -114,8 +120,28 @@ export const api = {
       method: "PUT",
       body: JSON.stringify(payload),
     }),
-  closeCase: (id: number) =>
+  closeCase: (id: number, payload: CloseCaseInput) =>
     request<FinalMemo>(`/cases/${id}/close`, {
       method: "POST",
+      body: JSON.stringify(payload),
     }),
+  getMyMetrics: () => request<StudentMetricsSummary>("/metrics/me"),
+  getAdminAnonymousMetrics: (cohortId?: number | null) =>
+    request<AdminAnonymousMetricsSummary>(
+      cohortId ? `/admin/metrics/anonymous?cohort_id=${cohortId}` : "/admin/metrics/anonymous",
+    ),
+  adminCreateLeaderEvaluation: (payload: LeaderEvaluationCreate) =>
+    request<LeaderEvaluationRead>("/admin/leader-evaluations", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  adminListLeaderEvaluations: (filters?: { targetUserId?: number; cohortId?: number; periodLabel?: string }) => {
+    const params = new URLSearchParams();
+    if (filters?.targetUserId != null) params.set("target_user_id", String(filters.targetUserId));
+    if (filters?.cohortId != null) params.set("cohort_id", String(filters.cohortId));
+    if (filters?.periodLabel) params.set("period_label", filters.periodLabel);
+    const suffix = params.toString() ? `?${params.toString()}` : "";
+    return request<LeaderEvaluationRead[]>(`/admin/leader-evaluations${suffix}`);
+  },
+  listMyLeaderEvaluations: () => request<LeaderEvaluationRead[]>("/leader-evaluations/me"),
 };

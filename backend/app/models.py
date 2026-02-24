@@ -1,12 +1,16 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Optional
 
 from sqlalchemy import Column
 from sqlalchemy.types import JSON
 from sqlmodel import Field, SQLModel
+
+
+def utc_now() -> datetime:
+    return datetime.now(UTC)
 
 
 class CaseStatus(str, Enum):
@@ -50,8 +54,8 @@ class User(SQLModel, table=True):
     full_name: str = Field(default="", max_length=120)
     role: UserRole = Field(default=UserRole.STUDENT)
     is_active: bool = Field(default=True)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utc_now)
+    updated_at: datetime = Field(default_factory=utc_now)
 
 
 class Cohort(SQLModel, table=True):
@@ -60,15 +64,15 @@ class Cohort(SQLModel, table=True):
     start_date: datetime
     end_date: datetime
     status: CohortStatus = Field(default=CohortStatus.DRAFT)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utc_now)
+    updated_at: datetime = Field(default_factory=utc_now)
 
 
 class CohortMembership(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="user.id", index=True)
     cohort_id: int = Field(foreign_key="cohort.id", index=True)
-    joined_at: datetime = Field(default_factory=datetime.utcnow)
+    joined_at: datetime = Field(default_factory=utc_now)
     left_at: Optional[datetime] = None
     is_active: bool = Field(default=True)
 
@@ -80,8 +84,8 @@ class Subscription(SQLModel, table=True):
     starts_at: Optional[datetime] = None
     ends_at: Optional[datetime] = None
     source: str = Field(default="manual", max_length=50)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utc_now)
+    updated_at: datetime = Field(default_factory=utc_now)
 
 
 class Case(SQLModel, table=True):
@@ -101,9 +105,15 @@ class Case(SQLModel, table=True):
 
     clarity_score: int = Field(default=0)
     inconsistency_count: int = Field(default=0)
+    confidence_start: Optional[int] = Field(default=None)
+    confidence_end: Optional[int] = Field(default=None)
+    agreement_quality_result: Optional[int] = Field(default=None)
+    agreement_quality_relationship: Optional[int] = Field(default=None)
+    agreement_quality_sustainability: Optional[int] = Field(default=None)
+    closed_at: Optional[datetime] = Field(default=None)
 
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utc_now)
+    updated_at: datetime = Field(default_factory=utc_now)
 
 
 class CaseVersion(SQLModel, table=True):
@@ -111,4 +121,24 @@ class CaseVersion(SQLModel, table=True):
     case_id: int = Field(index=True)
     event: str = Field(max_length=50)
     payload: dict = Field(default_factory=dict, sa_column=Column(JSON))
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utc_now)
+
+
+class LeaderEvaluation(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    evaluator_user_id: int = Field(foreign_key="user.id", index=True)
+    target_user_id: int = Field(foreign_key="user.id", index=True)
+    cohort_id: Optional[int] = Field(default=None, foreign_key="cohort.id", index=True)
+    follow_up_date: Optional[datetime] = None
+    period_label: str = Field(max_length=7, index=True)  # YYYY-MM
+
+    preparation_score: int = Field(ge=1, le=5)
+    execution_score: int = Field(ge=1, le=5)
+    collaboration_score: int = Field(ge=1, le=5)
+    autonomy_score: int = Field(ge=1, le=5)
+    confidence_score: int = Field(ge=1, le=5)
+
+    summary_note: str = Field(default="", max_length=600)
+    next_action: str = Field(default="", max_length=280)
+
+    created_at: datetime = Field(default_factory=utc_now)

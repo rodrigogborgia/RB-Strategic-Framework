@@ -3,15 +3,20 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { api, getAuthToken, setAuthToken } from "./lib/api";
 import brandLogo from "./assets/rb-logo.svg";
 import type {
+  AdminAnonymousMetricsSummary,
   AdminUserRead,
   AnalysisOutput,
   CaseListItem,
   CaseRead,
   CaseStatus,
   CaseTemplate,
+  CloseCaseInput,
   CohortRead,
   CohortStatus,
   DebriefInput,
+  LeaderEvaluationCreate,
+  LeaderEvaluationRead,
+  StudentMetricsSummary,
   PreparationInput,
   UserProfile,
 } from "./lib/types";
@@ -89,16 +94,16 @@ function normalizeAnalysis(raw: unknown): AnalysisOutput | null {
   };
 }
 
-const classPlan4x2 = [
-  { title: "Clase 1 · Psicología y escucha táctica", minutes: 120, hint: "Diagnóstico inicial + práctica de apertura y escucha." },
-  { title: "Clase 2 · Preparación de alto impacto", minutes: 120, hint: "BATNA, ZOPA y diseño de argumentos clave." },
-  { title: "Clase 3 · Tácticas de presión", minutes: 120, hint: "Role-play exigente con manejo de conflicto y reencuadre." },
-  { title: "Clase 4 · Cierre y seguimiento", minutes: 120, hint: "Cierre, implementación y plan de mejora personal." },
-];
-
 type ExperienceMode = "sesion_en_vivo" | "sparring";
 type AdminViewMode = "profesor" | "alumno";
-type TeacherSectionKey = "admin" | "users" | "cohorts" | "members";
+type TeacherSectionKey = "admin" | "users" | "cohorts" | "members" | "ritual";
+
+function currentPeriodLabel(): string {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  return `${yyyy}-${mm}`;
+}
 
 function App() {
   const mainScrollRef = useRef<HTMLElement | null>(null);
@@ -125,10 +130,11 @@ function App() {
   const [membersCohortId, setMembersCohortId] = useState<number | null>(null);
   const [cohortMembers, setCohortMembers] = useState<AdminUserRead[]>([]);
   const [teacherSections, setTeacherSections] = useState<Record<TeacherSectionKey, boolean>>({
-    admin: true,
+    admin: false,
     users: false,
     cohorts: false,
     members: false,
+    ritual: true,
   });
 
   const [cases, setCases] = useState<CaseListItem[]>([]);
@@ -138,6 +144,31 @@ function App() {
   const [selectedCase, setSelectedCase] = useState<CaseRead | null>(null);
 
   const [title, setTitle] = useState("");
+  const [confidenceStart, setConfidenceStart] = useState<number>(7);
+  const [closeMetrics, setCloseMetrics] = useState<CloseCaseInput>({
+    confidence_end: 7,
+    agreement_quality_result: 4,
+    agreement_quality_relationship: 4,
+    agreement_quality_sustainability: 4,
+  });
+
+  const [studentMetrics, setStudentMetrics] = useState<StudentMetricsSummary | null>(null);
+  const [adminAnonMetrics, setAdminAnonMetrics] = useState<AdminAnonymousMetricsSummary | null>(null);
+  const [leaderEvaluations, setLeaderEvaluations] = useState<LeaderEvaluationRead[]>([]);
+  const [myLeaderEvaluations, setMyLeaderEvaluations] = useState<LeaderEvaluationRead[]>([]);
+  const [leaderEvalInput, setLeaderEvalInput] = useState<LeaderEvaluationCreate>({
+    target_user_id: 0,
+    cohort_id: null,
+    follow_up_date: `${new Date().toISOString().slice(0, 10)}T00:00:00`,
+    period_label: currentPeriodLabel(),
+    preparation_score: 3,
+    execution_score: 3,
+    collaboration_score: 3,
+    autonomy_score: 3,
+    confidence_score: 3,
+    summary_note: "",
+    next_action: "",
+  });
 
   const [preparation, setPreparation] = useState<PreparationInput>(emptyPreparation);
   const [analysis, setAnalysis] = useState<AnalysisOutput | null>(null);
@@ -148,11 +179,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [showAdvancedPreparation, setShowAdvancedPreparation] = useState(false);
   const [showAdvancedDebrief, setShowAdvancedDebrief] = useState(false);
-  const [classMode90, setClassMode90] = useState(false);
-  const [classStep, setClassStep] = useState(0);
   const [showFullAnalysis, setShowFullAnalysis] = useState(false);
-  const [classWrapUp, setClassWrapUp] = useState<string[]>([]);
-  const [classWrapUpLoading, setClassWrapUpLoading] = useState(false);
   const [experienceMode, setExperienceMode] = useState<ExperienceMode>("sesion_en_vivo");
   const [highlightStep, setHighlightStep] = useState<CaseStatus | "cerrado" | null>(null);
 
@@ -176,6 +203,44 @@ function App() {
   const totalStudents = adminUsers.filter((item) => item.role === "student").length;
   const activeCohorts = adminCohorts.filter((item) => item.status === "active").length;
   const pendingDebriefCases = cases.filter((item) => item.status === "ejecutado_pendiente_debrief").length;
+  const confidenceDeltaCurrentCase =
+    selectedCase?.confidence_start != null && selectedCase?.confidence_end != null
+      ? selectedCase.confidence_end - selectedCase.confidence_start
+      : null;
+
+  const suggestedNextAction = useMemo(() => {
+    if (!leaderEvalInput.target_user_id) {
+      return "Durante 30 días, preparar cada negociación con objetivo explícito, MAAN y criterio de cierre antes de ejecutar.";
+    }
+
+    const history = leaderEvaluations
+      .filter((item) => item.target_user_id === leaderEvalInput.target_user_id)
+      .slice(0, 4);
+
+    if (history.length === 0) {
+      return "Durante 30 días, registrar 1 caso por semana y cerrar cada debrief con una acción concreta en 24h.";
+    }
+
+    const avg = (selector: (item: LeaderEvaluationRead) => number) =>
+      history.reduce((acc, item) => acc + selector(item), 0) / history.length;
+
+    const dimensions = [
+      { key: "preparación", value: avg((item) => item.preparation_score), action: "usar una checklist previa de 5 minutos (objetivo, MAAN, concesión máxima)." },
+      { key: "ejecución", value: avg((item) => item.execution_score), action: "simular apertura y anclaje 2 veces antes de la reunión real." },
+      { key: "colaboración", value: avg((item) => item.collaboration_score), action: "cerrar cada reunión con resumen conjunto y próximos pasos acordados." },
+      { key: "autonomía", value: avg((item) => item.autonomy_score), action: "definir decisión de retiro y criterio de concesión sin escalar todo al líder." },
+      { key: "confianza", value: avg((item) => item.confidence_score), action: "practicar 10 minutos semanales de role-play en escenarios de objeción." },
+    ];
+    dimensions.sort((a, b) => a.value - b.value);
+    const weakest = dimensions[0];
+
+    return `En los próximos 30 días, enfocar mejora en ${weakest.key}: ${weakest.action}`;
+  }, [leaderEvaluations, leaderEvalInput.target_user_id]);
+  const nextRitualDateLabel = useMemo(() => {
+    const date = new Date();
+    date.setDate(date.getDate() + 30);
+    return date.toLocaleDateString("es-AR");
+  }, []);
 
   function toHumanStatus(status: CaseStatus): string {
     return {
@@ -303,6 +368,12 @@ function App() {
     setSelectedCase(data);
     setPreparation({ ...emptyPreparation, ...(data.preparation as Partial<PreparationInput>) });
     setDebrief({ ...emptyDebrief, ...(data.debrief as Partial<DebriefInput>) });
+    setCloseMetrics({
+      confidence_end: data.confidence_end ?? 7,
+      agreement_quality_result: data.agreement_quality_result ?? 4,
+      agreement_quality_relationship: data.agreement_quality_relationship ?? 4,
+      agreement_quality_sustainability: data.agreement_quality_sustainability ?? 4,
+    });
     setAnalysis(normalizeAnalysis(data.analysis));
     setShowFullAnalysis(false);
   }
@@ -312,6 +383,7 @@ function App() {
     const [users, cohorts] = await Promise.all([api.adminListUsers(), api.adminListCohorts()]);
     setAdminUsers(users);
     setAdminCohorts(cohorts);
+    const students = users.filter((item) => item.role === "student");
     if (!assignUserId && users.length > 0) {
       setAssignUserId(users[0].id);
     }
@@ -321,11 +393,41 @@ function App() {
     if (!membersCohortId && cohorts.length > 0) {
       setMembersCohortId(cohorts[0].id);
     }
+    setLeaderEvalInput((prev) => ({
+      ...prev,
+      target_user_id: prev.target_user_id || (students[0]?.id ?? 0),
+      cohort_id: prev.cohort_id ?? (cohorts[0]?.id ?? null),
+    }));
   }
 
   async function loadTemplates() {
     const data = await api.listCaseTemplates();
     setTemplates(data);
+  }
+
+  async function loadStudentMetrics() {
+    const data = await api.getMyMetrics();
+    setStudentMetrics(data);
+  }
+
+  async function loadAdminAnonymousMetrics() {
+    if (!isAdmin) return;
+    const data = await api.getAdminAnonymousMetrics(membersCohortId);
+    setAdminAnonMetrics(data);
+  }
+
+  async function loadLeaderEvaluations() {
+    if (!isAdmin) return;
+    const data = await api.adminListLeaderEvaluations({
+      targetUserId: leaderEvalInput.target_user_id || undefined,
+      cohortId: membersCohortId ?? undefined,
+    });
+    setLeaderEvaluations(data);
+  }
+
+  async function loadMyLeaderEvaluations() {
+    const data = await api.listMyLeaderEvaluations();
+    setMyLeaderEvaluations(data);
   }
 
   async function loadCohortMembers(cohortId: number | null) {
@@ -377,8 +479,12 @@ function App() {
     if (!authUser) return;
     loadCases().catch((e) => setError(e.message));
     loadTemplates().catch((e) => setError(e.message));
+    loadStudentMetrics().catch((e) => setError(e.message));
+    loadMyLeaderEvaluations().catch((e) => setError(e.message));
     if (authUser.role === "admin") {
       loadAdminPanel().catch((e) => setError(e.message));
+      loadAdminAnonymousMetrics().catch((e) => setError(e.message));
+      loadLeaderEvaluations().catch((e) => setError(e.message));
     }
   }, [authUser]);
 
@@ -405,7 +511,25 @@ function App() {
 
   useEffect(() => {
     loadCohortMembers(membersCohortId).catch((e) => setError(e.message));
+    if (isAdmin) {
+      loadAdminAnonymousMetrics().catch((e) => setError(e.message));
+      setLeaderEvalInput((prev) => ({ ...prev, cohort_id: membersCohortId }));
+      loadLeaderEvaluations().catch((e) => setError(e.message));
+    }
   }, [membersCohortId, isAdmin]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    loadLeaderEvaluations().catch((e) => setError(e.message));
+  }, [leaderEvalInput.period_label, leaderEvalInput.target_user_id, isAdmin]);
+
+  useEffect(() => {
+    if (!isAdmin || !leaderEvalInput.target_user_id) return;
+    setLeaderEvalInput((prev) => ({
+      ...prev,
+      next_action: suggestedNextAction,
+    }));
+  }, [isAdmin, leaderEvalInput.target_user_id, suggestedNextAction]);
 
   async function handleLogin() {
     if (!authEmail.trim() || !authPassword.trim()) {
@@ -444,6 +568,10 @@ function App() {
     setAdminUsers([]);
     setAdminCohorts([]);
     setAdminViewMode("alumno");
+    setStudentMetrics(null);
+    setAdminAnonMetrics(null);
+    setLeaderEvaluations([]);
+    setMyLeaderEvaluations([]);
   }
 
   function formatDateLabel(value: string): string {
@@ -454,6 +582,32 @@ function App() {
 
   function toggleTeacherSection(section: TeacherSectionKey) {
     setTeacherSections((prev) => ({ ...prev, [section]: !prev[section] }));
+  }
+
+  async function handleCreateLeaderEvaluation() {
+    if (!leaderEvalInput.target_user_id) {
+      setError("Seleccioná un alumno para cargar la evaluación líder.");
+      setSuccess("");
+      return;
+    }
+    try {
+      setAdminLoading(true);
+      setError("");
+      setSuccess("");
+      await api.adminCreateLeaderEvaluation(leaderEvalInput);
+      await loadLeaderEvaluations();
+      await loadMyLeaderEvaluations();
+      setSuccess("Evaluación líder registrada.");
+      setLeaderEvalInput((prev) => ({
+        ...prev,
+        summary_note: "",
+        next_action: suggestedNextAction,
+      }));
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setAdminLoading(false);
+    }
   }
 
   async function handleAdminCreateUser() {
@@ -533,6 +687,12 @@ function App() {
   }
 
   async function handleCreateCase() {
+    if (!Number.isFinite(confidenceStart) || confidenceStart < 1 || confidenceStart > 10) {
+      setError("Definí una confianza inicial entre 1 y 10.");
+      setSuccess("");
+      return;
+    }
+
     try {
       setLoading(true);
       setError("");
@@ -545,14 +705,15 @@ function App() {
           return;
         }
         const modeForCase = currentExperienceMode === "sesion_en_vivo" ? "curso" : "profesional";
-        created = await api.createCase(title, modeForCase);
+        created = await api.createCase(title, modeForCase, confidenceStart);
         setTitle("");
       } else {
-        created = await api.createCaseFromTemplate(selectedTemplateId);
+        created = await api.createCaseFromTemplate(selectedTemplateId, confidenceStart);
       }
       await loadCases();
       setSelectedId(created.id);
       await loadCase(created.id);
+      await loadStudentMetrics();
       setSuccess("Caso creado correctamente.");
     } catch (e) {
       setError((e as Error).message);
@@ -571,6 +732,7 @@ function App() {
       await api.savePreparation(selectedCase.id, preparation);
       await loadCase(selectedCase.id);
       await loadCases();
+      await loadStudentMetrics();
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -604,6 +766,7 @@ function App() {
       await api.markExecuted(selectedCase.id);
       await loadCase(selectedCase.id);
       await loadCases();
+      await loadStudentMetrics();
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -637,6 +800,10 @@ function App() {
       });
       await loadCase(selectedCase.id);
       await loadCases();
+      await loadStudentMetrics();
+      if (isAdmin) {
+        await loadAdminAnonymousMetrics();
+      }
       setSuccess("Debrief registrado correctamente.");
       mainScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
     } catch (e) {
@@ -648,70 +815,33 @@ function App() {
 
   async function handleCloseCase() {
     if (!selectedCase) return;
+    if (
+      closeMetrics.confidence_end < 1 || closeMetrics.confidence_end > 10 ||
+      closeMetrics.agreement_quality_result < 1 || closeMetrics.agreement_quality_result > 5 ||
+      closeMetrics.agreement_quality_relationship < 1 || closeMetrics.agreement_quality_relationship > 5 ||
+      closeMetrics.agreement_quality_sustainability < 1 || closeMetrics.agreement_quality_sustainability > 5
+    ) {
+      setError("Completá métricas de cierre válidas (confianza 1-10 y calidad 1-5).");
+      setSuccess("");
+      return;
+    }
+
     try {
       setLoading(true);
       setError("");
       setSuccess("");
-      await api.closeCase(selectedCase.id);
+      await api.closeCase(selectedCase.id, closeMetrics);
       await loadCase(selectedCase.id);
       await loadCases();
+      await loadStudentMetrics();
+      if (isAdmin) {
+        await loadAdminAnonymousMetrics();
+      }
+      setSuccess("Caso cerrado y memo final generado.");
     } catch (e) {
       setError((e as Error).message);
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function handleGenerateClassWrapUp() {
-    try {
-      setClassWrapUpLoading(true);
-      setError("");
-
-      const closedCaseIds = cases
-        .filter((item) => item.status === "cerrado")
-        .slice(0, 12)
-        .map((item) => item.id);
-
-      if (closedCaseIds.length === 0) {
-        setClassWrapUp(["No hay casos cerrados todavía para generar un resumen de clase."]);
-        return;
-      }
-
-      const closedCases = await Promise.all(closedCaseIds.map((id) => api.getCase(id)));
-      const lessons = closedCases
-        .map((item) => {
-          const fromMemo = item.final_memo?.consolidated_transferable_principle;
-          const fromDebrief = item.debrief?.transferable_lesson;
-          return (fromMemo || fromDebrief || "").trim();
-        })
-        .filter((item) => item.length > 0);
-
-      if (lessons.length === 0) {
-        setClassWrapUp(["No hay lecciones transferibles cargadas en los casos cerrados."]);
-        return;
-      }
-
-      const counters = new Map<string, { text: string; count: number }>();
-      for (const lesson of lessons) {
-        const key = lesson.toLowerCase();
-        const current = counters.get(key);
-        if (current) {
-          current.count += 1;
-        } else {
-          counters.set(key, { text: lesson, count: 1 });
-        }
-      }
-
-      const topPatterns = [...counters.values()]
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 3)
-        .map((item, index) => `${index + 1}) ${item.text}`);
-
-      setClassWrapUp(topPatterns);
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setClassWrapUpLoading(false);
     }
   }
 
@@ -732,6 +862,10 @@ function App() {
       setPreparation(emptyPreparation);
       setSelectedId(null);
       await loadCases();
+      await loadStudentMetrics();
+      if (isAdmin) {
+        await loadAdminAnonymousMetrics();
+      }
       setSuccess("Caso borrado correctamente.");
     } catch (e) {
       setError((e as Error).message);
@@ -812,7 +946,7 @@ function App() {
             <div className="brand-block">
               <img src={brandLogo} alt="RB logo" className="brand-logo" />
               <h2 className="brand-title">RB Strategic Framework</h2>
-              <p className="brand-subtitle">Strategic Preparation &amp; Review System</p>
+              <p className="brand-subtitle">Capacitación + seguimiento mensual con evidencia de progreso</p>
             </div>
             <p className="small" style={{ marginBottom: 12 }}>Ingresá con tu email y contraseña.</p>
             <input
@@ -849,7 +983,7 @@ function App() {
           <div className="brand-block">
             <img src={brandLogo} alt="RB logo" className="brand-logo" />
             <h2 className="brand-title">RB Strategic Framework</h2>
-            <p className="brand-subtitle">Strategic Preparation &amp; Review System</p>
+            <p className="brand-subtitle">Capacitación + seguimiento mensual con evidencia de progreso</p>
           </div>
           {!isAdmin && (
             <div className="actions mode-switch" style={{ marginBottom: 10 }}>
@@ -925,6 +1059,16 @@ function App() {
                 </p>
               )}
               <div style={{ height: 8 }} />
+              <label className="small" htmlFor="confidence-start">Confianza inicial (1-10)</label>
+              <input
+                id="confidence-start"
+                type="number"
+                min={1}
+                max={10}
+                value={confidenceStart}
+                onChange={(e) => setConfidenceStart(Math.min(10, Math.max(1, Number(e.target.value) || 1)))}
+              />
+              <div style={{ height: 8 }} />
               <button disabled={loading} onClick={handleCreateCase}>
                 Crear caso
               </button>
@@ -973,11 +1117,28 @@ function App() {
                 <span className="status-pill">Cohortes activas: {activeCohorts}</span>
                 <span className="status-pill">Debrief pendiente: {pendingDebriefCases}</span>
               </div>
+              {adminAnonMetrics && (
+                <div style={{ marginTop: 12 }}>
+                  <p className="small"><strong>Métricas anonimizadas</strong></p>
+                  <div className="row">
+                    <div className="small">Casos totales: {adminAnonMetrics.cases_total}</div>
+                    <div className="small">Casos cerrados: {adminAnonMetrics.cases_closed}</div>
+                    <div className="small">Tasa de cierre: {adminAnonMetrics.close_rate}%</div>
+                    <div className="small">Ciclo medio: {adminAnonMetrics.cycle_days_avg ?? "-"} días</div>
+                    <div className="small">Calidad media: {adminAnonMetrics.agreement_quality_avg ?? "-"} / 5</div>
+                    <div className="small">Delta confianza: {adminAnonMetrics.confidence_delta_avg ?? "-"}</div>
+                  </div>
+                  <p className="small" style={{ marginTop: 8 }}>
+                    Alumnos activos con casos: {adminAnonMetrics.active_students_with_cases}
+                  </p>
+                  <p className="small">Próximo ritual sugerido (60 min): {nextRitualDateLabel}</p>
+                </div>
+              )}
             </div>
 
             <div className="card">
               <div className="section-header" onClick={() => toggleTeacherSection("admin")}>
-                <h2>Panel Admin (MVP)</h2>
+                <h2>Panel Admin</h2>
                 <button className="secondary" type="button">
                   {teacherSections.admin ? "Contraer" : "Expandir"}
                 </button>
@@ -1146,80 +1307,129 @@ function App() {
                 </>
               )}
             </div>
+
+            <div className="card">
+              <div className="section-header" onClick={() => toggleTeacherSection("ritual")}>
+                <h2>Ritual 30 días</h2>
+                <button className="secondary" type="button">
+                  {teacherSections.ritual ? "Contraer" : "Expandir"}
+                </button>
+              </div>
+              {teacherSections.ritual && (
+                <>
+                  <p className="small">Evaluación breve del líder para seguimiento mensual del equipo.</p>
+                  <div className="row">
+                    <select
+                      value={leaderEvalInput.target_user_id || ""}
+                      onChange={(e) =>
+                        setLeaderEvalInput((prev) => ({
+                          ...prev,
+                          target_user_id: e.target.value ? Number(e.target.value) : 0,
+                        }))
+                      }
+                    >
+                      <option value="">Seleccioná alumno</option>
+                      {(cohortMembers.length > 0 ? cohortMembers : adminUsers.filter((u) => u.role === "student")).map((member) => (
+                        <option key={member.id} value={member.id}>
+                          {member.full_name || member.email}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="date"
+                      value={(leaderEvalInput.follow_up_date || "").slice(0, 10)}
+                      onChange={(e) =>
+                        setLeaderEvalInput((prev) => ({
+                          ...prev,
+                          follow_up_date: e.target.value ? `${e.target.value}T00:00:00` : null,
+                          period_label: e.target.value ? e.target.value.slice(0, 7) : currentPeriodLabel(),
+                        }))
+                      }
+                    />
+                    <textarea
+                      placeholder="Resumen breve del período"
+                      value={leaderEvalInput.summary_note}
+                      onChange={(e) => setLeaderEvalInput((prev) => ({ ...prev, summary_note: e.target.value }))}
+                    />
+                    <textarea
+                      placeholder="Próxima acción concreta (30 días)"
+                      value={leaderEvalInput.next_action}
+                      onChange={(e) => setLeaderEvalInput((prev) => ({ ...prev, next_action: e.target.value }))}
+                    />
+                  </div>
+                  <p className="small" style={{ marginTop: 8 }}>
+                    Sugerencia automática: {suggestedNextAction}
+                  </p>
+                  <div className="actions" style={{ marginTop: 8 }}>
+                    <button className="secondary" onClick={() => handleCreateLeaderEvaluation().catch(() => undefined)} disabled={adminLoading}>
+                      Guardar evaluación líder
+                    </button>
+                  </div>
+                  {leaderEvaluations.length > 0 && (
+                    <div style={{ marginTop: 10 }}>
+                      <p className="small"><strong>Evaluaciones del período</strong></p>
+                      <ul>
+                        {leaderEvaluations.slice(0, 8).map((evaluation) => (
+                          <li key={evaluation.id} className="small">
+                            {(evaluation.follow_up_date ? formatDateLabel(evaluation.follow_up_date) : evaluation.period_label)} · Alumno #{evaluation.target_user_id} · Próxima acción: {evaluation.next_action || "-"}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         ) : (
           <>
-        <div className="card">
-          <h2>Modo Curso 4x2h</h2>
-          <p className="small">
-            {isLiveSession
-              ? "Guía ejecutiva para conducir las 4 clases sin fricción."
-              : "Plan de referencia para seguir entrenando luego del curso."}
-          </p>
-          <div className="actions">
-            <button className="secondary" onClick={() => setClassMode90((v) => !v)}>
-              {classMode90 ? "Ocultar plan del curso" : "Ver plan del curso"}
-            </button>
+        {!isTeacherPanel && studentMetrics && (
+          <div className="card">
+            <h2>Mi progreso</h2>
+            <div className="row">
+              <div className="small">Casos iniciados: {studentMetrics.cases_total}</div>
+              <div className="small">Casos cerrados: {studentMetrics.cases_closed}</div>
+              <div className="small">Tasa de cierre: {studentMetrics.close_rate}%</div>
+              <div className="small">Tiempo de ciclo promedio: {studentMetrics.cycle_days_avg ?? "-"} días</div>
+              <div className="small">Calidad de acuerdo promedio: {studentMetrics.agreement_quality_avg ?? "-"} / 5</div>
+              <div className="small">Delta de confianza promedio: {studentMetrics.confidence_delta_avg ?? "-"}</div>
+            </div>
+            {studentMetrics.confidence_delta_trend.length > 0 && (
+              <div style={{ marginTop: 10 }}>
+                <p className="small"><strong>Confianza a través del tiempo</strong></p>
+                <ul>
+                  {studentMetrics.confidence_delta_trend.map((point) => (
+                    <li key={point.period} className="small">
+                      {point.period}: Δ {point.confidence_delta_avg} ({point.cases_count} casos)
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            <p className="small">Próximo ritual de seguimiento sugerido: {nextRitualDateLabel}</p>
           </div>
-          {classMode90 && (
-            <>
-              <p style={{ marginTop: 12 }}>
-                <strong>
-                  Etapa {classStep + 1}/{classPlan4x2.length}: {classPlan4x2[classStep].title}
-                </strong>{" "}
-                · {classPlan4x2[classStep].minutes} min
-              </p>
-              <p className="small">{classPlan4x2[classStep].hint}</p>
-              <p className="small">
-                Cierre rápido: 1) qué funcionó, 2) qué trabó la conversación, 3) qué vas a repetir en el próximo caso.
-              </p>
-              <p className="small">
-                Para sesiones online: acordá canal por etapa, cerrá cada ronda con resumen y confirmá entendimiento antes de conceder.
-              </p>
-              <p className="small">
-                Checkpoint BATNA: alternativa real, número mínimo de aceptación y decisión de retiro antes del cierre.
-              </p>
-              <p className="small">
-                Debrief en 3 líneas: objetivo de práctica, evidencia observada y ajuste para el próximo caso.
-              </p>
-              <div className="actions">
-                <button
-                  className="secondary"
-                  onClick={handleGenerateClassWrapUp}
-                  disabled={classWrapUpLoading}
-                >
-                  {classWrapUpLoading ? "Generando resumen..." : "Generar resumen de cierre"}
-                </button>
-              </div>
-              {classWrapUp.length > 0 && (
-                <div style={{ marginTop: 8 }}>
-                  <p className="small"><strong>Patrones repetidos de la clase</strong></p>
-                  <ul>
-                    {classWrapUp.map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              <div className="actions">
-                <button
-                  className="secondary"
-                  disabled={classStep === 0}
-                  onClick={() => setClassStep((s) => Math.max(0, s - 1))}
-                >
-                  Etapa anterior
-                </button>
-                <button
-                  className="secondary"
-                  disabled={classStep === classPlan4x2.length - 1}
-                  onClick={() => setClassStep((s) => Math.min(classPlan4x2.length - 1, s + 1))}
-                >
-                  Etapa siguiente
-                </button>
-              </div>
-            </>
-          )}
-        </div>
+        )}
+
+        {!isTeacherPanel && myLeaderEvaluations.length > 0 && (
+          <div className="card">
+            <h2>Feedback del líder</h2>
+            <p className="small">Última evaluación mensual registrada.</p>
+            <p className="small"><strong>Período:</strong> {myLeaderEvaluations[0].period_label}</p>
+            <div className="row">
+              <div className="small">Preparación: {myLeaderEvaluations[0].preparation_score}/5</div>
+              <div className="small">Ejecución: {myLeaderEvaluations[0].execution_score}/5</div>
+              <div className="small">Colaboración: {myLeaderEvaluations[0].collaboration_score}/5</div>
+              <div className="small">Autonomía: {myLeaderEvaluations[0].autonomy_score}/5</div>
+              <div className="small">Confianza observada: {myLeaderEvaluations[0].confidence_score}/5</div>
+            </div>
+            {myLeaderEvaluations[0].summary_note && (
+              <p className="small" style={{ marginTop: 8 }}><strong>Resumen:</strong> {myLeaderEvaluations[0].summary_note}</p>
+            )}
+            {myLeaderEvaluations[0].next_action && (
+              <p className="small"><strong>Próxima acción:</strong> {myLeaderEvaluations[0].next_action}</p>
+            )}
+          </div>
+        )}
 
         {!selectedCase ? (
           <div className="card">Seleccioná o creá un caso para empezar.</div>
@@ -1233,6 +1443,14 @@ function App() {
               <p className="small" style={{ marginBottom: 12 }}>
                 Confirmar ejecución = confirmás que la negociación ya ocurrió. Registrar debrief = cargás resultado y aprendizaje. Cerrar caso = genera el memo final y cierra el ciclo.
               </p>
+              <div className="row" style={{ marginBottom: 12 }}>
+                <div className="small">Confianza inicial: {selectedCase.confidence_start ?? "-"}</div>
+                <div className="small">Confianza final: {selectedCase.confidence_end ?? "-"}</div>
+                <div className="small">Delta de confianza: {confidenceDeltaCurrentCase ?? "-"}</div>
+                <div className="small">
+                  Tiempo de ciclo: {selectedCase.closed_at ? Math.max(0, Math.round((new Date(selectedCase.closed_at).getTime() - new Date(selectedCase.created_at).getTime()) / 86400000)) : "-"} días
+                </div>
+              </div>
               <div className="workflow-track" style={{ marginBottom: 12 }}>
                 {[
                   { key: "en_preparacion", label: "Preparación", actionKey: "save_preparation" },
@@ -1275,6 +1493,64 @@ function App() {
                       <p className="small" style={{ marginBottom: 8 }}>
                         Último paso: cerrá el caso para generar el memo ejecutivo final.
                       </p>
+                      <div className="row" style={{ marginBottom: 8 }}>
+                        <label className="small" htmlFor="confidence-end">Confianza final (1-10)</label>
+                        <input
+                          id="confidence-end"
+                          type="number"
+                          min={1}
+                          max={10}
+                          value={closeMetrics.confidence_end}
+                          onChange={(e) =>
+                            setCloseMetrics((prev) => ({
+                              ...prev,
+                              confidence_end: Math.min(10, Math.max(1, Number(e.target.value) || 1)),
+                            }))
+                          }
+                        />
+                        <label className="small" htmlFor="quality-result">Calidad acuerdo: resultado (1-5)</label>
+                        <input
+                          id="quality-result"
+                          type="number"
+                          min={1}
+                          max={5}
+                          value={closeMetrics.agreement_quality_result}
+                          onChange={(e) =>
+                            setCloseMetrics((prev) => ({
+                              ...prev,
+                              agreement_quality_result: Math.min(5, Math.max(1, Number(e.target.value) || 1)),
+                            }))
+                          }
+                        />
+                        <label className="small" htmlFor="quality-relationship">Calidad acuerdo: relación (1-5)</label>
+                        <input
+                          id="quality-relationship"
+                          type="number"
+                          min={1}
+                          max={5}
+                          value={closeMetrics.agreement_quality_relationship}
+                          onChange={(e) =>
+                            setCloseMetrics((prev) => ({
+                              ...prev,
+                              agreement_quality_relationship: Math.min(5, Math.max(1, Number(e.target.value) || 1)),
+                            }))
+                          }
+                        />
+                        <label className="small" htmlFor="quality-sustainability">Calidad acuerdo: sostenibilidad (1-5)</label>
+                        <input
+                          id="quality-sustainability"
+                          type="number"
+                          min={1}
+                          max={5}
+                          value={closeMetrics.agreement_quality_sustainability}
+                          onChange={(e) =>
+                            setCloseMetrics((prev) => ({
+                              ...prev,
+                              agreement_quality_sustainability: Math.min(5, Math.max(1, Number(e.target.value) || 1)),
+                            }))
+                          }
+                        />
+                      </div>
                       <button onClick={handleCloseCase} disabled={primaryAction.disabled}>
                         Cerrar caso y generar memo
                       </button>
@@ -1622,6 +1898,16 @@ function App() {
                       <p className="small" style={{ marginTop: 8 }}>
                         Completá objetivo explícito y lección transferible para habilitar el guardado.
                       </p>
+                    )}
+                    {canSubmitDebrief && hasSavedDebrief && (
+                      <div style={{ marginTop: 10 }}>
+                        <p className="small" style={{ marginBottom: 8 }}>
+                          Debrief completo. Presioná este botón para cerrar el caso.
+                        </p>
+                        <button className="secondary" onClick={handleCloseCase} disabled={loading}>
+                          Cerrar caso y generar memo
+                        </button>
+                      </div>
                     )}
                   </div>
                 )}

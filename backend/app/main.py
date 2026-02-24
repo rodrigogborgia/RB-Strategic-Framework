@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from datetime import datetime
+from contextlib import asynccontextmanager
+from datetime import UTC, datetime
 
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,24 +18,32 @@ from .models import (
     Cohort,
     CohortMembership,
     CohortStatus,
+    LeaderEvaluation,
     User,
     UserRole,
 )
 from .openai_engine import analyze_preparation_with_openai
 from .schemas import (
+    AdminAnonymousMetricsSummary,
     AdminUserCreate,
     AdminUserRead,
     AnalysisOutput,
     CaseCreate,
+    CaseFromTemplateCreate,
     CaseListItem,
     CaseRead,
     CaseTemplate,
+    CloseCaseInput,
     CohortCreate,
     CohortMembershipAdd,
     CohortRead,
     CohortUpdate,
     DebriefInput,
     FinalMemo,
+    MetricsTrendPoint,
+    StudentMetricsSummary,
+    LeaderEvaluationCreate,
+    LeaderEvaluationRead,
     LoginInput,
     PreparationInput,
     TokenResponse,
@@ -43,18 +52,12 @@ from .schemas import (
 from .settings import settings
 from .templates import CASE_TEMPLATES
 
-app = FastAPI(title="RB Strategic Framework API")
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=list(settings.frontend_origins),
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+def _utc_now() -> datetime:
+    return datetime.now(UTC)
 
 
-@app.on_event("startup")
-def on_startup() -> None:
+def _bootstrap_admin() -> None:
     init_db()
     with Session(engine) as session:
         statement = select(User).where(User.email == settings.bootstrap_admin_email)
@@ -69,6 +72,22 @@ def on_startup() -> None:
             )
             session.add(admin)
             session.commit()
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    _bootstrap_admin()
+    yield
+
+
+app = FastAPI(title="RB Strategic Framework API", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=list(settings.frontend_origins),
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 def _save_version(session: Session, case_id: int, event: str, payload: dict) -> None:
@@ -87,6 +106,16 @@ def _require_admin(current_user: User) -> None:
         raise HTTPException(status_code=403, detail="Solo administrador")
 
 
+def _is_valid_period_label(value: str) -> bool:
+    if len(value) != 7:
+        return False
+    try:
+        datetime.strptime(f"{value}-01", "%Y-%m-%d")
+        return True
+    except ValueError:
+        return False
+
+
 def _resolve_user_access(session: Session, user: User) -> dict:
     if user.role == UserRole.ADMIN:
         return {
@@ -97,7 +126,7 @@ def _resolve_user_access(session: Session, user: User) -> dict:
             "active_cohort_name": None,
         }
 
-    now = datetime.utcnow()
+    now = _utc_now()
     statement = (
         select(CohortMembership, Cohort)
         .join(Cohort, CohortMembership.cohort_id == Cohort.id)
@@ -151,6 +180,66 @@ def _get_case_for_user(session: Session, case_id: int, user: User) -> Case:
     if case.owner_user_id != user.id:
         raise HTTPException(status_code=403, detail="Sin acceso al caso")
     return case
+
+
+def _round_or_none(value: float | None, digits: int = 2) -> float | None:
+    if value is None:
+        return None
+    return round(value, digits)
+
+
+def _build_metrics_summary(cases: list[Case], cohort_id: int | None = None) -> dict:
+    cases_total = len(cases)
+    closed_cases = [item for item in cases if item.status == CaseStatus.CERRADO]
+    cases_closed = len(closed_cases)
+    close_rate = (cases_closed / cases_total * 100) if cases_total else 0.0
+
+    cycle_days_values: list[int] = []
+    agreement_quality_values: list[float] = []
+    confidence_delta_values: list[int] = []
+    trend_buckets: dict[str, list[int]] = {}
+
+    for case in closed_cases:
+        if case.closed_at and case.created_at:
+            delta_days = (case.closed_at.date() - case.created_at.date()).days
+            cycle_days_values.append(max(delta_days, 0))
+
+        quality_parts = [
+            case.agreement_quality_result,
+            case.agreement_quality_relationship,
+            case.agreement_quality_sustainability,
+        ]
+        quality_valid = [float(item) for item in quality_parts if item is not None]
+        if quality_valid:
+            agreement_quality_values.append(sum(quality_valid) / len(quality_valid))
+
+        if case.confidence_start is not None and case.confidence_end is not None:
+            delta = case.confidence_end - case.confidence_start
+            confidence_delta_values.append(delta)
+            period = (case.closed_at or case.updated_at).strftime("%Y-%m")
+            trend_buckets.setdefault(period, []).append(delta)
+
+    trend: list[MetricsTrendPoint] = []
+    for period in sorted(trend_buckets.keys()):
+        values = trend_buckets[period]
+        trend.append(
+            MetricsTrendPoint(
+                period=period,
+                confidence_delta_avg=round(sum(values) / len(values), 2),
+                cases_count=len(values),
+            )
+        )
+
+    return {
+        "cohort_id": cohort_id,
+        "cases_total": cases_total,
+        "cases_closed": cases_closed,
+        "close_rate": round(close_rate, 2),
+        "cycle_days_avg": _round_or_none(sum(cycle_days_values) / len(cycle_days_values), 2) if cycle_days_values else None,
+        "agreement_quality_avg": _round_or_none(sum(agreement_quality_values) / len(agreement_quality_values), 2) if agreement_quality_values else None,
+        "confidence_delta_avg": _round_or_none(sum(confidence_delta_values) / len(confidence_delta_values), 2) if confidence_delta_values else None,
+        "confidence_delta_trend": trend,
+    }
 
 
 @app.get("/health")
@@ -255,7 +344,7 @@ def admin_update_cohort(
     data = payload.model_dump(exclude_unset=True)
     for key, value in data.items():
         setattr(cohort, key, value)
-    cohort.updated_at = datetime.utcnow()
+    cohort.updated_at = _utc_now()
     session.add(cohort)
     session.commit()
     session.refresh(cohort)
@@ -314,7 +403,7 @@ def admin_remove_cohort_member(
         raise HTTPException(status_code=404, detail="Membresía no encontrada")
 
     membership.is_active = False
-    membership.left_at = datetime.utcnow()
+    membership.left_at = _utc_now()
     session.add(membership)
     session.commit()
     return {"ok": True}
@@ -341,6 +430,85 @@ def admin_list_cohort_members(
     return list(session.exec(statement).all())
 
 
+@app.post("/admin/leader-evaluations", response_model=LeaderEvaluationRead)
+def admin_create_leader_evaluation(
+    payload: LeaderEvaluationCreate,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> LeaderEvaluation:
+    _require_admin(current_user)
+
+    effective_period_label = payload.period_label
+    if not effective_period_label and payload.follow_up_date:
+        effective_period_label = payload.follow_up_date.strftime("%Y-%m")
+    if not effective_period_label:
+        effective_period_label = _utc_now().strftime("%Y-%m")
+
+    if not _is_valid_period_label(effective_period_label):
+        raise HTTPException(status_code=400, detail="period_label inválido (usar YYYY-MM)")
+
+    target_user = session.get(User, payload.target_user_id)
+    if not target_user:
+        raise HTTPException(status_code=404, detail="Alumno no encontrado")
+
+    if target_user.role != UserRole.STUDENT:
+        raise HTTPException(status_code=400, detail="La evaluación debe ser para un alumno")
+
+    evaluation = LeaderEvaluation(
+        evaluator_user_id=current_user.id or 0,
+        target_user_id=payload.target_user_id,
+        cohort_id=payload.cohort_id,
+        follow_up_date=payload.follow_up_date,
+        period_label=effective_period_label,
+        preparation_score=payload.preparation_score,
+        execution_score=payload.execution_score,
+        collaboration_score=payload.collaboration_score,
+        autonomy_score=payload.autonomy_score,
+        confidence_score=payload.confidence_score,
+        summary_note=payload.summary_note,
+        next_action=payload.next_action,
+    )
+    session.add(evaluation)
+    session.commit()
+    session.refresh(evaluation)
+    return evaluation
+
+
+@app.get("/admin/leader-evaluations", response_model=list[LeaderEvaluationRead])
+def admin_list_leader_evaluations(
+    target_user_id: int | None = None,
+    cohort_id: int | None = None,
+    period_label: str | None = None,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> list[LeaderEvaluation]:
+    _require_admin(current_user)
+
+    statement = select(LeaderEvaluation)
+    if target_user_id is not None:
+        statement = statement.where(LeaderEvaluation.target_user_id == target_user_id)
+    if cohort_id is not None:
+        statement = statement.where(LeaderEvaluation.cohort_id == cohort_id)
+    if period_label:
+        statement = statement.where(LeaderEvaluation.period_label == period_label)
+
+    statement = statement.order_by(LeaderEvaluation.created_at.desc())
+    return list(session.exec(statement).all())
+
+
+@app.get("/leader-evaluations/me", response_model=list[LeaderEvaluationRead])
+def list_my_leader_evaluations(
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> list[LeaderEvaluation]:
+    statement = (
+        select(LeaderEvaluation)
+        .where(LeaderEvaluation.target_user_id == (current_user.id or 0))
+        .order_by(LeaderEvaluation.created_at.desc())
+    )
+    return list(session.exec(statement).all())
+
+
 @app.post("/cases", response_model=CaseRead)
 def create_case(
     case_in: CaseCreate,
@@ -352,6 +520,7 @@ def create_case(
         mode=case_in.mode,
         owner_user_id=current_user.id,
         origin=CaseOrigin.SPARRING.value,
+        confidence_start=case_in.confidence_start,
     )
     session.add(case)
     session.commit()
@@ -392,6 +561,7 @@ def list_case_templates(current_user: User = Depends(get_current_user)) -> list[
 @app.post("/cases/from-template/{template_id}", response_model=CaseRead)
 def create_case_from_template(
     template_id: str,
+    payload: CaseFromTemplateCreate | None = None,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> Case:
@@ -410,6 +580,7 @@ def create_case_from_template(
         owner_user_id=current_user.id,
         origin=case_origin,
         cohort_id=access["active_cohort_id"],
+        confidence_start=payload.confidence_start if payload else None,
     )
     session.add(case)
     session.commit()
@@ -465,7 +636,7 @@ def upsert_preparation(
         raise HTTPException(status_code=400, detail="No se puede editar un caso cerrado")
 
     case.preparation = preparation.model_dump()
-    case.updated_at = datetime.utcnow()
+    case.updated_at = _utc_now()
     case.status = CaseStatus.EN_PREPARACION
 
     _save_version(session, case_id, "preparation_updated", case.preparation)
@@ -502,7 +673,7 @@ def analyze_case(
     case.inconsistency_count = len(analysis.inconsistencies)
     case.clarity_score = 100 - min(90, len(analysis.inconsistencies) * 20 + len(analysis.clarification_questions) * 10)
     case.status = CaseStatus.PREPARADO
-    case.updated_at = datetime.utcnow()
+    case.updated_at = _utc_now()
 
     _save_version(session, case_id, "analysis_generated", {**case.analysis, "provider": provider_used})
 
@@ -523,7 +694,7 @@ def mark_executed(
         raise HTTPException(status_code=400, detail="Solo un caso preparado puede pasar a ejecutado")
 
     case.status = CaseStatus.EJECUTADO_PENDIENTE_DEBRIEF
-    case.updated_at = datetime.utcnow()
+    case.updated_at = _utc_now()
 
     _save_version(session, case_id, "marked_executed", {"status": case.status.value})
 
@@ -545,7 +716,7 @@ def submit_debrief(
         raise HTTPException(status_code=400, detail="Debrief solo disponible luego de ejecutar")
 
     case.debrief = debrief_in.model_dump()
-    case.updated_at = datetime.utcnow()
+    case.updated_at = _utc_now()
 
     _save_version(session, case_id, "debrief_submitted", case.debrief)
 
@@ -558,6 +729,7 @@ def submit_debrief(
 @app.post("/cases/{case_id}/close", response_model=FinalMemo)
 def close_case(
     case_id: int,
+    close_in: CloseCaseInput,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> FinalMemo:
@@ -576,8 +748,13 @@ def close_case(
     memo = build_final_memo(preparation, analysis, debrief)
 
     case.final_memo = memo
+    case.confidence_end = close_in.confidence_end
+    case.agreement_quality_result = close_in.agreement_quality_result
+    case.agreement_quality_relationship = close_in.agreement_quality_relationship
+    case.agreement_quality_sustainability = close_in.agreement_quality_sustainability
     case.status = CaseStatus.CERRADO
-    case.updated_at = datetime.utcnow()
+    case.closed_at = _utc_now()
+    case.updated_at = _utc_now()
 
     _save_version(session, case_id, "case_closed", memo)
 
@@ -608,3 +785,34 @@ def get_versions(
     _get_case_for_user(session, case_id, current_user)
     statement = select(CaseVersion).where(CaseVersion.case_id == case_id).order_by(CaseVersion.created_at.asc())
     return list(session.exec(statement).all())
+
+
+@app.get("/metrics/me", response_model=StudentMetricsSummary)
+def get_my_metrics(
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> StudentMetricsSummary:
+    statement = select(Case)
+    if current_user.role != UserRole.ADMIN:
+        statement = statement.where(Case.owner_user_id == current_user.id)
+    cases = list(session.exec(statement).all())
+    summary = _build_metrics_summary(cases)
+    return StudentMetricsSummary(**summary)
+
+
+@app.get("/admin/metrics/anonymous", response_model=AdminAnonymousMetricsSummary)
+def get_admin_anonymous_metrics(
+    cohort_id: int | None = None,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> AdminAnonymousMetricsSummary:
+    _require_admin(current_user)
+
+    statement = select(Case)
+    if cohort_id is not None:
+        statement = statement.where(Case.cohort_id == cohort_id)
+
+    cases = list(session.exec(statement).all())
+    summary = _build_metrics_summary(cases, cohort_id=cohort_id)
+    summary["active_students_with_cases"] = len({item.owner_user_id for item in cases if item.owner_user_id is not None})
+    return AdminAnonymousMetricsSummary(**summary)

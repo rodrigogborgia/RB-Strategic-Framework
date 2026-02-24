@@ -24,6 +24,12 @@ def _ensure_case_columns() -> None:
             "cohort_id": "INTEGER",
             "origin": "VARCHAR(20) NOT NULL DEFAULT 'sparring'",
             "is_read_only": "BOOLEAN NOT NULL DEFAULT 0",
+            "confidence_start": "INTEGER",
+            "confidence_end": "INTEGER",
+            "agreement_quality_result": "INTEGER",
+            "agreement_quality_relationship": "INTEGER",
+            "agreement_quality_sustainability": "INTEGER",
+            "closed_at": "DATETIME",
         }
 
         for col_name, col_type in migration_columns.items():
@@ -42,9 +48,32 @@ def _ensure_case_columns() -> None:
         )
 
 
+def _ensure_leader_evaluation_columns() -> None:
+    with engine.begin() as conn:
+        table_exists = conn.execute(
+            text("SELECT name FROM sqlite_master WHERE type='table' AND name='leaderevaluation'")
+        ).first()
+        if not table_exists:
+            return
+
+        existing_columns = {
+            row[1]
+            for row in conn.execute(text("PRAGMA table_info('leaderevaluation')")).fetchall()
+        }
+
+        migration_columns = {
+            "follow_up_date": "DATETIME",
+        }
+
+        for col_name, col_type in migration_columns.items():
+            if col_name not in existing_columns:
+                conn.execute(text(f"ALTER TABLE 'leaderevaluation' ADD COLUMN {col_name} {col_type}"))
+
+
 def init_db() -> None:
     SQLModel.metadata.create_all(engine)
     _ensure_case_columns()
+    _ensure_leader_evaluation_columns()
 
 
 def get_session():

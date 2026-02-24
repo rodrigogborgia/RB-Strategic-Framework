@@ -116,6 +116,13 @@ export interface CaseListItem {
   status: CaseStatus;
   clarity_score: number;
   inconsistency_count: number;
+  created_at: string;
+  closed_at: string | null;
+  confidence_start: number | null;
+  confidence_end: number | null;
+  agreement_quality_result: number | null;
+  agreement_quality_relationship: number | null;
+  agreement_quality_sustainability: number | null;
 }
 
 export interface CaseRead extends CaseListItem {
@@ -123,6 +130,55 @@ export interface CaseRead extends CaseListItem {
   analysis: Partial<AnalysisOutput>;
   debrief: Partial<DebriefInput>;
   final_memo: Partial<FinalMemo>;
+}
+
+export interface CloseCaseInput {
+  confidence_end: number;
+  agreement_quality_result: number;
+  agreement_quality_relationship: number;
+  agreement_quality_sustainability: number;
+}
+
+export interface MetricsTrendPoint {
+  period: string;
+  confidence_delta_avg: number;
+  cases_count: number;
+}
+
+export interface StudentMetricsSummary {
+  cases_total: number;
+  cases_closed: number;
+  close_rate: number;
+  cycle_days_avg: number | null;
+  agreement_quality_avg: number | null;
+  confidence_delta_avg: number | null;
+  confidence_delta_trend: MetricsTrendPoint[];
+}
+
+export interface AdminAnonymousMetricsSummary extends StudentMetricsSummary {
+  cohort_id: number | null;
+  active_students_with_cases: number;
+}
+
+export interface LeaderEvaluationCreate {
+  target_user_id: number;
+  cohort_id: number | null;
+  follow_up_date: string | null;
+  period_label?: string | null;
+  preparation_score: number;
+  execution_score: number;
+  collaboration_score: number;
+  autonomy_score: number;
+  confidence_score: number;
+  summary_note: string;
+  next_action: string;
+}
+
+export interface LeaderEvaluationRead extends LeaderEvaluationCreate {
+  id: number;
+  evaluator_user_id: number;
+  period_label: string;
+  created_at: string;
 }
 
 export interface CaseTemplate {
