@@ -92,4 +92,4 @@ jobs:
             sudo systemctl restart backend.service
             cd frontend
             npm ci
-            npm run build
+            VITE_API_URL=https://app.rodrigoborgia.com npm run build
