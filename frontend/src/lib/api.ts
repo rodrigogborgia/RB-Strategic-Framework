@@ -57,14 +57,14 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
 export const api = {
   login: (email: string, password: string) =>
-    request<TokenResponse>("/auth/login", {
+    request<TokenResponse>("/api/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
     }),
-  me: () => request<UserProfile>("/auth/me"),
-  adminListUsers: () => request<AdminUserRead[]>("/admin/users"),
+  me: () => request<UserProfile>("/api/auth/me"),
+  adminListUsers: () => request<AdminUserRead[]>("/api/admin/users"),
   adminCreateUser: (payload: { email: string; password: string; full_name: string; role: "admin" | "student" }) =>
-    request<AdminUserRead>("/admin/users", {
+    request<AdminUserRead>("/api/admin/users", {
       method: "POST",
       body: JSON.stringify(payload),
     }),
