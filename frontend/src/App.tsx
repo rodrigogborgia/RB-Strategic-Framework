@@ -1131,7 +1131,7 @@ function App() {
                   <p className="small" style={{ marginTop: 8 }}>
                     Alumnos activos con casos: {adminAnonMetrics.active_students_with_cases}
                   </p>
-                  <p className="small">Próximo ritual sugerido (60 min): {nextRitualDateLabel}</p>
+                  <p className="small">Próximo seguimiento sugerido (60 min): {nextRitualDateLabel}</p>
                 </div>
               )}
             </div>
@@ -1310,7 +1310,7 @@ function App() {
 
             <div className="card">
               <div className="section-header" onClick={() => toggleTeacherSection("ritual")}>
-                <h2>Ritual 30 días</h2>
+                <h2>Seguimiento 30 días</h2>
                 <button className="secondary" type="button">
                   {teacherSections.ritual ? "Contraer" : "Expandir"}
                 </button>
@@ -1406,7 +1406,7 @@ function App() {
                 </ul>
               </div>
             )}
-            <p className="small">Próximo ritual de seguimiento sugerido: {nextRitualDateLabel}</p>
+            <p className="small">Próximo encuentro de seguimiento sugerido: {nextRitualDateLabel}</p>
           </div>
         )}
 

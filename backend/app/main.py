@@ -242,12 +242,12 @@ def _build_metrics_summary(cases: list[Case], cohort_id: int | None = None) -> d
     }
 
 
-@app.get("/health")
+@app.get("/api/health")
 def health_check() -> dict:
     return {"ok": True}
 
 
-@app.post("/auth/login", response_model=TokenResponse)
+@app.post("/api/auth/login", response_model=TokenResponse)
 def login(payload: LoginInput, session: Session = Depends(get_session)) -> TokenResponse:
     statement = select(User).where(User.email == payload.email)
     user = session.exec(statement).first()
@@ -258,7 +258,7 @@ def login(payload: LoginInput, session: Session = Depends(get_session)) -> Token
     return TokenResponse(access_token=token, user=_to_user_profile(session, user))
 
 
-@app.get("/auth/me", response_model=UserProfile)
+@app.get("/api/auth/me", response_model=UserProfile)
 def me(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
@@ -266,7 +266,7 @@ def me(
     return _to_user_profile(session, current_user)
 
 
-@app.get("/admin/users", response_model=list[AdminUserRead])
+@app.get("/api/admin/users", response_model=list[AdminUserRead])
 def admin_list_users(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
@@ -276,7 +276,7 @@ def admin_list_users(
     return list(session.exec(statement).all())
 
 
-@app.post("/admin/users", response_model=AdminUserRead)
+@app.post("/api/admin/users", response_model=AdminUserRead)
 def admin_create_user(
     payload: AdminUserCreate,
     session: Session = Depends(get_session),
@@ -300,7 +300,7 @@ def admin_create_user(
     return user
 
 
-@app.get("/admin/cohorts", response_model=list[CohortRead])
+@app.get("/api/admin/cohorts", response_model=list[CohortRead])
 def admin_list_cohorts(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
@@ -310,7 +310,7 @@ def admin_list_cohorts(
     return list(session.exec(statement).all())
 
 
-@app.post("/admin/cohorts", response_model=CohortRead)
+@app.post("/api/admin/cohorts", response_model=CohortRead)
 def admin_create_cohort(
     payload: CohortCreate,
     session: Session = Depends(get_session),
@@ -329,7 +329,7 @@ def admin_create_cohort(
     return cohort
 
 
-@app.patch("/admin/cohorts/{cohort_id}", response_model=CohortRead)
+@app.patch("/api/admin/cohorts/{cohort_id}", response_model=CohortRead)
 def admin_update_cohort(
     cohort_id: int,
     payload: CohortUpdate,
@@ -351,7 +351,7 @@ def admin_update_cohort(
     return cohort
 
 
-@app.post("/admin/cohorts/{cohort_id}/members")
+@app.post("/api/admin/cohorts/{cohort_id}/members")
 def admin_add_cohort_members(
     cohort_id: int,
     payload: CohortMembershipAdd,
@@ -385,7 +385,7 @@ def admin_add_cohort_members(
     return {"ok": True, "added": added}
 
 
-@app.delete("/admin/cohorts/{cohort_id}/members/{user_id}")
+@app.delete("/api/admin/cohorts/{cohort_id}/members/{user_id}")
 def admin_remove_cohort_member(
     cohort_id: int,
     user_id: int,
@@ -409,7 +409,7 @@ def admin_remove_cohort_member(
     return {"ok": True}
 
 
-@app.get("/admin/cohorts/{cohort_id}/members", response_model=list[AdminUserRead])
+@app.get("/api/admin/cohorts/{cohort_id}/members", response_model=list[AdminUserRead])
 def admin_list_cohort_members(
     cohort_id: int,
     session: Session = Depends(get_session),
@@ -430,7 +430,7 @@ def admin_list_cohort_members(
     return list(session.exec(statement).all())
 
 
-@app.post("/admin/leader-evaluations", response_model=LeaderEvaluationRead)
+@app.post("/api/admin/leader-evaluations", response_model=LeaderEvaluationRead)
 def admin_create_leader_evaluation(
     payload: LeaderEvaluationCreate,
     session: Session = Depends(get_session),
@@ -474,7 +474,7 @@ def admin_create_leader_evaluation(
     return evaluation
 
 
-@app.get("/admin/leader-evaluations", response_model=list[LeaderEvaluationRead])
+@app.get("/api/admin/leader-evaluations", response_model=list[LeaderEvaluationRead])
 def admin_list_leader_evaluations(
     target_user_id: int | None = None,
     cohort_id: int | None = None,
@@ -496,7 +496,7 @@ def admin_list_leader_evaluations(
     return list(session.exec(statement).all())
 
 
-@app.get("/leader-evaluations/me", response_model=list[LeaderEvaluationRead])
+@app.get("/api/leader-evaluations/me", response_model=list[LeaderEvaluationRead])
 def list_my_leader_evaluations(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
@@ -509,7 +509,7 @@ def list_my_leader_evaluations(
     return list(session.exec(statement).all())
 
 
-@app.post("/cases", response_model=CaseRead)
+@app.post("/api/cases", response_model=CaseRead)
 def create_case(
     case_in: CaseCreate,
     session: Session = Depends(get_session),
@@ -532,7 +532,7 @@ def create_case(
     return case
 
 
-@app.get("/cases", response_model=list[CaseListItem])
+@app.get("/api/cases", response_model=list[CaseListItem])
 def list_cases(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
@@ -544,7 +544,7 @@ def list_cases(
     return list(session.exec(statement).all())
 
 
-@app.get("/case-templates", response_model=list[CaseTemplate])
+@app.get("/api/case-templates", response_model=list[CaseTemplate])
 def list_case_templates(current_user: User = Depends(get_current_user)) -> list[CaseTemplate]:
     _ = current_user
     return [
@@ -558,7 +558,7 @@ def list_case_templates(current_user: User = Depends(get_current_user)) -> list[
     ]
 
 
-@app.post("/cases/from-template/{template_id}", response_model=CaseRead)
+@app.post("/api/cases/from-template/{template_id}", response_model=CaseRead)
 def create_case_from_template(
     template_id: str,
     payload: CaseFromTemplateCreate | None = None,
@@ -597,7 +597,7 @@ def create_case_from_template(
     return case
 
 
-@app.get("/cases/{case_id}", response_model=CaseRead)
+@app.get("/api/cases/{case_id}", response_model=CaseRead)
 def get_case(
     case_id: int,
     session: Session = Depends(get_session),
@@ -606,7 +606,7 @@ def get_case(
     return _get_case_for_user(session, case_id, current_user)
 
 
-@app.delete("/cases/{case_id}")
+@app.delete("/api/cases/{case_id}")
 def delete_case(
     case_id: int,
     session: Session = Depends(get_session),
@@ -624,7 +624,7 @@ def delete_case(
     return {"ok": True}
 
 
-@app.put("/cases/{case_id}/preparation", response_model=CaseRead)
+@app.put("/api/cases/{case_id}/preparation", response_model=CaseRead)
 def upsert_preparation(
     case_id: int,
     preparation: PreparationInput,
@@ -647,7 +647,7 @@ def upsert_preparation(
     return case
 
 
-@app.post("/cases/{case_id}/analyze", response_model=AnalysisOutput)
+@app.post("/api/cases/{case_id}/analyze", response_model=AnalysisOutput)
 def analyze_case(
     case_id: int,
     session: Session = Depends(get_session),
@@ -683,7 +683,7 @@ def analyze_case(
     return analysis
 
 
-@app.post("/cases/{case_id}/execute", response_model=CaseRead)
+@app.post("/api/cases/{case_id}/execute", response_model=CaseRead)
 def mark_executed(
     case_id: int,
     session: Session = Depends(get_session),
@@ -704,7 +704,7 @@ def mark_executed(
     return case
 
 
-@app.put("/cases/{case_id}/debrief", response_model=CaseRead)
+@app.put("/api/cases/{case_id}/debrief", response_model=CaseRead)
 def submit_debrief(
     case_id: int,
     debrief_in: DebriefInput,
@@ -726,7 +726,7 @@ def submit_debrief(
     return case
 
 
-@app.post("/cases/{case_id}/close", response_model=FinalMemo)
+@app.post("/api/cases/{case_id}/close", response_model=FinalMemo)
 def close_case(
     case_id: int,
     close_in: CloseCaseInput,
@@ -764,7 +764,7 @@ def close_case(
     return FinalMemo.model_validate(memo)
 
 
-@app.get("/cases/{case_id}/memo", response_model=FinalMemo)
+@app.get("/api/cases/{case_id}/memo", response_model=FinalMemo)
 def get_memo(
     case_id: int,
     session: Session = Depends(get_session),
