@@ -210,7 +210,7 @@ def test_metrics_me_returns_confidence_and_cycle(monkeypatch, tmp_path: Path):
 
     _create_case_lifecycle(client, admin_token)
 
-    metrics_response = client.get("/metrics/me", headers=_auth_headers(admin_token))
+    metrics_response = client.get("api/metrics/me", headers=_auth_headers(admin_token))
     assert metrics_response.status_code == 200
     payload = metrics_response.json()
 
