@@ -776,7 +776,7 @@ def get_memo(
     return FinalMemo.model_validate(case.final_memo)
 
 
-@app.get("/cases/{case_id}/versions")
+@app.get("/api/cases/{case_id}/versions")
 def get_versions(
     case_id: int,
     session: Session = Depends(get_session),
@@ -787,7 +787,7 @@ def get_versions(
     return list(session.exec(statement).all())
 
 
-@app.get("/metrics/me", response_model=StudentMetricsSummary)
+@app.get("/api/metrics/me", response_model=StudentMetricsSummary)
 def get_my_metrics(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
@@ -800,7 +800,7 @@ def get_my_metrics(
     return StudentMetricsSummary(**summary)
 
 
-@app.get("/admin/metrics/anonymous", response_model=AdminAnonymousMetricsSummary)
+@app.get("/api/admin/metrics/anonymous", response_model=AdminAnonymousMetricsSummary)
 def get_admin_anonymous_metrics(
     cohort_id: int | None = None,
     session: Session = Depends(get_session),
