@@ -52,15 +52,15 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     try {
       body = await response.json();
     } catch (err) {
-      throw new Error("La respuesta de la API no es JSON válido. Puede que el backend esté caído o la ruta sea incorrecta.");
+      throw new Error(`La respuesta de la API no es JSON válido. Path: ${path}, Método: ${options?.method || 'GET'}. Puede que el backend esté caído o la ruta sea incorrecta.`);
     }
-    throw new Error(body.detail ?? "Error en la API");
+    throw new Error(body.detail ?? `Error en la API. Path: ${path}, Método: ${options?.method || 'GET'}`);
   }
 
   try {
     return await response.json() as Promise<T>;
   } catch (err) {
-    throw new Error("La respuesta de la API no es JSON válido. Puede que el backend esté caído o la ruta sea incorrecta.");
+    throw new Error(`La respuesta de la API no es JSON válido. Path: ${path}, Método: ${options?.method || 'GET'}. Puede que el backend esté caído o la ruta sea incorrecta.`);
   }
 }
 
