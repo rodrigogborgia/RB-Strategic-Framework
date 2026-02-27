@@ -65,7 +65,7 @@ VALID_DEBRIEF = {
 
 
 def _login(client: TestClient, email: str, password: str) -> str:
-    response = client.post("/auth/login", json={"email": email, "password": password})
+    response = client.post("/api/auth/login", json={"email": email, "password": password})
     assert response.status_code == 200, response.text
     return response.json()["access_token"]
 
@@ -76,7 +76,7 @@ def _auth_headers(token: str) -> dict[str, str]:
 
 def _create_case_lifecycle(client: TestClient, token: str) -> int:
     case_response = client.post(
-        "/cases",
+        "/api/cases",
         json={"title": "Caso métrico", "mode": "curso", "confidence_start": 6},
         headers=_auth_headers(token),
     )
@@ -84,27 +84,27 @@ def _create_case_lifecycle(client: TestClient, token: str) -> int:
     case_id = case_response.json()["id"]
 
     prep_response = client.put(
-        f"/cases/{case_id}/preparation",
+        f"/api/cases/{case_id}/preparation",
         json=REQUIRED_PREPARATION,
         headers=_auth_headers(token),
     )
     assert prep_response.status_code == 200, prep_response.text
 
-    analyze_response = client.post(f"/cases/{case_id}/analyze", headers=_auth_headers(token))
+    analyze_response = client.post(f"/api/cases/{case_id}/analyze", headers=_auth_headers(token))
     assert analyze_response.status_code == 200, analyze_response.text
 
-    execute_response = client.post(f"/cases/{case_id}/execute", headers=_auth_headers(token))
+    execute_response = client.post(f"/api/cases/{case_id}/execute", headers=_auth_headers(token))
     assert execute_response.status_code == 200, execute_response.text
 
     debrief_response = client.put(
-        f"/cases/{case_id}/debrief",
+        f"/api/cases/{case_id}/debrief",
         json=VALID_DEBRIEF,
         headers=_auth_headers(token),
     )
     assert debrief_response.status_code == 200, debrief_response.text
 
     close_response = client.post(
-        f"/cases/{case_id}/close",
+        f"/api/cases/{case_id}/close",
         json={
             "confidence_end": 8,
             "agreement_quality_result": 4,
@@ -125,7 +125,7 @@ def _create_student(client: TestClient, admin_token: str, idx: int = 1) -> dict:
         "full_name": f"Student {idx}",
         "role": "student",
     }
-    response = client.post("/admin/users", json=payload, headers=_auth_headers(admin_token))
+    response = client.post("/api/admin/users", json=payload, headers=_auth_headers(admin_token))
     assert response.status_code == 200, response.text
     return response.json()
 
@@ -137,7 +137,7 @@ def _create_cohort(client: TestClient, admin_token: str, idx: int = 1) -> dict:
         "end_date": "2026-12-31T23:59:59Z",
         "status": "active",
     }
-    response = client.post("/admin/cohorts", json=payload, headers=_auth_headers(admin_token))
+    response = client.post("/api/admin/cohorts", json=payload, headers=_auth_headers(admin_token))
     assert response.status_code == 200, response.text
     return response.json()
 
@@ -177,7 +177,7 @@ def _build_test_client(tmp_path: Path, monkeypatch) -> TestClient:
 def test_health_and_bootstrap_login(monkeypatch, tmp_path: Path):
     client = _build_test_client(tmp_path, monkeypatch)
 
-    health = client.get("/health")
+    health = client.get("/api/health")
     assert health.status_code == 200
     assert health.json() == {"ok": True}
 
@@ -191,7 +191,7 @@ def test_case_lifecycle_persists_metrics(monkeypatch, tmp_path: Path):
 
     case_id = _create_case_lifecycle(client, admin_token)
 
-    case_response = client.get(f"/cases/{case_id}", headers=_auth_headers(admin_token))
+    case_response = client.get(f"/api/cases/{case_id}", headers=_auth_headers(admin_token))
     assert case_response.status_code == 200
     case_data = case_response.json()
 
@@ -229,7 +229,7 @@ def test_admin_anonymous_metrics_endpoint(monkeypatch, tmp_path: Path):
 
     _create_case_lifecycle(client, admin_token)
 
-    metrics_response = client.get("/admin/metrics/anonymous", headers=_auth_headers(admin_token))
+    metrics_response = client.get("/api/admin/metrics/anonymous", headers=_auth_headers(admin_token))
     assert metrics_response.status_code == 200
     payload = metrics_response.json()
 
@@ -254,14 +254,14 @@ def test_leader_evaluation_admin_create_and_student_read(monkeypatch, tmp_path: 
     }
 
     create_response = client.post(
-        "/admin/leader-evaluations",
+        "/api/admin/leader-evaluations",
         json=eval_payload,
         headers=_auth_headers(admin_token),
     )
     assert create_response.status_code == 200, create_response.text
 
     student_token = _login(client, student["email"], "student1234")
-    me_response = client.get("/leader-evaluations/me", headers=_auth_headers(student_token))
+    me_response = client.get("/api/leader-evaluations/me", headers=_auth_headers(student_token))
     assert me_response.status_code == 200
     items = me_response.json()
     assert len(items) == 1
@@ -276,7 +276,7 @@ def test_student_cannot_access_admin_leader_evaluations(monkeypatch, tmp_path: P
     student_token = _login(client, student["email"], "student1234")
 
     post_response = client.post(
-        "/admin/leader-evaluations",
+        "/api/admin/leader-evaluations",
         json={
             "target_user_id": student["id"],
             "follow_up_date": "2026-03-01T00:00:00Z",
@@ -287,7 +287,7 @@ def test_student_cannot_access_admin_leader_evaluations(monkeypatch, tmp_path: P
     )
     assert post_response.status_code == 403
 
-    get_response = client.get("/admin/leader-evaluations", headers=_auth_headers(student_token))
+    get_response = client.get("/api/admin/leader-evaluations", headers=_auth_headers(student_token))
     assert get_response.status_code == 403
 
 
@@ -296,19 +296,19 @@ def test_close_case_rejects_invalid_metrics(monkeypatch, tmp_path: Path):
     admin_token = _login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
 
     case_response = client.post(
-        "/cases",
+        "/api/cases",
         json={"title": "Caso inválido cierre", "mode": "curso", "confidence_start": 5},
         headers=_auth_headers(admin_token),
     )
     case_id = case_response.json()["id"]
 
-    client.put(f"/cases/{case_id}/preparation", json=REQUIRED_PREPARATION, headers=_auth_headers(admin_token))
-    client.post(f"/cases/{case_id}/analyze", headers=_auth_headers(admin_token))
-    client.post(f"/cases/{case_id}/execute", headers=_auth_headers(admin_token))
-    client.put(f"/cases/{case_id}/debrief", json=VALID_DEBRIEF, headers=_auth_headers(admin_token))
+    client.put(f"/api/cases/{case_id}/preparation", json=REQUIRED_PREPARATION, headers=_auth_headers(admin_token))
+    client.post(f"/api/cases/{case_id}/analyze", headers=_auth_headers(admin_token))
+    client.post(f"/api/cases/{case_id}/execute", headers=_auth_headers(admin_token))
+    client.put(f"/api/cases/{case_id}/debrief", json=VALID_DEBRIEF, headers=_auth_headers(admin_token))
 
     close_response = client.post(
-        f"/cases/{case_id}/close",
+        f"/api/cases/{case_id}/close",
         json={
             "confidence_end": 11,
             "agreement_quality_result": 4,
@@ -323,10 +323,10 @@ def test_close_case_rejects_invalid_metrics(monkeypatch, tmp_path: Path):
 def test_unauthenticated_requests_are_blocked(monkeypatch, tmp_path: Path):
     client = _build_test_client(tmp_path, monkeypatch)
 
-    me_response = client.get("/auth/me")
+    me_response = client.get("/api/auth/me")
     assert me_response.status_code == 401
 
-    cases_response = client.get("/cases")
+    cases_response = client.get("/api/cases")
     assert cases_response.status_code == 401
 
 
@@ -341,20 +341,20 @@ def test_case_ownership_is_enforced_between_students(monkeypatch, tmp_path: Path
     token_b = _login(client, student_b["email"], "student1234")
 
     create_case_response = client.post(
-        "/cases",
+        "/api/cases",
         json={"title": "Caso privado student A", "mode": "curso", "confidence_start": 7},
         headers=_auth_headers(token_a),
     )
     assert create_case_response.status_code == 200
     case_id = create_case_response.json()["id"]
 
-    unauthorized_read = client.get(f"/cases/{case_id}", headers=_auth_headers(token_b))
+    unauthorized_read = client.get(f"/api/cases/{case_id}", headers=_auth_headers(token_b))
     assert unauthorized_read.status_code == 403
 
-    unauthorized_delete = client.delete(f"/cases/{case_id}", headers=_auth_headers(token_b))
+    unauthorized_delete = client.delete(f"/api/cases/{case_id}", headers=_auth_headers(token_b))
     assert unauthorized_delete.status_code == 403
 
-    admin_read = client.get(f"/cases/{case_id}", headers=_auth_headers(admin_token))
+    admin_read = client.get(f"/api/cases/{case_id}", headers=_auth_headers(admin_token))
     assert admin_read.status_code == 200
 
 
@@ -365,7 +365,7 @@ def test_non_admin_cannot_create_admin_user(monkeypatch, tmp_path: Path):
     student_token = _login(client, student["email"], "student1234")
 
     response = client.post(
-        "/admin/users",
+        "/api/admin/users",
         json={
             "email": "hacker@rb.local",
             "password": "12345678",
@@ -385,7 +385,7 @@ def test_cohort_membership_add_is_idempotent_and_remove_works(monkeypatch, tmp_p
     cohort = _create_cohort(client, admin_token, idx=30)
 
     first_add = client.post(
-        f"/admin/cohorts/{cohort['id']}/members",
+        f"/api/admin/cohorts/{cohort['id']}/members",
         json={"user_ids": [student["id"]]},
         headers=_auth_headers(admin_token),
     )
@@ -393,7 +393,7 @@ def test_cohort_membership_add_is_idempotent_and_remove_works(monkeypatch, tmp_p
     assert first_add.json()["added"] == 1
 
     second_add = client.post(
-        f"/admin/cohorts/{cohort['id']}/members",
+        f"/api/admin/cohorts/{cohort['id']}/members",
         json={"user_ids": [student["id"]]},
         headers=_auth_headers(admin_token),
     )
@@ -401,21 +401,21 @@ def test_cohort_membership_add_is_idempotent_and_remove_works(monkeypatch, tmp_p
     assert second_add.json()["added"] == 0
 
     members_before = client.get(
-        f"/admin/cohorts/{cohort['id']}/members",
+        f"/api/admin/cohorts/{cohort['id']}/members",
         headers=_auth_headers(admin_token),
     )
     assert members_before.status_code == 200
     assert len(members_before.json()) == 1
 
     remove = client.delete(
-        f"/admin/cohorts/{cohort['id']}/members/{student['id']}",
+        f"/api/admin/cohorts/{cohort['id']}/members/{student['id']}",
         headers=_auth_headers(admin_token),
     )
     assert remove.status_code == 200
     assert remove.json()["ok"] is True
 
     members_after = client.get(
-        f"/admin/cohorts/{cohort['id']}/members",
+        f"/api/admin/cohorts/{cohort['id']}/members",
         headers=_auth_headers(admin_token),
     )
     assert members_after.status_code == 200
@@ -430,7 +430,7 @@ def test_case_template_origin_depends_on_active_cohort_membership(monkeypatch, t
     cohort = _create_cohort(client, admin_token, idx=40)
 
     add_membership = client.post(
-        f"/admin/cohorts/{cohort['id']}/members",
+        f"/api/admin/cohorts/{cohort['id']}/members",
         json={"user_ids": [student["id"]]},
         headers=_auth_headers(admin_token),
     )
@@ -438,12 +438,12 @@ def test_case_template_origin_depends_on_active_cohort_membership(monkeypatch, t
 
     student_token = _login(client, student["email"], "student1234")
 
-    templates_response = client.get("/case-templates", headers=_auth_headers(student_token))
+    templates_response = client.get("/api/case-templates", headers=_auth_headers(student_token))
     assert templates_response.status_code == 200
     template_id = templates_response.json()[0]["id"]
 
     from_template_live = client.post(
-        f"/cases/from-template/{template_id}",
+        f"/api/cases/from-template/{template_id}",
         json={"confidence_start": 6},
         headers=_auth_headers(student_token),
     )
@@ -458,13 +458,13 @@ def test_case_template_origin_depends_on_active_cohort_membership(monkeypatch, t
         assert live_entity.cohort_id == cohort["id"]
 
     remove_membership = client.delete(
-        f"/admin/cohorts/{cohort['id']}/members/{student['id']}",
+        f"/api/admin/cohorts/{cohort['id']}/members/{student['id']}",
         headers=_auth_headers(admin_token),
     )
     assert remove_membership.status_code == 200
 
     from_template_sparring = client.post(
-        f"/cases/from-template/{template_id}",
+        f"/api/cases/from-template/{template_id}",
         json={"confidence_start": 5},
         headers=_auth_headers(student_token),
     )
@@ -485,7 +485,7 @@ def test_leader_evaluation_rejects_invalid_period_label(monkeypatch, tmp_path: P
     student = _create_student(client, admin_token, idx=50)
 
     response = client.post(
-        "/admin/leader-evaluations",
+        "/api/admin/leader-evaluations",
         json={
             "target_user_id": student["id"],
             "period_label": "2026/03",
