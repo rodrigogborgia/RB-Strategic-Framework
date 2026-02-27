@@ -77,70 +77,70 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload),
     }),
-  adminListCohorts: () => request<CohortRead[]>("/admin/cohorts"),
+  adminListCohorts: () => request<CohortRead[]>("/api/admin/cohorts"),
   adminCreateCohort: (payload: { name: string; start_date: string; end_date: string; status: CohortStatus }) =>
-    request<CohortRead>("/admin/cohorts", {
+    request<CohortRead>("/api/admin/cohorts", {
       method: "POST",
       body: JSON.stringify(payload),
     }),
   adminAddCohortMembers: (cohortId: number, userIds: number[]) =>
-    request<{ ok: boolean; added: number }>(`/admin/cohorts/${cohortId}/members`, {
+    request<{ ok: boolean; added: number }>(`/api/admin/cohorts/${cohortId}/members`, {
       method: "POST",
       body: JSON.stringify({ user_ids: userIds }),
     }),
   adminListCohortMembers: (cohortId: number) =>
-    request<AdminUserRead[]>(`/admin/cohorts/${cohortId}/members`),
+    request<AdminUserRead[]>(`/api/admin/cohorts/${cohortId}/members`),
   adminRemoveCohortMember: (cohortId: number, userId: number) =>
-    request<{ ok: boolean }>(`/admin/cohorts/${cohortId}/members/${userId}`, {
+    request<{ ok: boolean }>(`/api/admin/cohorts/${cohortId}/members/${userId}`, {
       method: "DELETE",
     }),
-  listCaseTemplates: () => request<CaseTemplate[]>("/case-templates"),
-  listCases: () => request<CaseListItem[]>("/cases"),
-  getCase: (id: number) => request<CaseRead>(`/cases/${id}`),
+  listCaseTemplates: () => request<CaseTemplate[]>("/api/case-templates"),
+  listCases: () => request<CaseListItem[]>("/api/cases"),
+  getCase: (id: number) => request<CaseRead>(`/api/cases/${id}`),
   createCase: (title: string, mode: FeedbackMode, confidenceStart?: number) =>
-    request<CaseRead>("/cases", {
+    request<CaseRead>("/api/cases", {
       method: "POST",
       body: JSON.stringify({ title, mode, confidence_start: confidenceStart ?? null }),
     }),
   createCaseFromTemplate: (templateId: string, confidenceStart?: number) =>
-    request<CaseRead>(`/cases/from-template/${templateId}`, {
+    request<CaseRead>(`/api/cases/from-template/${templateId}`, {
       method: "POST",
       body: JSON.stringify({ confidence_start: confidenceStart ?? null }),
     }),
   deleteCase: (id: number) =>
-    request<{ ok: boolean }>(`/cases/${id}`, {
+    request<{ ok: boolean }>(`/api/cases/${id}`, {
       method: "DELETE",
     }),
   savePreparation: (id: number, payload: PreparationInput) =>
-    request<CaseRead>(`/cases/${id}/preparation`, {
+    request<CaseRead>(`/api/cases/${id}/preparation`, {
       method: "PUT",
       body: JSON.stringify(payload),
     }),
   analyzeCase: (id: number) =>
-    request<AnalysisOutput>(`/cases/${id}/analyze`, {
+    request<AnalysisOutput>(`/api/cases/${id}/analyze`, {
       method: "POST",
     }),
   markExecuted: (id: number) =>
-    request<CaseRead>(`/cases/${id}/execute`, {
+    request<CaseRead>(`/api/cases/${id}/execute`, {
       method: "POST",
     }),
   saveDebrief: (id: number, payload: DebriefInput) =>
-    request<CaseRead>(`/cases/${id}/debrief`, {
+    request<CaseRead>(`/api/cases/${id}/debrief`, {
       method: "PUT",
       body: JSON.stringify(payload),
     }),
   closeCase: (id: number, payload: CloseCaseInput) =>
-    request<FinalMemo>(`/cases/${id}/close`, {
+    request<FinalMemo>(`/api/cases/${id}/close`, {
       method: "POST",
       body: JSON.stringify(payload),
     }),
-  getMyMetrics: () => request<StudentMetricsSummary>("/metrics/me"),
+  getMyMetrics: () => request<StudentMetricsSummary>("/api/metrics/me"),
   getAdminAnonymousMetrics: (cohortId?: number | null) =>
     request<AdminAnonymousMetricsSummary>(
-      cohortId ? `/admin/metrics/anonymous?cohort_id=${cohortId}` : "/admin/metrics/anonymous",
+      cohortId ? `/api/admin/metrics/anonymous?cohort_id=${cohortId}` : "/api/admin/metrics/anonymous",
     ),
   adminCreateLeaderEvaluation: (payload: LeaderEvaluationCreate) =>
-    request<LeaderEvaluationRead>("/admin/leader-evaluations", {
+    request<LeaderEvaluationRead>("/api/admin/leader-evaluations", {
       method: "POST",
       body: JSON.stringify(payload),
     }),
@@ -150,7 +150,7 @@ export const api = {
     if (filters?.cohortId != null) params.set("cohort_id", String(filters.cohortId));
     if (filters?.periodLabel) params.set("period_label", filters.periodLabel);
     const suffix = params.toString() ? `?${params.toString()}` : "";
-    return request<LeaderEvaluationRead[]>(`/admin/leader-evaluations${suffix}`);
+    return request<LeaderEvaluationRead[]>(`/api/admin/leader-evaluations${suffix}`);
   },
-  listMyLeaderEvaluations: () => request<LeaderEvaluationRead[]>("/leader-evaluations/me"),
+  listMyLeaderEvaluations: () => request<LeaderEvaluationRead[]>("/api/leader-evaluations/me"),
 };
