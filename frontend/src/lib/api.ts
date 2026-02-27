@@ -48,11 +48,20 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   });
 
   if (!response.ok) {
-    const body = await response.json().catch(() => ({}));
+    let body;
+    try {
+      body = await response.json();
+    } catch (err) {
+      throw new Error("La respuesta de la API no es JSON válido. Puede que el backend esté caído o la ruta sea incorrecta.");
+    }
     throw new Error(body.detail ?? "Error en la API");
   }
 
-  return response.json() as Promise<T>;
+  try {
+    return await response.json() as Promise<T>;
+  } catch (err) {
+    throw new Error("La respuesta de la API no es JSON válido. Puede que el backend esté caído o la ruta sea incorrecta.");
+  }
 }
 
 export const api = {
