@@ -75,6 +75,7 @@ class CohortMembership(SQLModel, table=True):
     joined_at: datetime = Field(default_factory=utc_now)
     left_at: Optional[datetime] = None
     is_active: bool = Field(default=True)
+    expiry_date: Optional[datetime] = None  # Fecha de vencimiento de la membresía
 
 
 class Subscription(SQLModel, table=True):

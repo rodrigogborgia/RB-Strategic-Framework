@@ -19,7 +19,7 @@ import type {
   UserProfile,
 } from "./types";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const API_BASE = process.env.VITE_API_URL || "http://localhost:8000";
 const AUTH_TOKEN_KEY = "rb_auth_token";
 
 let authToken = localStorage.getItem(AUTH_TOKEN_KEY);
@@ -69,6 +69,11 @@ export const api = {
     request<TokenResponse>("/api/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
+    }),
+  adminUpdateCohortMembership: (cohortId: number, userId: number, payload: { is_active: boolean; expiry_date: string | null }) =>
+    request<{ ok: boolean }>(`/api/admin/cohorts/${cohortId}/members/${userId}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
     }),
   me: () => request<UserProfile>("/api/auth/me"),
   adminListUsers: () => request<AdminUserRead[]>("/api/admin/users"),

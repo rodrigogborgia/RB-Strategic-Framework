@@ -108,3 +108,22 @@ npm run dev
 
 Frontend: http://localhost:5173
 Backend: http://localhost:8000
+
+## Tests de integración y CI/CD
+
+Para validar la integración real entre frontend y backend antes de enviar cambios:
+
+```bash
+bash run-integration-tests.sh
+```
+
+Este script:
+- Verifica si el backend está activo en http://localhost:8000.
+- Si no está activo, lo inicia automáticamente.
+- Ejecuta los tests de backend (pytest).
+- Ejecuta los tests de frontend (jest).
+- Detiene el backend si fue iniciado por el script.
+
+En el pipeline de GitHub Actions, este script se ejecuta automáticamente en cada push a main, validando la integración antes del despliegue.
+
+**Recomendación:** Ejecuta este script localmente antes de cada commit/push para asegurar calidad y evitar errores en CI/CD.

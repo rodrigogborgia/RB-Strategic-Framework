@@ -1220,7 +1220,7 @@ function App() {
             </div>
 
             <div className="card">
-              <div className="section-header" onClick={() => toggleTeacherSection("users")}>
+              <div className="section-header" onClick={() => toggleTeacherSection("users")}> 
                 <h2>Usuarios</h2>
                 <button className="secondary" type="button">
                   {teacherSections.users ? "Contraer" : "Expandir"}
@@ -1235,6 +1235,42 @@ function App() {
                       {adminUsers.map((user) => (
                         <li key={user.id}>
                           {user.full_name || user.email} · {user.role} · {user.is_active ? "activo" : "inactivo"}
+                          {/* UI edición membresía */}
+                          <div style={{ marginTop: 8 }}>
+                            <label>
+                              Estado membresía:
+                              <input
+                                type="checkbox"
+                                checked={user.membership?.is_active ?? false}
+                                onChange={e => {
+                                  const newActive = e.target.checked;
+                                  // Lógica para actualizar estado en backend
+                                  api.adminUpdateCohortMembership(user.membership?.cohort_id!, user.id, {
+                                    is_active: newActive,
+                                    expiry_date: user.membership?.expiry_date ?? null,
+                                  }).then(() => {
+                                    // Actualizar UI si es necesario
+                                  });
+                                }}
+                              />
+                            </label>
+                            <label style={{ marginLeft: 16 }}>
+                              Fecha vencimiento:
+                              <input
+                                type="date"
+                                value={user.membership?.expiry_date ? user.membership.expiry_date.substring(0, 10) : ""}
+                                onChange={e => {
+                                  const newDate = e.target.value;
+                                  api.adminUpdateCohortMembership(user.membership?.cohort_id!, user.id, {
+                                    is_active: user.membership?.is_active ?? false,
+                                    expiry_date: newDate,
+                                  }).then(() => {
+                                    // Actualizar UI si es necesario
+                                  });
+                                }}
+                              />
+                            </label>
+                          </div>
                         </li>
                       ))}
                     </ul>

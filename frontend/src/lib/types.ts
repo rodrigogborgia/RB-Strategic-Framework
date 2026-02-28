@@ -1,3 +1,10 @@
+export interface CohortMembership {
+  id: number;
+  user_id: number;
+  cohort_id: number;
+  is_active: boolean;
+  expiry_date: string | null;
+}
 export type CaseStatus =
   | "en_preparacion"
   | "preparado"

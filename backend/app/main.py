@@ -1,4 +1,6 @@
+
 from __future__ import annotations
+from fastapi import Body
 
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
@@ -127,28 +129,62 @@ def _resolve_user_access(session: Session, user: User) -> dict:
         }
 
     now = _utc_now()
-    statement = (
+    # Buscar membresía activa en cohorte activa (modo clase)
+    statement_active = (
         select(CohortMembership, Cohort)
         .join(Cohort, CohortMembership.cohort_id == Cohort.id)
         .where(CohortMembership.user_id == user.id)
-        .where(CohortMembership.is_active == True)  # noqa: E712
+        .where(CohortMembership.is_active == True)
         .where(Cohort.status == CohortStatus.ACTIVE)
         .where(Cohort.start_date <= now)
         .where(Cohort.end_date >= now)
         .order_by(Cohort.start_date.desc())
     )
-    active = session.exec(statement).first()
+    active = session.exec(statement_active).first()
     if active:
         membership, cohort = active
-        _ = membership
-        return {
-            "effective_mode": "sesion_en_vivo",
-            "can_access_live_session": True,
-            "can_access_sparring": True,
-            "active_cohort_id": cohort.id,
-            "active_cohort_name": cohort.name,
-        }
+        # Si la membresía tiene fecha de vencimiento y está vencida, marcar como inactiva
+        if membership.expiry_date and membership.expiry_date < now:
+            membership.is_active = False
+            membership.left_at = now
+            session.add(membership)
+            session.commit()
+        else:
+            return {
+                "effective_mode": "sesion_en_vivo",
+                "can_access_live_session": True,
+                "can_access_sparring": True,
+                "active_cohort_id": cohort.id,
+                "active_cohort_name": cohort.name,
+            }
 
+    # Buscar membresía activa en cohorte finalizada (modo sparring)
+    statement_finished = (
+        select(CohortMembership, Cohort)
+        .join(Cohort, CohortMembership.cohort_id == Cohort.id)
+        .where(CohortMembership.user_id == user.id)
+        .where(CohortMembership.is_active == True)
+        .where(Cohort.status == CohortStatus.FINISHED)
+        .order_by(Cohort.end_date.desc())
+    )
+    finished = session.exec(statement_finished).first()
+    if finished:
+        membership, cohort = finished
+        if membership.expiry_date and membership.expiry_date < now:
+            membership.is_active = False
+            membership.left_at = now
+            session.add(membership)
+            session.commit()
+        else:
+            return {
+                "effective_mode": "sparring",
+                "can_access_live_session": False,
+                "can_access_sparring": True,
+                "active_cohort_id": cohort.id,
+                "active_cohort_name": cohort.name,
+            }
+
+    # Caso por defecto: sin membresía activa
     return {
         "effective_mode": "sparring",
         "can_access_live_session": False,
@@ -246,6 +282,32 @@ def _build_metrics_summary(cases: list[Case], cohort_id: int | None = None) -> d
 def health_check() -> dict:
     return {"ok": True}
 
+@app.put("/api/admin/cohorts/{cohort_id}/members/{user_id}")
+def admin_update_cohort_member(
+    cohort_id: int,
+    user_id: int,
+    payload: dict = Body(...),
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    _require_admin(current_user)
+    membership = session.exec(
+        select(CohortMembership)
+        .where(CohortMembership.user_id == user_id)
+        .where(CohortMembership.cohort_id == cohort_id)
+    ).first()
+    if not membership:
+        raise HTTPException(status_code=404, detail="Membresía no encontrada")
+    # Actualizar campos
+    if "is_active" in payload:
+        membership.is_active = payload["is_active"]
+        if not payload["is_active"]:
+            membership.left_at = _utc_now()
+    if "expiry_date" in payload:
+        membership.expiry_date = payload["expiry_date"]
+    session.add(membership)
+    session.commit()
+    return {"ok": True}
 
 @app.post("/api/auth/login", response_model=TokenResponse)
 def login(payload: LoginInput, session: Session = Depends(get_session)) -> TokenResponse:
