@@ -1,12 +1,10 @@
+
 import { render, screen, fireEvent } from "@testing-library/react";
 import React from "react";
 import { api } from "../lib/api";
-jest.mock("../lib/api", () => {
-  const actualApi = jest.requireActual("../lib/api");
-  return {
-    ...actualApi,
-    adminCreateUser: jest.fn(),
-  };
+
+beforeEach(() => {
+  jest.spyOn(api, "adminCreateUser").mockImplementation(jest.fn());
 });
 
 test("crea un usuario nuevo", () => {

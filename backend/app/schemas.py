@@ -60,6 +60,17 @@ class AdminUserRead(BaseModel):
     is_active: bool
 
 
+class MembershipUserRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    email: str
+    full_name: str
+    role: UserRole
+    is_active: bool  # is_active del usuario
+    membership_active: bool  # is_active de la membresía
+
+
 class CohortCreate(BaseModel):
     name: str
     start_date: datetime

@@ -8,6 +8,10 @@ jest.mock("../lib/api", () => {
   };
 });
 
+beforeEach(() => {
+  jest.spyOn(api, "saveDebrief").mockImplementation(jest.fn());
+});
+
 test("guarda el debrief de un caso", () => {
   render(<div>
     <input placeholder="Resultado real" />

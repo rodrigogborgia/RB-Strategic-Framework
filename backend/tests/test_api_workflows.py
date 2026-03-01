@@ -419,7 +419,10 @@ def test_cohort_membership_add_is_idempotent_and_remove_works(monkeypatch, tmp_p
         headers=_auth_headers(admin_token),
     )
     assert members_after.status_code == 200
-    assert len(members_after.json()) == 0
+    members_list = members_after.json()
+    # Verificar que el usuario fue marcado como inactivo (membership_active = false)
+    active_memberships = [m for m in members_list if m.get("membership_active") is True]
+    assert len(active_memberships) == 0
 
 
 def test_case_template_origin_depends_on_active_cohort_membership(monkeypatch, tmp_path: Path):

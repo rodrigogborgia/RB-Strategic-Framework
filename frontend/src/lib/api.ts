@@ -49,12 +49,24 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
   if (!response.ok) {
     let body;
+    let rawText;
     try {
       body = await response.json();
     } catch (err) {
-      throw new Error(`La respuesta de la API no es JSON válido. Path: ${path}, Método: ${options?.method || 'GET'}. Puede que el backend esté caído o la ruta sea incorrecta.`);
+      rawText = await response.text();
+      console.error("No se pudo parsear el cuerpo de la respuesta como JSON:", err);
+      console.error("Respuesta RAW:", rawText);
+      console.error("Status:", response.status);
+      throw new Error(`La respuesta de la API no es JSON válido. Path: ${path}, Método: ${options?.method || 'GET'}. Puede que el backend esté caído o la ruta sea incorrecta. Status: ${response.status}. Respuesta RAW: ${rawText}`);
     }
-    throw new Error(body.detail ?? `Error en la API. Path: ${path}, Método: ${options?.method || 'GET'}`);
+    // Si la respuesta tiene error, mostrar el detalle
+    if (!response.ok) {
+      let errorDetail = body?.detail;
+      if (errorDetail && typeof errorDetail === "object") {
+        errorDetail = JSON.stringify(errorDetail);
+      }
+      throw new Error(`Error en la API. Path: ${path}, Método: ${options?.method || 'GET'}. Status: ${response.status}. Detalle: ${errorDetail}`);
+    }
   }
 
   try {
@@ -95,6 +107,8 @@ export const api = {
     }),
   adminListCohortMembers: (cohortId: number) =>
     request<AdminUserRead[]>(`/api/admin/cohorts/${cohortId}/members`),
+  adminGetCohortMember: (cohortId: number, userId: number) =>
+    request<{ id: number; user_id: number; cohort_id: number; joined_at: string; left_at: string | null; is_active: boolean; expiry_date: string | null }>(`/api/admin/cohorts/${cohortId}/members/${userId}`),
   adminRemoveCohortMember: (cohortId: number, userId: number) =>
     request<{ ok: boolean }>(`/api/admin/cohorts/${cohortId}/members/${userId}`, {
       method: "DELETE",

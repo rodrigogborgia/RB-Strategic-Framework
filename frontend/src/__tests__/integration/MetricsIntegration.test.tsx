@@ -1,11 +1,12 @@
-import { api } from "../../lib/api";
+import { api, setAuthToken } from "../../lib/api";
 
 describe("Integración visualización y métricas", () => {
   beforeAll(async () => {
     // Login admin y seteo de token
     const login = await api.login("admin@rb.local", "admin1234");
-    api.setAuthToken(login.access_token);
-    // ...existing code...
+    setAuthToken(login.access_token);
+  });
+
   let cohortId: number;
 
   beforeAll(async () => {

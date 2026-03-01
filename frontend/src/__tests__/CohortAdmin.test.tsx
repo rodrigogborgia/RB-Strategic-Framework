@@ -9,6 +9,10 @@ jest.mock("../lib/api", () => {
   };
 });
 
+beforeEach(() => {
+  jest.spyOn(api, "adminCreateCohort").mockImplementation(jest.fn());
+});
+
 test("crea una cohorte nueva", () => {
   render(<div>
     <input placeholder="Nombre cohorte" />

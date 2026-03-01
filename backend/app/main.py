@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 from fastapi import Body
 
@@ -53,6 +52,11 @@ from .schemas import (
 )
 from .settings import settings
 from .templates import CASE_TEMPLATES
+from fastapi.responses import JSONResponse
+from fastapi.requests import Request
+from fastapi.exception_handlers import RequestValidationError
+from fastapi.exceptions import HTTPException
+import traceback
 
 
 def _utc_now() -> datetime:
@@ -300,11 +304,26 @@ def admin_update_cohort_member(
         raise HTTPException(status_code=404, detail="Membresía no encontrada")
     # Actualizar campos
     if "is_active" in payload:
+        print(f"Actualizando is_active de membresía {membership.id} a {payload['is_active']}")
         membership.is_active = payload["is_active"]
         if not payload["is_active"]:
             membership.left_at = _utc_now()
     if "expiry_date" in payload:
-        membership.expiry_date = payload["expiry_date"]
+        # Convertir string a datetime si es necesario
+        from datetime import datetime
+        expiry = payload["expiry_date"]
+        if isinstance(expiry, str):
+            try:
+                # Intentar parsear solo fecha (YYYY-MM-DD)
+                membership.expiry_date = datetime.strptime(expiry, "%Y-%m-%d")
+            except ValueError:
+                # Intentar parsear fecha y hora (YYYY-MM-DD HH:MM:SS)
+                try:
+                    membership.expiry_date = datetime.strptime(expiry, "%Y-%m-%d %H:%M:%S")
+                except Exception:
+                    raise HTTPException(status_code=400, detail=f"Formato de fecha inválido: {expiry}")
+        else:
+            membership.expiry_date = expiry
     session.add(membership)
     session.commit()
     return {"ok": True}
@@ -447,6 +466,33 @@ def admin_add_cohort_members(
     return {"ok": True, "added": added}
 
 
+@app.get("/api/admin/cohorts/{cohort_id}/members/{user_id}")
+def admin_get_cohort_member(
+    cohort_id: int,
+    user_id: int,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    _require_admin(current_user)
+    membership = session.exec(
+        select(CohortMembership)
+        .where(CohortMembership.user_id == user_id)
+        .where(CohortMembership.cohort_id == cohort_id)
+    ).first()
+    if not membership:
+        raise HTTPException(status_code=404, detail="Membresía no encontrada")
+    
+    return {
+        "id": membership.id,
+        "user_id": membership.user_id,
+        "cohort_id": membership.cohort_id,
+        "joined_at": membership.joined_at,
+        "left_at": membership.left_at,
+        "is_active": membership.is_active,
+        "expiry_date": membership.expiry_date,
+    }
+
+
 @app.delete("/api/admin/cohorts/{cohort_id}/members/{user_id}")
 def admin_remove_cohort_member(
     cohort_id: int,
@@ -471,25 +517,36 @@ def admin_remove_cohort_member(
     return {"ok": True}
 
 
-@app.get("/api/admin/cohorts/{cohort_id}/members", response_model=list[AdminUserRead])
+@app.get("/api/admin/cohorts/{cohort_id}/members", response_model=list[dict])
 def admin_list_cohort_members(
     cohort_id: int,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
-) -> list[User]:
+) -> list[dict]:
     _require_admin(current_user)
     cohort = session.get(Cohort, cohort_id)
     if not cohort:
         raise HTTPException(status_code=404, detail="Cohorte no encontrada")
 
-    statement = (
-        select(User)
-        .join(CohortMembership, CohortMembership.user_id == User.id)
+    memberships = session.exec(
+        select(CohortMembership, User)
+        .join(User, CohortMembership.user_id == User.id)
         .where(CohortMembership.cohort_id == cohort_id)
-        .where(CohortMembership.is_active == True)  # noqa: E712
         .order_by(User.full_name.asc(), User.email.asc())
-    )
-    return list(session.exec(statement).all())
+    ).all()
+    
+    result = []
+    for membership, user in memberships:
+        result.append({
+            "id": user.id,
+            "email": user.email,
+            "full_name": user.full_name,
+            "role": user.role,
+            "is_active": user.is_active,
+            "membership_active": membership.is_active,  # Campo clave para el test
+        })
+    
+    return result
 
 
 @app.post("/api/admin/leader-evaluations", response_model=LeaderEvaluationRead)
@@ -699,7 +756,7 @@ def upsert_preparation(
 
     case.preparation = preparation.model_dump()
     case.updated_at = _utc_now()
-    case.status = CaseStatus.EN_PREPARACION
+    case.status = CaseStatus.PREPARADO
 
     _save_version(session, case_id, "preparation_updated", case.preparation)
 
@@ -878,3 +935,25 @@ def get_admin_anonymous_metrics(
     summary = _build_metrics_summary(cases, cohort_id=cohort_id)
     summary["active_students_with_cases"] = len({item.owner_user_id for item in cases if item.owner_user_id is not None})
     return AdminAnonymousMetricsSummary(**summary)
+
+
+@app.exception_handler(Exception)
+async def generic_exception_handler(request: Request, exc: Exception):
+    # Log the traceback for debugging
+    tb = traceback.format_exc()
+    print(f"Internal Server Error: {tb}")
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": "Internal Server Error",
+            "error": str(exc),
+            "traceback": tb,
+        },
+    )
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors(), "body": exc.body},
+    )

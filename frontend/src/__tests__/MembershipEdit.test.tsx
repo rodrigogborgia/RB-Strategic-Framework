@@ -6,6 +6,10 @@ import "@testing-library/jest-dom";
 jest.mock("../lib/api");
 (api.adminUpdateCohortMembership as jest.Mock) = jest.fn(() => Promise.resolve());
 
+beforeEach(() => {
+  jest.spyOn(api, "adminUpdateCohortMembership").mockImplementation(jest.fn());
+});
+
 const mockMembership = {
   id: 1,
   user_id: 2,

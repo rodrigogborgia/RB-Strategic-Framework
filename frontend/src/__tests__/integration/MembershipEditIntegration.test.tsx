@@ -1,11 +1,12 @@
-import { api } from "../../lib/api";
+import { api, setAuthToken } from "../../lib/api";
 
 describe("Integración edición de membresía", () => {
   beforeAll(async () => {
     // Login admin y seteo de token
     const login = await api.login("admin@rb.local", "admin1234");
-    api.setAuthToken(login.access_token);
-    // ...existing code...
+    setAuthToken(login.access_token);
+  });
+
   let userId: number;
   let cohortId: number;
 
@@ -26,6 +27,11 @@ describe("Integración edición de membresía", () => {
     });
     cohortId = cohort.id;
     await api.adminAddCohortMembers(cohortId, [userId]);
+    // Verificar que la membresía fue creada
+    const members = await api.adminListCohortMembers(cohortId);
+    console.log("Miembros tras creación:", members);
+    const member = members.find(u => u.id === userId);
+    expect(member).toBeDefined();
   });
 
   it("edita estado y fecha de membresía", async () => {
@@ -36,11 +42,12 @@ describe("Integración edición de membresía", () => {
     });
     expect(result.ok).toBe(true);
 
-    // Verificar cambios en backend
-    const members = await api.adminListCohortMembers(cohortId);
-    const member = members.find(u => u.id === userId);
-    expect(member).toBeDefined();
-    expect(member?.is_active).toBe(false);
-    // Si el endpoint devuelve la membresía, aquí se puede agregar la aserción de expiry_date
+    // Verificar cambios consultando la membresía directamente por ID
+    const membership = await api.adminGetCohortMember(cohortId, userId);
+    console.log("Membresía tras edición:", membership);
+    expect(membership).toBeDefined();
+    expect(membership.is_active).toBe(false);
+    // La fecha puede venir en formato ISO (2026-06-30T00:00:00), así que solo verificamos que empiece con la fecha esperada
+    expect(membership.expiry_date).toContain("2026-06-30");
   });
 });

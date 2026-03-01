@@ -9,6 +9,10 @@ jest.mock("../lib/api", () => {
   };
 });
 
+beforeEach(() => {
+  jest.spyOn(api, "savePreparation").mockImplementation(jest.fn());
+});
+
 test("guarda la preparación de un caso", () => {
   render(<div>
     <input placeholder="Objetivo explícito" />

@@ -2,6 +2,10 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import React from "react";
 import { api } from "../lib/api";
 
+beforeEach(() => {
+  jest.spyOn(api, "createCase").mockImplementation(jest.fn());
+});
+
 test("crea un caso nuevo", () => {
   render(<div>
     <input placeholder="Título" />

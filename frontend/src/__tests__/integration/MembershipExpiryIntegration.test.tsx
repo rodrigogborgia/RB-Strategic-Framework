@@ -1,11 +1,12 @@
-import { api } from "../../lib/api";
+import { api, setAuthToken } from "../../lib/api";
 
 describe("Integración desactivación automática de membresía por vencimiento", () => {
   beforeAll(async () => {
     // Login admin y seteo de token
     const login = await api.login("admin@rb.local", "admin1234");
-    api.setAuthToken(login.access_token);
-    // ...existing code...
+    setAuthToken(login.access_token);
+  });
+
   let userId: number;
   let cohortId: number;
 
@@ -26,6 +27,10 @@ describe("Integración desactivación automática de membresía por vencimiento"
     });
     cohortId = cohort.id;
     await api.adminAddCohortMembers(cohortId, [userId]);
+    // Verificar que la membresía fue creada
+    const members = await api.adminListCohortMembers(cohortId);
+    const member = members.find(u => u.id === userId);
+    expect(member).toBeDefined();
     // Setear fecha de vencimiento pasada
     await api.adminUpdateCohortMembership(cohortId, userId, {
       is_active: true,

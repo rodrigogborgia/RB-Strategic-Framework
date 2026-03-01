@@ -1,12 +1,12 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import React from "react";
-import { api } from "../../lib/api";
+import { api, setAuthToken } from "../../lib/api";
 
 describe("Integración usuario y cohorte", () => {
   beforeAll(async () => {
     // Login admin y seteo de token
     const login = await api.login("admin@rb.local", "admin1234");
-    api.setAuthToken(login.access_token);
+    setAuthToken(login.access_token);
   });
   let userId: number;
   let cohortId: number;
