@@ -1,8 +1,8 @@
 fastapi>=0.115.0
 uvicorn[standard]==0.41.0
 sqlmodel==0.0.37
-openai==2.24.0
-python-dotenv==1.2.1
+openai==1.102.0
+python-dotenv==1.2.2
 python-jose[cryptography]==3.5.0
 passlib==1.7.4
 pytest==9.0.2
