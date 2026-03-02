@@ -8,7 +8,7 @@ from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import Session, select
 
-from .analysis_engine import analyze_preparation, build_final_memo
+from .analysis_engine import analyze_preparation, analyze_debrief, build_final_memo
 from .auth import create_access_token, get_current_user, hash_password, verify_password
 from .db import engine, get_session, init_db
 from .models import (
@@ -536,16 +536,28 @@ def admin_list_cohort_members(
     ).all()
     
     result = []
+    now = _utc_now()
     for membership, user in memberships:
+        # Desactivar automáticamente membresías expiradas
+        if membership.expiry_date and membership.is_active:
+            # Convertir a timezone-aware si es necesario para comparar
+            expiry_dt = membership.expiry_date
+            if expiry_dt.tzinfo is None:
+                expiry_dt = expiry_dt.replace(tzinfo=UTC)
+            if expiry_dt < now:
+                membership.is_active = False
+                session.add(membership)
+        
         result.append({
             "id": user.id,
             "email": user.email,
             "full_name": user.full_name,
             "role": user.role,
-            "is_active": user.is_active,
-            "membership_active": membership.is_active,  # Campo clave para el test
+            "is_active": membership.is_active,  # Usar estado de la membresía, no del usuario
+            "membership_active": membership.is_active,  # Campo duplicado por compatibilidad
         })
     
+    session.commit()
     return result
 
 
@@ -791,7 +803,9 @@ def analyze_case(
     case.analysis = analysis.model_dump()
     case.inconsistency_count = len(analysis.inconsistencies)
     case.clarity_score = 100 - min(90, len(analysis.inconsistencies) * 20 + len(analysis.clarification_questions) * 10)
-    case.status = CaseStatus.PREPARADO
+    # Solo cambiar a PREPARADO si está EN_PREPARACION; mantener status actual en otros casos
+    if case.status == CaseStatus.EN_PREPARACION:
+        case.status = CaseStatus.PREPARADO
     case.updated_at = _utc_now()
 
     _save_version(session, case_id, "analysis_generated", {**case.analysis, "provider": provider_used})
@@ -837,6 +851,17 @@ def submit_debrief(
     case.debrief = debrief_in.model_dump()
     case.updated_at = _utc_now()
 
+    # Generar segundo análisis automático: Comparar preparación vs. ejecución
+    if case.preparation and case.analysis:
+        try:
+            preparation = PreparationInput.model_validate(case.preparation)
+            analysis = AnalysisOutput.model_validate(case.analysis)
+            debrief_analysis = analyze_debrief(preparation, analysis, debrief_in)
+            case.debrief_analysis = debrief_analysis
+        except Exception:
+            # Si falla el análisis, continuar sin él
+            pass
+
     _save_version(session, case_id, "debrief_submitted", case.debrief)
 
     session.add(case)
@@ -864,7 +889,7 @@ def close_case(
     analysis = AnalysisOutput.model_validate(case.analysis)
     debrief = DebriefInput.model_validate(case.debrief)
 
-    memo = build_final_memo(preparation, analysis, debrief)
+    memo = build_final_memo(preparation, analysis, debrief, case.debrief_analysis)
 
     case.final_memo = memo
     case.confidence_end = close_in.confidence_end

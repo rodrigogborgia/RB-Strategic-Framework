@@ -1,129 +1,137 @@
-# RB Strategic Framework (MVP)
+# RB Strategic Framework
 
-Aplicación web para disciplina de preparación estratégica en negociación.
+## Propósito
 
-## Stack
-- Backend: FastAPI + SQLModel + SQLite
-- Frontend: React + Vite + TypeScript
+Esta aplicación te ayuda a preparar negociaciones con rigor estratégico y a aprender de cada experiencia real. No es solo un template para organizar información: es un **sparring personal** que detecta incoherencias, te hace las preguntas difíciles antes de sentarte a negociar, y te guía para convertir cada caso en práctica deliberada.
 
-## Estructura
-- `backend/`: API, validaciones, estados del caso, análisis y memo final.
-- `frontend/`: interfaz de una sola pantalla para flujo completo del caso.
+El objetivo es que desarrolles disciplina de preparación y capacidad de autoevaluación honesta, pasando de comprensión conceptual a cambio observable de hábitos en negociación real.
 
-## Flujo implementado
-1. Crear caso (`curso` o `profesional`).
-	- También podés crear desde casos modelo precargados.
-2. Completar y guardar preparación (bloques obligatorios con límites).
-3. Analizar preparación (preguntas, incoherencias, sugerencias, nivel).
-4. Marcar caso como ejecutado.
-5. Cargar debrief obligatorio.
-6. Cerrar caso y generar memo ejecutivo final.
-7. Consultar histórico de versiones (`/cases/{id}/versions`).
+## Cómo la usa el estudiante: flujo de aprendizaje
+
+### 1. Crear caso
+Elegí el tipo de caso:
+- **Curso**: Para práctica académica durante un programa de formación
+- **Profesional**: Para negociaciones reales en tu contexto laboral
+
+Podés partir de cero o usar uno de los 7 casos modelo precargados para inspirarte o adaptar a tu contexto.
+
+### 2. Preparar (Primera entrada de datos)
+Completá los bloques de preparación estratégica con lo mínimo necesario:
+- **Contexto**: Tipo de negociación, nivel de impacto, tu relación con la contraparte
+- **Objetivo**: Objetivo explícito (lo que decís que querés) vs. objetivo real (lo que realmente querés)
+- **Poder y alternativas**: Tu MAAN, fortalezas relativas, punto de ruptura
+- **Estrategia**: ZOPA estimada, secuencia de concesiones, hipótesis sobre la contraparte
+- **Riesgo**: Tu variable emocional crítica, riesgo principal, señal clave a observar
+
+Si querés profundizar, abrí "campos avanzados" con preguntas adicionales.
+
+### 3. Analizar (Primer aprendizaje automático)
+El sistema revisa tu preparación y te devuelve:
+- **Preguntas de clarificación** sobre decisiones estratégicas clave
+- **Observaciones** sobre inconsistencias o riesgos detectados
+- **Sugerencias concretas** para fortalecer tu preparación
+- **Próximos pasos** a considerar antes de negociar
+- **Inconsistencias detectadas** explícitamente
+- **Nivel de preparación** alcanzado
+
+**Ciclo de mejora:** Podés actualizar tu preparación y pedir análisis de nuevo. Ver el historial (`/cases/{id}/versions`) para observar cómo evolucionó tu pensamiento.
+
+### 4. Ejecutar + Debrief (Captura de realidad)
+Después de negociar en la vida real, registrá lo que pasó realmente:
+- **¿Lograste tu objetivo explícito?** Qué sucedió vs. qué esperabas
+- **¿Y el objetivo real?** Diferencia entre lo planeado y lo logrado
+- **¿Dónde se movió el poder** durante la negociación? Cambios inesperados
+- **¿Cuál fue la objeción decisiva** que no anticipaste o que te hizo cambiar de estrategia?
+- **¿Qué concesión cambió la estructura** del acuerdo?
+- **Autodiagnóstico honesto**: Tu error estratégico principal, tu acierto principal, qué decisión vas a cambiar en la próxima
+
+También disponible en modo mínimo al inicio, con campos avanzados para mayor profundidad.
+
+### 5. Debrief automático (Segundo aprendizaje automático)
+El sistema ahora compara tu preparación con tu ejecución real y te devuelve:
+- **Brechas estratégicas**: Dónde tu preparación no predijo la realidad
+- **Errores identificados**: Suposiciones fallidas, señales que no leíste correctamente
+- **Aciertos confirmados**: Qué funcionó exactamente como preparaste
+- **Oportunidades de mejora**: Qué aplicarías diferente en la próxima basándote en lo aprendido
+- **Patrones personales**: Tendencias en tu comportamiento (si es tu segundo caso adelante)
+
+Este análisis es **el corazón del aprendizaje**: compara tu plan + tu ejecución + tu autodiagnóstico para extraer lecciones concretas.
+
+### 6. Cerrar (Reporte final)
+Evaluás los resultados:
+- **Confianza final** en tu capacidad de negociación
+- **Calidad del acuerdo** en 3 dimensiones: resultado, relación, sostenibilidad
+
+El sistema genera un **memo ejecutivo final** que consolida:
+- Síntesis estratégica de lo que sucedió
+- Todas las oportunidades de mejora identificadas
+- Tu patrón de pensamiento observado
+- Principio transferible (la lección que llevas a la próxima)
+
+---
 
 ## Casos modelo incluidos
+
+Para empezar rápido o inspirarte:
 - Compraventa de inmueble urbano
 - Negociación salarial por cambio de rol
-- Oferta laboral “no negociable”
+- Oferta laboral "no negociable"
 - Términos de contrato B2B
 - Licitación competitiva (negotiauction)
 - Relación en tensión con contraparte difícil
 - Cierre e implementación del acuerdo
 
-Catálogo simplificado para facilitar adopción continua como sparring personal de negociación.
+---
 
-## UX de carga rápida
-- Preparación mínima por defecto: tipo de negociación, objetivo explícito, MAAN y riesgo principal.
-- Debrief mínimo por defecto: estado de objetivo explícito y lección transferible.
-- El resto de campos queda disponible en “campos avanzados”.
+## Cómo usar la aplicación en modo sparring personal
 
-## Modo Curso 4x2h
-- Guía por etapas en frontend para conducir un programa de 4 clases de 2 horas.
-- Etapas: psicología/escucha, preparación avanzada, tácticas de presión y cierre/seguimiento.
-- Incluye formato de sesión online (sincrónico, asincrónico o híbrido) con protocolo simple de recap y validación.
-- Debrief simplificado en 3 líneas para cada caso: intención concreta, evidencia observada y ajuste siguiente.
-- Incluye resumen de cierre de clase (patrones repetidos) a partir de casos cerrados.
+Una vez que completás un caso, la aplicación sigue siendo tu entrenador para cada negociación importante:
 
-## Reglas online incorporadas
-- Sugerencias para secuenciar canal por fase (alineación en vivo + confirmación escrita).
-- Alertas por riesgo de malentendidos cuando no hay protocolo de paráfrasis/confirmación.
-- Recomendaciones para evitar fricción en e-mail asincrónico (cadencia y cierre por ronda).
+### Antes de negociar
+1. **Creá el caso** apenas sepas que tenés una negociación importante por delante (aunque sea semanas antes).
+2. **Preparalo en varias pasadas**: No lo llenes todo el mismo día. Volvé a revisar tu preparación conforme se acerca la fecha.
+3. **Analizá cada versión**: Cada vez que actualices, pedí análisis de nuevo. Las recomendaciones van a cambiar conforme afinás tu estrategia.
+4. **Consultá el historial** (`/cases/{id}/versions`) para ver cómo evolucionó tu pensamiento estratégico.
 
-## Reglas BATNA incorporadas
-- Checklist BATNA en 4 pasos: alternativas, evaluación de valor esperado, elección de BATNA y valor de reserva.
-- Señales para estimar BATNA de contraparte (incluyendo incentivos individuales vs organizacionales).
-- En multiparte, sugerencia de matriz simple por actor para seguir alianzas y BATNAs fluctuantes.
-- Alerta por sesgo de costos hundidos/entitlement para sostener buena fe y relación de largo plazo.
+### Durante la negociación
+- Tené a mano tu preparación (consultala desde la app en cualquier momento).
+- Prestá atención a las señales clave que identificaste en el bloque de riesgo.
 
-## Marco docente global incorporado
-- Eje Ética: explicitar límites de tácticas, candor mínimo y criterio de justicia negociada.
-- Eje Poder: reconocer asimetrías (estatus, rol, contexto) y compensarlas con diseño de proceso.
-- Eje Conducta: pasar de comprensión conceptual a cambio observable de hábitos en negociación real.
-- Objetivo de clase y de uso individual: que cada caso funcione como práctica deliberada, no solo como análisis teórico.
+### Después de negociar
+1. **Hacé el debrief dentro de las 24hs** mientras la memoria está fresca.
+2. **Sé brutalmente honesto** en tu autodiagnóstico: nadie más lo ve, es solo para vos.
+3. **Leé el análisis automático** que el sistema genera al completar el debrief. Ahí están tus oportunidades de mejora específicas.
+4. **Revisá periódicamente tus casos cerrados**: Los patrones se vuelven evidentes cuando mirás varios casos juntos.
 
-Endpoint de plantillas: `GET /case-templates`.
+### La diferencia entre uso puntual y práctica deliberada
 
-## Ejecutar backend
-```bash
-cd backend
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-# preferido: usar archivo externo de secrets fuera del repo
-uvicorn app.main:app --reload --port 8000
-```
+**Uso puntual:** Abrís la app solo cuando tenés una negociación mega importante y la preparás una sola vez justo antes.
 
-### Secrets fuera del repo (recomendado)
-```bash
-mkdir -p ~/.rb-secrets
-cat > ~/.rb-secrets/backend.env << 'EOF'
-OPENAI_API_KEY=tu_key
-OPENAI_MODEL=gpt-4.1-mini
-ANALYSIS_PROVIDER=openai
-JWT_SECRET_KEY=change_this_in_production
-JWT_ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=720
-FRONTEND_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,http://localhost:4173,http://127.0.0.1:4173,http://localhost:4174,http://127.0.0.1:4174
-BOOTSTRAP_ADMIN_EMAIL=admin@rb.local
-BOOTSTRAP_ADMIN_PASSWORD=admin1234
-BOOTSTRAP_ADMIN_FULL_NAME=Administrador RB
-EOF
-chmod 600 ~/.rb-secrets/backend.env
-```
+**Práctica deliberada:** Preparás TODAS tus negociaciones importantes (aunque te parezcan "fáciles"), hacés análisis en varias pasadas conforme se acerca la fecha, hacés debrief honesto siempre, y revisás periódicamente qué patrones se repiten en tu comportamiento y decisiones.
 
-El backend carga variables en este orden: `RB_ENV_FILE` (si está definido) → `~/.rb-secrets/backend.env` → `backend/.env`.
+La segunda opción es la que genera cambio real de hábitos.
 
-### Variables de entorno backend
-- `OPENAI_API_KEY`: requerida para análisis IA real.
-- `OPENAI_MODEL`: opcional, default `gpt-4.1-mini`.
-- `ANALYSIS_PROVIDER`: `openai` (default) o `rules`.
+---
 
-Si falta key o falla OpenAI, el sistema usa fallback automático al motor por reglas.
+## Reglas integradas que te ayudan
 
-## Ejecutar frontend
-```bash
-cd frontend
-npm install
-npm run dev
-```
+La aplicación tiene lógica incorporada sobre:
 
-Frontend: http://localhost:5173
-Backend: http://localhost:8000
+**Negociación online/híbrida:**
+- Cómo secuenciar canales por fase (alineación en vivo + confirmación escrita)
+- Alertas por riesgo de malentendidos sin protocolo de paráfrasis
+- Recomendaciones para evitar fricción en e-mail asincrónico
 
-## Tests de integración y CI/CD
+**BATNA (Best Alternative To Negotiated Agreement):**
+- Checklist en 4 pasos: alternativas, evaluación de valor esperado, elección de BATNA, valor de reserva
+- Señales para estimar BATNA de la contraparte (incentivos individuales vs. organizacionales)
+- En multiparte: matriz simple por actor para seguir alianzas y BATNAs fluctuantes
+- Alertas por sesgo de costos hundidos o entitlement
 
-Para validar la integración real entre frontend y backend antes de enviar cambios:
+**Marco ético y de poder:**
+- Límites de tácticas, candor mínimo, criterio de justicia negociada
+- Reconocimiento de asimetrías (estatus, rol, contexto) y compensación con diseño de proceso
 
-```bash
-bash run-integration-tests.sh
-```
+---
 
-Este script:
-- Verifica si el backend está activo en http://localhost:8000.
-- Si no está activo, lo inicia automáticamente.
-- Ejecuta los tests de backend (pytest).
-- Ejecuta los tests de frontend (jest).
-- Detiene el backend si fue iniciado por el script.
-
-En el pipeline de GitHub Actions, este script se ejecuta automáticamente en cada push a main, validando la integración antes del despliegue.
-
-**Recomendación:** Ejecuta este script localmente antes de cada commit/push para asegurar calidad y evitar errores en CI/CD.
+**Acceso:** https://app.rodrigoborgia.com

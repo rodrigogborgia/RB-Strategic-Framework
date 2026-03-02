@@ -7,7 +7,7 @@ CASE_TEMPLATES: list[dict] = [
     {
         "id": "inmueble_compraventa",
         "title": "Compraventa de inmueble urbano",
-        "ideal_for": "Clase 1 · Fundamentos y diagnóstico inicial.",
+        "ideal_for": "Fundamentos y diagnóstico inicial de poder relativo.",
         "mode": FeedbackMode.CURSO,
         "preparation": {
             "context": {
@@ -40,7 +40,7 @@ CASE_TEMPLATES: list[dict] = [
     {
         "id": "negociacion_salarial",
         "title": "Negociación salarial por cambio de rol",
-        "ideal_for": "Clase 2 · BATNA/ZOPA y argumentos de valor.",
+        "ideal_for": "BATNA/ZOPA y argumentos de valor.",
         "mode": FeedbackMode.CURSO,
         "preparation": {
             "context": {
@@ -73,7 +73,7 @@ CASE_TEMPLATES: list[dict] = [
     {
         "id": "contrato_b2b_terminos",
         "title": "Términos de contrato B2B",
-        "ideal_for": "Clase 2 · Preparación avanzada en acuerdos complejos.",
+        "ideal_for": "Preparación avanzada en acuerdos complejos.",
         "mode": FeedbackMode.CURSO,
         "preparation": {
             "context": {
@@ -106,7 +106,7 @@ CASE_TEMPLATES: list[dict] = [
     {
         "id": "licitacion_negotiauction",
         "title": "Licitación competitiva (negotiauction)",
-        "ideal_for": "Clase 3 · Tácticas de presión y contramedidas.",
+        "ideal_for": "Tácticas de presión y contramedidas.",
         "mode": FeedbackMode.CURSO,
         "preparation": {
             "context": {
@@ -139,7 +139,7 @@ CASE_TEMPLATES: list[dict] = [
     {
         "id": "contraparte_dificil_presion",
         "title": "Relación en tensión con contraparte difícil",
-        "ideal_for": "Clase 3 · Manejo de conflicto y reencuadre.",
+        "ideal_for": "Manejo de conflicto y reencuadre.",
         "mode": FeedbackMode.CURSO,
         "preparation": {
             "context": {
@@ -172,7 +172,7 @@ CASE_TEMPLATES: list[dict] = [
     {
         "id": "cierre_e_implementacion",
         "title": "Cierre e implementación del acuerdo",
-        "ideal_for": "Clase 4 · Cierre, seguimiento y ejecución.",
+        "ideal_for": "Cierre, seguimiento y ejecución.",
         "mode": FeedbackMode.CURSO,
         "preparation": {
             "context": {
@@ -205,7 +205,7 @@ CASE_TEMPLATES: list[dict] = [
     {
         "id": "oferta_laboral_no_negociable",
         "title": "Oferta laboral “no negociable”",
-        "ideal_for": "Clase 1/3 · Persuasión con límites de política.",
+        "ideal_for": "Persuasión con límites de política.",
         "mode": FeedbackMode.CURSO,
         "preparation": {
             "context": {

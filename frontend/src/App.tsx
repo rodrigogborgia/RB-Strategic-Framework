@@ -13,6 +13,7 @@ import type {
   CloseCaseInput,
   CohortRead,
   CohortStatus,
+  DebriefAnalysis,
   DebriefInput,
   LeaderEvaluationCreate,
   LeaderEvaluationRead,
@@ -94,6 +95,23 @@ function normalizeAnalysis(raw: unknown): AnalysisOutput | null {
   };
 }
 
+function normalizeDebriefAnalysis(raw: unknown): DebriefAnalysis | null {
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
+
+  const value = raw as Partial<DebriefAnalysis>;
+  
+  // Devuelve la estructura aunque esté vacía (asi sabemos que existe el análisis)
+  return {
+    strategic_gaps: Array.isArray(value.strategic_gaps) ? value.strategic_gaps : [],
+    identified_errors: Array.isArray(value.identified_errors) ? value.identified_errors : [],
+    confirmed_successes: Array.isArray(value.confirmed_successes) ? value.confirmed_successes : [],
+    improvement_opportunities: Array.isArray(value.improvement_opportunities) ? value.improvement_opportunities : [],
+    personal_patterns: Array.isArray(value.personal_patterns) ? value.personal_patterns : [],
+  };
+}
+
 type ExperienceMode = "sesion_en_vivo" | "sparring";
 type AdminViewMode = "profesor" | "alumno";
 type TeacherSectionKey = "admin" | "users" | "cohorts" | "members" | "ritual";
@@ -103,6 +121,31 @@ function currentPeriodLabel(): string {
   const yyyy = now.getFullYear();
   const mm = String(now.getMonth() + 1).padStart(2, "0");
   return `${yyyy}-${mm}`;
+}
+
+function prioritySource(item: string, analysis: AnalysisOutput): string {
+  if (analysis.inconsistencies.includes(item)) return "Fuente: Inconsistencia";
+  if (analysis.clarification_questions.includes(item)) return "Fuente: Aclaración estratégica";
+  if (analysis.suggestions.includes(item)) return "Fuente: Recomendación";
+  if (analysis.next_steps.includes(item)) return "Fuente: Próximo paso";
+  return "Fuente: Hallazgo";
+}
+
+function priorityTheory(item: string): string {
+  const value = item.toLowerCase();
+  if (/(maan|batna|zopa|reserva|punto de ruptura|alternativa)/.test(value)) {
+    return "Sustento: Coherencia BATNA/MAAN–ZOPA–reserva (poder y límite de acuerdo).";
+  }
+  if (/(objetivo explícito|objetivo real|aline|incoherenc|postura)/.test(value)) {
+    return "Sustento: Alineación objetivo explícito vs objetivo real y consistencia de postura.";
+  }
+  if (/(conces|ancl|apertura|cierre|objec)/.test(value)) {
+    return "Sustento: Diseño de estrategia (secuencia de concesiones y manejo de objeciones).";
+  }
+  if (/(riesgo|emoc|señal|tensión|fricción)/.test(value)) {
+    return "Sustento: Gestión de riesgo y señales críticas durante la negociación.";
+  }
+  return "Sustento: Coherencia integral entre contexto, poder, estrategia y riesgo.";
 }
 
 function App() {
@@ -177,6 +220,7 @@ function App() {
   const [error, setError] = useState<string>("");
   const [success, setSuccess] = useState<string>("");
   const [loading, setLoading] = useState(false);
+  const [isDebriefAnalyzing, setIsDebriefAnalyzing] = useState(false);
   const [showAdvancedPreparation, setShowAdvancedPreparation] = useState(false);
   const [showAdvancedDebrief, setShowAdvancedDebrief] = useState(false);
   const [showFullAnalysis, setShowFullAnalysis] = useState(false);
@@ -255,7 +299,7 @@ function App() {
     return {
       en_preparacion: "Guardar preparación",
       preparado: "Confirmar ejecución",
-      ejecutado_pendiente_debrief: "Registrar debrief",
+      ejecutado_pendiente_debrief: "Guardar y analizar",
       cerrado: "Revisar memo final",
     }[status];
   }
@@ -284,6 +328,66 @@ function App() {
     ].filter((item, index, items) => items.indexOf(item) === index);
     return ordered.slice(0, 3);
   }, [analysis]);
+
+  const analysisInputsEvaluated = useMemo(() => {
+    const items = [
+      { label: "Objetivo explícito", value: preparation.objective.explicit_objective },
+      { label: "MAAN", value: preparation.power_alternatives.maan },
+      { label: "Riesgo principal", value: preparation.risk.main_risk },
+      { label: "ZOPA estimada", value: preparation.strategy.estimated_zopa },
+      { label: "Secuencia de concesiones", value: preparation.strategy.concession_sequence },
+      { label: "Hipótesis de contraparte", value: preparation.strategy.counterpart_hypothesis },
+      { label: "Punto de ruptura", value: preparation.power_alternatives.breakpoint },
+      { label: "Señal clave", value: preparation.risk.key_signal },
+    ]
+      .filter((entry) => entry.value.trim().length > 0)
+      .map((entry) => entry.label);
+
+    if (items.length >= 3) {
+      return items.slice(0, 3);
+    }
+
+    return [
+      "Objetivo y límites de acuerdo",
+      "Poder negociador (MAAN/BATNA, ZOPA, punto de ruptura)",
+      "Riesgo y ejecución (concesiones, señales y objeciones)",
+    ];
+  }, [preparation]);
+
+  const debriefAnalysis = useMemo(
+    () => normalizeDebriefAnalysis(selectedCase?.debrief_analysis),
+    [selectedCase?.debrief_analysis],
+  );
+
+  const postExecutionBlindSpots = useMemo(() => {
+    if (!debriefAnalysis) return [];
+    return [...debriefAnalysis.strategic_gaps, ...debriefAnalysis.identified_errors]
+      .filter((item, index, items) => items.indexOf(item) === index)
+      .slice(0, 3);
+  }, [debriefAnalysis]);
+
+  const postExecutionActions = useMemo(() => {
+    if (!debriefAnalysis) return [];
+
+    const fromAnalysis = debriefAnalysis.improvement_opportunities
+      .filter((item, index, items) => items.indexOf(item) === index)
+      .slice(0, 3);
+
+    if (fromAnalysis.length === 3) {
+      return fromAnalysis;
+    }
+
+    const fallback = [
+      ...fromAnalysis,
+      ...debriefAnalysis.identified_errors.map((item) => `Practicar prevención de error: ${item}`),
+      ...debriefAnalysis.strategic_gaps.map((item) => `Preparar mejor esta brecha: ${item}`),
+      "Hacer una simulación corta de apertura, concesiones y cierre antes de la próxima negociación.",
+    ];
+
+    return fallback
+      .filter((item, index, items) => items.indexOf(item) === index)
+      .slice(0, 3);
+  }, [debriefAnalysis]);
 
   const selectedTemplate = useMemo(
     () => templates.find((template) => template.id === selectedTemplateId) ?? null,
@@ -326,7 +430,7 @@ function App() {
       if (hasSavedDebrief) {
         return { label: "Cerrar caso", disabled: loading || !canClose, key: "close" as const };
       }
-      return { label: "Registrar debrief", disabled: loading || !canSubmitDebrief, key: "save_debrief" as const };
+      return { label: "Guardar y analizar", disabled: loading || !canSubmitDebrief, key: "save_debrief" as const };
     }
 
     return { label: "Caso cerrado", disabled: true, key: "closed" as const };
@@ -533,7 +637,7 @@ function App() {
 
   async function handleLogin() {
     if (!authEmail.trim() || !authPassword.trim()) {
-      setError("Completá email y contraseña.");
+      setError("Ingresá email y contraseña.");
       return;
     }
 
@@ -612,7 +716,7 @@ function App() {
 
   async function handleAdminCreateUser() {
     if (!newUserEmail.trim() || !newUserPassword.trim()) {
-      setError("Para crear usuario, completá email y contraseña.");
+      setError("Ingresá email y contraseña para crear el usuario.");
       return;
     }
     try {
@@ -639,7 +743,7 @@ function App() {
 
   async function handleAdminCreateCohort() {
     if (!newCohortName.trim() || !newCohortStart || !newCohortEnd) {
-      setError("Completá nombre, fecha de inicio y fecha de fin de cohorte.");
+      setError("Ingresá nombre y fechas de cohorte.");
       return;
     }
     try {
@@ -714,7 +818,7 @@ function App() {
       setSelectedId(created.id);
       await loadCase(created.id);
       await loadStudentMetrics();
-      setSuccess("Caso creado correctamente.");
+      setSuccess("Caso creado.");
     } catch (e) {
       setError((e as Error).message);
       setSuccess("");
@@ -733,6 +837,16 @@ function App() {
       await loadCase(selectedCase.id);
       await loadCases();
       await loadStudentMetrics();
+      // Auto-generar primer análisis
+      try {
+        const result = await api.analyzeCase(selectedCase.id);
+        setAnalysis(result);
+        await loadCase(selectedCase.id);
+        setSuccess("Preparación guardada. Análisis generado.");
+      } catch (analysisError) {
+        setSuccess("Preparación guardada. Reintentá el análisis.");
+        console.error("Error generating analysis:", analysisError);
+      }
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -781,13 +895,14 @@ function App() {
     const transferableLesson = debrief.transferable_lesson.trim();
 
     if (!explicitObjective || transferableLesson.length < 3) {
-      setError("Para registrar el debrief completá objetivo explícito y una lección transferible de al menos 3 caracteres.");
+      setError("Completá estado y resultado (mínimo 3 caracteres).");
       setSuccess("");
       return;
     }
 
     try {
       setLoading(true);
+      setIsDebriefAnalyzing(true);
       setError("");
       setSuccess("");
       await api.saveDebrief(selectedCase.id, {
@@ -804,11 +919,11 @@ function App() {
       if (isAdmin) {
         await loadAdminAnonymousMetrics();
       }
-      setSuccess("Debrief registrado correctamente.");
-      mainScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+      setSuccess("Resultado registrado.");
     } catch (e) {
       setError((e as Error).message);
     } finally {
+      setIsDebriefAnalyzing(false);
       setLoading(false);
     }
   }
@@ -821,7 +936,7 @@ function App() {
       closeMetrics.agreement_quality_relationship < 1 || closeMetrics.agreement_quality_relationship > 5 ||
       closeMetrics.agreement_quality_sustainability < 1 || closeMetrics.agreement_quality_sustainability > 5
     ) {
-      setError("Completá métricas de cierre válidas (confianza 1-10 y calidad 1-5).");
+      setError("Definí métricas válidas de cierre (confianza 1-10 y calidad 1-5).");
       setSuccess("");
       return;
     }
@@ -837,7 +952,7 @@ function App() {
       if (isAdmin) {
         await loadAdminAnonymousMetrics();
       }
-      setSuccess("Caso cerrado y memo final generado.");
+      setSuccess("Caso cerrado. Memo final generado.");
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -848,7 +963,7 @@ function App() {
   async function handleDeleteCase() {
     if (!selectedCase) return;
 
-    const confirmed = window.confirm(`¿Querés borrar el caso "${selectedCase.title}"? Esta acción no se puede deshacer.`);
+    const confirmed = window.confirm(`Confirmá la eliminación del caso "${selectedCase.title}". Esta acción es irreversible.`);
     if (!confirmed) return;
 
     try {
@@ -866,7 +981,7 @@ function App() {
       if (isAdmin) {
         await loadAdminAnonymousMetrics();
       }
-      setSuccess("Caso borrado correctamente.");
+      setSuccess("Caso eliminado.");
     } catch (e) {
       setError((e as Error).message);
       setSuccess("");
@@ -931,7 +1046,7 @@ function App() {
     return (
       <div className="page" style={{ gridTemplateColumns: "1fr" }}>
         <main className="main">
-          <div className="card">Validando sesión...</div>
+          <div className="card">Validando acceso...</div>
         </main>
       </div>
     );
@@ -1040,13 +1155,13 @@ function App() {
               />
               <div style={{ height: 8 }} />
               <p className="small" style={{ marginBottom: 6 }}>
-                Tipo de inicio del caso
+                Origen del caso
               </p>
               <select
                 value={selectedTemplateId}
                 onChange={(e) => setSelectedTemplateId(e.target.value)}
               >
-                <option value="__blank__">Desde cero (en blanco)</option>
+                  <option value="__blank__">Nuevo caso (en blanco)</option>
                 {templates.map((template) => (
                   <option key={template.id} value={template.id}>
                     {template.title}
@@ -1065,8 +1180,9 @@ function App() {
                 type="number"
                 min={1}
                 max={10}
+                step="1"
                 value={confidenceStart}
-                onChange={(e) => setConfidenceStart(Math.min(10, Math.max(1, Number(e.target.value) || 1)))}
+                onChange={(e) => setConfidenceStart(Math.min(10, Math.max(1, Math.floor(Number(e.target.value)) || 1)))}
               />
               <div style={{ height: 8 }} />
               <button disabled={loading} onClick={handleCreateCase}>
@@ -1111,15 +1227,15 @@ function App() {
           <div className="teacher-grid">
             <div className="card teacher-summary">
               <h2>Panel Profesor</h2>
-              <p className="small">Vista exclusiva de administración y seguimiento de cohortes.</p>
+              <p className="small">Administración y seguimiento de cohortes.</p>
               <div className="actions">
                 <span className="status-pill active">Alumnos: {totalStudents}</span>
                 <span className="status-pill">Cohortes activas: {activeCohorts}</span>
-                <span className="status-pill">Debrief pendiente: {pendingDebriefCases}</span>
+                <span className="status-pill">Resultados pendientes: {pendingDebriefCases}</span>
               </div>
               {adminAnonMetrics && (
                 <div style={{ marginTop: 12 }}>
-                  <p className="small"><strong>Métricas anonimizadas</strong></p>
+                  <p className="small"><strong>Métricas agregadas</strong></p>
                   <div className="row">
                     <div className="small">Casos totales: {adminAnonMetrics.cases_total}</div>
                     <div className="small">Casos cerrados: {adminAnonMetrics.cases_closed}</div>
@@ -1131,7 +1247,7 @@ function App() {
                   <p className="small" style={{ marginTop: 8 }}>
                     Alumnos activos con casos: {adminAnonMetrics.active_students_with_cases}
                   </p>
-                  <p className="small">Próximo seguimiento sugerido (60 min): {nextRitualDateLabel}</p>
+                  <p className="small">Próximo seguimiento sugerido: {nextRitualDateLabel}</p>
                 </div>
               )}
             </div>
@@ -1145,7 +1261,7 @@ function App() {
               </div>
               {teacherSections.admin && (
                 <>
-                  <p className="small">Alta de usuarios, cohortes y asignación de estudiantes.</p>
+                  <p className="small">Gestión de usuarios, cohortes y asignaciones.</p>
 
                   <p><strong>Crear usuario</strong></p>
                   <div className="row">
@@ -1229,48 +1345,12 @@ function App() {
               {teacherSections.users && (
                 <>
                   {adminUsers.length === 0 ? (
-                    <p className="small">No hay usuarios cargados.</p>
+                    <p className="small">Sin usuarios registrados.</p>
                   ) : (
                     <ul>
                       {adminUsers.map((user) => (
                         <li key={user.id}>
                           {user.full_name || user.email} · {user.role} · {user.is_active ? "activo" : "inactivo"}
-                          {/* UI edición membresía */}
-                          <div style={{ marginTop: 8 }}>
-                            <label>
-                              Estado membresía:
-                              <input
-                                type="checkbox"
-                                checked={user.membership?.is_active ?? false}
-                                onChange={e => {
-                                  const newActive = e.target.checked;
-                                  // Lógica para actualizar estado en backend
-                                  api.adminUpdateCohortMembership(user.membership?.cohort_id!, user.id, {
-                                    is_active: newActive,
-                                    expiry_date: user.membership?.expiry_date ?? null,
-                                  }).then(() => {
-                                    // Actualizar UI si es necesario
-                                  });
-                                }}
-                              />
-                            </label>
-                            <label style={{ marginLeft: 16 }}>
-                              Fecha vencimiento:
-                              <input
-                                type="date"
-                                value={user.membership?.expiry_date ? user.membership.expiry_date.substring(0, 10) : ""}
-                                onChange={e => {
-                                  const newDate = e.target.value;
-                                  api.adminUpdateCohortMembership(user.membership?.cohort_id!, user.id, {
-                                    is_active: user.membership?.is_active ?? false,
-                                    expiry_date: newDate,
-                                  }).then(() => {
-                                    // Actualizar UI si es necesario
-                                  });
-                                }}
-                              />
-                            </label>
-                          </div>
                         </li>
                       ))}
                     </ul>
@@ -1289,7 +1369,7 @@ function App() {
               {teacherSections.cohorts && (
                 <>
                   {adminCohorts.length === 0 ? (
-                    <p className="small">No hay cohortes cargadas.</p>
+                    <p className="small">Sin cohortes registradas.</p>
                   ) : (
                     <ul>
                       {adminCohorts.map((cohort) => (
@@ -1328,7 +1408,7 @@ function App() {
                       </select>
                       <div style={{ height: 8 }} />
                       {cohortMembers.length === 0 ? (
-                        <p className="small">Esta cohorte no tiene miembros activos.</p>
+                        <p className="small">Sin miembros activos en esta cohorte.</p>
                       ) : (
                         <ul>
                           {cohortMembers.map((member) => (
@@ -1346,14 +1426,14 @@ function App() {
 
             <div className="card">
               <div className="section-header" onClick={() => toggleTeacherSection("ritual")}>
-                <h2>Seguimiento 30 días</h2>
+                <h2>Seguimiento mensual</h2>
                 <button className="secondary" type="button">
                   {teacherSections.ritual ? "Contraer" : "Expandir"}
                 </button>
               </div>
               {teacherSections.ritual && (
                 <>
-                  <p className="small">Evaluación breve del líder para seguimiento mensual del equipo.</p>
+                  <p className="small">Evaluación ejecutiva mensual del equipo.</p>
                   <div className="row">
                     <select
                       value={leaderEvalInput.target_user_id || ""}
@@ -1394,7 +1474,7 @@ function App() {
                     />
                   </div>
                   <p className="small" style={{ marginTop: 8 }}>
-                    Sugerencia automática: {suggestedNextAction}
+                    Recomendación automática: {suggestedNextAction}
                   </p>
                   <div className="actions" style={{ marginTop: 8 }}>
                     <button className="secondary" onClick={() => handleCreateLeaderEvaluation().catch(() => undefined)} disabled={adminLoading}>
@@ -1421,7 +1501,7 @@ function App() {
           <>
         {!isTeacherPanel && studentMetrics && (
           <div className="card">
-            <h2>Mi progreso</h2>
+            <h2>Indicadores personales</h2>
             <div className="row">
               <div className="small">Casos iniciados: {studentMetrics.cases_total}</div>
               <div className="small">Casos cerrados: {studentMetrics.cases_closed}</div>
@@ -1432,7 +1512,7 @@ function App() {
             </div>
             {studentMetrics.confidence_delta_trend.length > 0 && (
               <div style={{ marginTop: 10 }}>
-                <p className="small"><strong>Confianza a través del tiempo</strong></p>
+                <p className="small"><strong>Tendencia de confianza</strong></p>
                 <ul>
                   {studentMetrics.confidence_delta_trend.map((point) => (
                     <li key={point.period} className="small">
@@ -1442,14 +1522,14 @@ function App() {
                 </ul>
               </div>
             )}
-            <p className="small">Próximo encuentro de seguimiento sugerido: {nextRitualDateLabel}</p>
+            <p className="small">Próximo seguimiento sugerido: {nextRitualDateLabel}</p>
           </div>
         )}
 
         {!isTeacherPanel && myLeaderEvaluations.length > 0 && (
           <div className="card">
-            <h2>Feedback del líder</h2>
-            <p className="small">Última evaluación mensual registrada.</p>
+            <h2>Evaluación del líder</h2>
+            <p className="small">Última evaluación mensual.</p>
             <p className="small"><strong>Período:</strong> {myLeaderEvaluations[0].period_label}</p>
             <div className="row">
               <div className="small">Preparación: {myLeaderEvaluations[0].preparation_score}/5</div>
@@ -1468,7 +1548,7 @@ function App() {
         )}
 
         {!selectedCase ? (
-          <div className="card">Seleccioná o creá un caso para empezar.</div>
+          <div className="card">Seleccioná o creá un caso.</div>
         ) : (
           <>
             <div className="card">
@@ -1477,7 +1557,7 @@ function App() {
                 Estado: {statusLabel} · Modo: {selectedCase.mode}
               </p>
               <p className="small" style={{ marginBottom: 12 }}>
-                Confirmar ejecución = confirmás que la negociación ya ocurrió. Registrar debrief = cargás resultado y aprendizaje. Cerrar caso = genera el memo final y cierra el ciclo.
+                Confirmar ejecución: registra que la negociación ocurrió. Guardar y analizar: procesa resultado con IA. Cerrar caso: emite el memo final.
               </p>
               <div className="row" style={{ marginBottom: 12 }}>
                 <div className="small">Confianza inicial: {selectedCase.confidence_start ?? "-"}</div>
@@ -1491,7 +1571,7 @@ function App() {
                 {[
                   { key: "en_preparacion", label: "Preparación", actionKey: "save_preparation" },
                   { key: "preparado", label: "Ejecución", actionKey: "execute" },
-                  { key: "ejecutado_pendiente_debrief", label: "Debrief", actionKey: "save_debrief" },
+                  { key: "ejecutado_pendiente_debrief", label: "Resultado", actionKey: "save_debrief" },
                   { key: "cerrado", label: "Cierre", actionKey: "close" },
                 ].map((step) => {
                   const active =
@@ -1501,13 +1581,14 @@ function App() {
                     statusRank(step.key as CaseStatus) < statusRank(selectedCase.status) ||
                     (step.key === "ejecutado_pendiente_debrief" &&
                       selectedCase.status === "ejecutado_pendiente_debrief" &&
-                      hasSavedDebrief);
+                      hasSavedDebrief) ||
+                    (step.key === "cerrado" && selectedCase.status === "cerrado");
                   const showAction = primaryAction.key === step.actionKey;
                   return (
                     <div key={step.key} className={`workflow-step ${active ? "active" : ""} ${done ? "done" : ""} ${highlightStep === step.key ? "pulse" : ""}`}>
                       <div className="workflow-title">{step.label}</div>
                       <div className="small">
-                        {active ? "En curso" : done ? "Completado" : "Pendiente"}
+                        {active ? "Activo" : done ? "Completado" : "Pendiente"}
                       </div>
                       <div className="workflow-action">
                         {showAction ? (
@@ -1522,106 +1603,21 @@ function App() {
                   );
                 })}
               </div>
-              {selectedCase.status === "ejecutado_pendiente_debrief" && (
-                <div className="final-close-cta" style={{ marginBottom: 12 }}>
-                  {hasSavedDebrief ? (
-                    <>
-                      <p className="small" style={{ marginBottom: 8 }}>
-                        Último paso: cerrá el caso para generar el memo ejecutivo final.
-                      </p>
-                      <div className="row" style={{ marginBottom: 8 }}>
-                        <label className="small" htmlFor="confidence-end">Confianza final (1-10)</label>
-                        <input
-                          id="confidence-end"
-                          type="number"
-                          min={1}
-                          max={10}
-                          value={closeMetrics.confidence_end}
-                          onChange={(e) =>
-                            setCloseMetrics((prev) => ({
-                              ...prev,
-                              confidence_end: Math.min(10, Math.max(1, Number(e.target.value) || 1)),
-                            }))
-                          }
-                        />
-                        <label className="small" htmlFor="quality-result">Calidad acuerdo: resultado (1-5)</label>
-                        <input
-                          id="quality-result"
-                          type="number"
-                          min={1}
-                          max={5}
-                          value={closeMetrics.agreement_quality_result}
-                          onChange={(e) =>
-                            setCloseMetrics((prev) => ({
-                              ...prev,
-                              agreement_quality_result: Math.min(5, Math.max(1, Number(e.target.value) || 1)),
-                            }))
-                          }
-                        />
-                        <label className="small" htmlFor="quality-relationship">Calidad acuerdo: relación (1-5)</label>
-                        <input
-                          id="quality-relationship"
-                          type="number"
-                          min={1}
-                          max={5}
-                          value={closeMetrics.agreement_quality_relationship}
-                          onChange={(e) =>
-                            setCloseMetrics((prev) => ({
-                              ...prev,
-                              agreement_quality_relationship: Math.min(5, Math.max(1, Number(e.target.value) || 1)),
-                            }))
-                          }
-                        />
-                        <label className="small" htmlFor="quality-sustainability">Calidad acuerdo: sostenibilidad (1-5)</label>
-                        <input
-                          id="quality-sustainability"
-                          type="number"
-                          min={1}
-                          max={5}
-                          value={closeMetrics.agreement_quality_sustainability}
-                          onChange={(e) =>
-                            setCloseMetrics((prev) => ({
-                              ...prev,
-                              agreement_quality_sustainability: Math.min(5, Math.max(1, Number(e.target.value) || 1)),
-                            }))
-                          }
-                        />
-                      </div>
-                      <button onClick={handleCloseCase} disabled={primaryAction.disabled}>
-                        Cerrar caso y generar memo
-                      </button>
-                    </>
-                  ) : (
-                    <p className="small" style={{ marginBottom: 0 }}>
-                      Para habilitar el cierre, primero registrá el debrief (objetivo explícito + lección transferible).
-                    </p>
-                  )}
-                </div>
-              )}
-              <div className="actions">
-                {(selectedCase.status === "en_preparacion" || selectedCase.status === "preparado") && (
-                  <button className="secondary" onClick={handleAnalyze} disabled={loading}>
-                    Analizar preparación
-                  </button>
-                )}
-                <button className="danger" onClick={handleDeleteCase} disabled={loading}>
+              <div style={{ marginTop: 12, display: "flex", justifyContent: "flex-end" }}>
+                <button className="danger" onClick={handleDeleteCase} disabled={loading} style={{ padding: "6px 12px", fontSize: "12px" }}>
                   Borrar caso
                 </button>
               </div>
-              {(selectedCase.status === "en_preparacion" || selectedCase.status === "preparado") && (
-                <p className="small" style={{ marginTop: 8 }}>
-                  Analizar preparación revisa claridad, inconsistencias y próximos pasos antes de ejecutar.
-                </p>
-              )}
+
             </div>
 
             <div className="card">
               <h2>Preparación</h2>
               {isCaseClosed && <span className="readonly-badge">Solo lectura</span>}
-              <p className="small">Carga rápida: completá 4 campos clave y analizá. El resto es opcional.</p>
+              <p className="small">Carga rápida: completá 4 campos críticos. El resto es opcional.</p>
               {isPreparationLocked && (
                 <p className="small" style={{ marginBottom: 12 }}>
-                  Preparación bloqueada: esta etapa ya se completó para este caso.
+                  Preparación cerrada para este caso.
                 </p>
               )}
               <fieldset
@@ -1629,49 +1625,55 @@ function App() {
                 style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}
               >
               <div className="row">
+                <label className="small">Tipo de negociación</label>
                 <select
                   value={preparation.context.negotiation_type}
                   onChange={(e) => updatePreparation("context.negotiation_type", e.target.value)}
                 >
-                  <option value="">Tipo de negociación</option>
+                  <option value="">Seleccioná una opción</option>
                   <option value="Compraventa de inmueble">Compraventa de inmueble</option>
                   <option value="Negociación salarial">Negociación salarial</option>
                   <option value="Negociación de términos contractuales B2B">Términos contractuales B2B</option>
                   <option value="Renegociación comercial">Renegociación comercial</option>
                   <option value="Otro">Otro</option>
                 </select>
+                <label className="small">Nivel de impacto</label>
                 <select
                   value={preparation.context.impact_level}
                   onChange={(e) => updatePreparation("context.impact_level", e.target.value)}
                 >
-                  <option value="">Nivel de impacto</option>
+                  <option value="">Seleccioná una opción</option>
                   <option value="Bajo">Bajo</option>
                   <option value="Medio">Medio</option>
                   <option value="Alto">Alto</option>
                   <option value="Crítico">Crítico</option>
                 </select>
+                <label className="small">Relación con contraparte</label>
                 <select
                   value={preparation.context.counterpart_relationship}
                   onChange={(e) => updatePreparation("context.counterpart_relationship", e.target.value)}
                 >
-                  <option value="">Relación con contraparte</option>
+                  <option value="">Seleccioná una opción</option>
                   <option value="Nueva relación">Nueva relación</option>
                   <option value="Relación en curso">Relación en curso</option>
                   <option value="Largo plazo">Largo plazo</option>
                   <option value="Tensionada">Tensionada</option>
                 </select>
+                <label className="small">Objetivo explícito</label>
                 <textarea
-                  placeholder="Objetivo explícito"
+                  placeholder="Qué querés lograr en esta negociación"
                   value={preparation.objective.explicit_objective}
                   onChange={(e) => updatePreparation("objective.explicit_objective", e.target.value)}
                 />
+                <label className="small">MAAN concreta</label>
                 <textarea
-                  placeholder="MAAN concreta"
+                  placeholder="Tu mejor alternativa si no hay acuerdo"
                   value={preparation.power_alternatives.maan}
                   onChange={(e) => updatePreparation("power_alternatives.maan", e.target.value)}
                 />
+                <label className="small">Riesgo principal</label>
                 <textarea
-                  placeholder="Riesgo principal"
+                  placeholder="Qué podría hacer fracasar esta negociación"
                   value={preparation.risk.main_risk}
                   onChange={(e) => updatePreparation("risk.main_risk", e.target.value)}
                 />
@@ -1689,72 +1691,68 @@ function App() {
               )}
               {showAdvancedPreparation && !isLiveSession && (
                 <div className="row" style={{ marginTop: 12 }}>
-                  <select
-                    value={preparation.context.impact_level}
-                    onChange={(e) => updatePreparation("context.impact_level", e.target.value)}
-                  >
-                    <option value="">Nivel de impacto</option>
-                    <option value="Bajo">Bajo</option>
-                    <option value="Medio">Medio</option>
-                    <option value="Alto">Alto</option>
-                    <option value="Crítico">Crítico</option>
-                  </select>
-                  <select
-                    value={preparation.context.counterpart_relationship}
-                    onChange={(e) => updatePreparation("context.counterpart_relationship", e.target.value)}
-                  >
-                    <option value="">Relación con contraparte</option>
-                    <option value="Nueva relación">Nueva relación</option>
-                    <option value="Relación en curso">Relación en curso</option>
-                    <option value="Largo plazo">Largo plazo</option>
-                    <option value="Tensionada">Tensionada</option>
-                  </select>
+                <label className="small">Objetivo real (opcional)</label>
                 <textarea
-                  placeholder="Objetivo real (opcional)"
+                  placeholder="Lo que realmente querés lograr (puede ser distinto del explícito)"
                   value={preparation.objective.real_objective}
                   onChange={(e) => updatePreparation("objective.real_objective", e.target.value)}
                 />
+                <label className="small">Resultado mínimo aceptable</label>
                 <textarea
-                  placeholder="Resultado mínimo aceptable (opcional)"
+                  placeholder="El peor resultado que aceptarías"
                   value={preparation.objective.minimum_acceptable_result}
                   onChange={(e) => updatePreparation("objective.minimum_acceptable_result", e.target.value)}
                 />
+                <label className="small">Fortaleza percibida del otro</label>
                 <textarea
-                  placeholder="Fortaleza percibida del otro"
+                  placeholder="En qué es fuerte la contraparte"
                   value={preparation.power_alternatives.counterpart_perceived_strength}
                   onChange={(e) => updatePreparation("power_alternatives.counterpart_perceived_strength", e.target.value)}
                 />
+                <label className="small">Punto de ruptura</label>
                 <textarea
-                  placeholder="Punto de ruptura"
+                  placeholder="A partir de qué punto te retirás"
                   value={preparation.power_alternatives.breakpoint}
                   onChange={(e) => updatePreparation("power_alternatives.breakpoint", e.target.value)}
                 />
+                <label className="small">ZOPA estimada</label>
                 <textarea
-                  placeholder="ZOPA estimada"
+                  placeholder="Zona de posible acuerdo entre tu punto de ruptura y el estimado del otro"
                   value={preparation.strategy.estimated_zopa}
                   onChange={(e) => updatePreparation("strategy.estimated_zopa", e.target.value)}
                 />
+                <label className="small">Secuencia de concesiones</label>
                 <textarea
-                  placeholder="Secuencia de concesiones"
+                  placeholder="Qué vas a ceder primero, segundo, tercero"
                   value={preparation.strategy.concession_sequence}
                   onChange={(e) => updatePreparation("strategy.concession_sequence", e.target.value)}
                 />
+                <label className="small">Hipótesis sobre contraparte</label>
                 <textarea
-                  placeholder="Hipótesis sobre contraparte"
+                  placeholder="Qué creés que quiere, necesita, o teme la otra parte"
                   value={preparation.strategy.counterpart_hypothesis}
                   onChange={(e) => updatePreparation("strategy.counterpart_hypothesis", e.target.value)}
                 />
+                <label className="small">Variable emocional propia</label>
                 <textarea
-                  placeholder="Variable emocional propia"
+                  placeholder="Qué te puede desestabilizar emocionalmente"
                   value={preparation.risk.emotional_variable}
                   onChange={(e) => updatePreparation("risk.emotional_variable", e.target.value)}
                 />
+                <label className="small">Señal clave a observar</label>
                 <textarea
-                  placeholder="Señal clave a observar"
+                  placeholder="Qué señal te va a indicar que tenés que cambiar de estrategia"
                   value={preparation.risk.key_signal}
                   onChange={(e) => updatePreparation("risk.key_signal", e.target.value)}
                 />
               </div>
+              )}
+              {!isPreparationLocked && (
+                <div style={{ marginTop: 16, textAlign: 'right' }}>
+                  <button onClick={handleSavePreparation} disabled={loading}>
+                    Guardar preparación
+                  </button>
+                </div>
               )}
               </fieldset>
             </div>
@@ -1767,13 +1765,41 @@ function App() {
                   Análisis congelado: este caso está cerrado y se muestra solo para revisión.
                 </p>
               )}
-              {!analysis ? (
-                <p className="small">Aún no generado.</p>
+              {loading && !analysis ? (
+                <div style={{ padding: "16px 0", textAlign: "center" }}>
+                  <p className="small" style={{ marginBottom: 8 }}>IA analizando preparación...</p>
+                  <div style={{
+                    display: "inline-block",
+                    fontSize: "24px",
+                    letterSpacing: "4px",
+                    animation: "pulse 1.5s infinite"
+                  }}>
+                    ●●●
+                  </div>
+                </div>
+              ) : !analysis ? (
+                <p className="small">Análisis pendiente.</p>
               ) : (
                 <>
                   <p>
                     <strong>Nivel de preparación:</strong> {analysis.preparation_level}
                   </p>
+                  <p>
+                    <strong>Qué se evaluó</strong>
+                  </p>
+                  <ul>
+                    {analysisInputsEvaluated.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                  <p>
+                    <strong>Marco aplicado</strong>
+                  </p>
+                  <ul>
+                    <li>Coherencia entre objetivo, postura y límites de acuerdo.</li>
+                    <li>Consistencia de poder negociador (BATNA/MAAN, ZOPA y concesiones).</li>
+                    <li>Control de riesgo y señales críticas durante la ejecución.</li>
+                  </ul>
                   <p>
                     <strong>Top 3 prioridades</strong>
                   </p>
@@ -1782,7 +1808,12 @@ function App() {
                   ) : (
                     <ul>
                       {analysisTopPriorities.map((item) => (
-                        <li key={item}>{item}</li>
+                        <li key={item}>
+                          <div>{item}</div>
+                          <div className="small">
+                            {prioritySource(item, analysis)} · {priorityTheory(item)}
+                          </div>
+                        </li>
                       ))}
                     </ul>
                   )}
@@ -1821,16 +1852,26 @@ function App() {
                   )}
                 </>
               )}
+              {selectedCase.status === "preparado" && analysis && (
+                <div style={{ marginTop: 20 }}>
+                  <p className="small" style={{ marginBottom: 12, lineHeight: "1.6" }}>
+                    Preparación completa. Ejecutá la negociación y luego registrá el resultado para comparar plan vs ejecución.
+                  </p>
+                  <button onClick={handleExecute} disabled={loading}>
+                    Registrar negociación realizada
+                  </button>
+                </div>
+              )}
             </div>
 
             {(selectedCase.status === "ejecutado_pendiente_debrief" || selectedCase.status === "cerrado") && (
               <div className="card">
-                <h2>Debrief</h2>
+                <h2>Resultado de la ejecución</h2>
                 {isCaseClosed && <span className="readonly-badge">Solo lectura</span>}
-                <p className="small">Carga rápida: estado del objetivo explícito + lección transferible.</p>
+                <p className="small">Carga rápida: estado y resultado obtenido.</p>
                 {selectedCase.status === "cerrado" && (
                   <p className="small" style={{ marginBottom: 12 }}>
-                    Caso cerrado: podés revisar el debrief y el memo final. Para seguir, creá un nuevo caso.
+                    Caso cerrado: revisá resultado y memo final. Para continuar, creá un nuevo caso.
                   </p>
                 )}
                 <fieldset
@@ -1838,19 +1879,21 @@ function App() {
                   style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}
                 >
                 <div className="row">
+                  <label className="small">Estado</label>
                   <select
                     value={debrief.real_result.explicit_objective_achieved}
                     onChange={(e) =>
                       updateDebrief("real_result.explicit_objective_achieved", e.target.value)
                     }
                   >
-                    <option value="">Objetivo explícito</option>
+                    <option value="">Seleccioná una opción</option>
                     <option value="Logrado">Logrado</option>
                     <option value="Parcial">Parcial</option>
                     <option value="No logrado">No logrado</option>
                   </select>
+                  <label className="small">Resultado obtenido</label>
                   <textarea
-                    placeholder="Lección transferible (3 líneas: intención, evidencia, ajuste)"
+                    placeholder="Qué lograste y qué aprendiste de esta negociación"
                     value={debrief.transferable_lesson}
                     onChange={(e) => updateDebrief("transferable_lesson", e.target.value)}
                   />
@@ -1862,7 +1905,7 @@ function App() {
                       onClick={() => setShowAdvancedDebrief((v) => !v)}
                       disabled={loading}
                     >
-                      {showAdvancedDebrief ? "Ocultar debrief avanzado" : "Mostrar debrief avanzado"}
+                      {showAdvancedDebrief ? "Ocultar detalle" : "Ver detalle"}
                     </button>
                   </div>
                 )}
@@ -1927,22 +1970,33 @@ function App() {
                 </fieldset>
                 {selectedCase.status !== "cerrado" && (
                   <div style={{ marginTop: 12 }}>
+                    <p className="small" style={{ marginBottom: 12, lineHeight: "1.6" }}>
+                      Compararemos plan vs ejecución para obtener aprendizajes accionables.
+                    </p>
                     <button onClick={handleSaveDebrief} disabled={loading || !canSubmitDebrief}>
-                      Registrar debrief
+                      Guardar resultado y analizar
                     </button>
                     {!canSubmitDebrief && (
                       <p className="small" style={{ marginTop: 8 }}>
-                        Completá objetivo explícito y lección transferible para habilitar el guardado.
+                        Completá tus resultados y el aprendizaje clave.
                       </p>
                     )}
-                    {canSubmitDebrief && hasSavedDebrief && (
-                      <div style={{ marginTop: 10 }}>
-                        <p className="small" style={{ marginBottom: 8 }}>
-                          Debrief completo. Presioná este botón para cerrar el caso.
+                    {isDebriefAnalyzing && (
+                      <div style={{ marginTop: 16, padding: 12, backgroundColor: "#f0f9ff", borderRadius: 8, textAlign: "center", border: "1px solid #7dd3fc" }}>
+                        <p className="small" style={{ marginBottom: 12, fontWeight: 600, color: "#0369a1" }}>
+                          ⚡ IA analizando tu resultado de ejecución...
                         </p>
-                        <button className="secondary" onClick={handleCloseCase} disabled={loading}>
-                          Cerrar caso y generar memo
-                        </button>
+                        <div
+                          style={{
+                            display: "inline-block",
+                            fontSize: "32px",
+                            letterSpacing: "6px",
+                            animation: "pulse 1.5s infinite",
+                            color: "#0284c7",
+                          }}
+                        >
+                          ●●●
+                        </div>
                       </div>
                     )}
                   </div>
@@ -1950,17 +2004,164 @@ function App() {
               </div>
             )}
 
+            {!isDebriefAnalyzing && hasSavedDebrief && (
+              <div className="card">
+                <h2>Análisis de tu ejecución</h2>
+                <div style={{ marginBottom: 16, border: "1px solid #e5e7eb", borderRadius: 10, padding: 14, backgroundColor: "#fafafa" }}>
+                  <p style={{ marginBottom: 10, fontSize: "14px", fontWeight: 600, color: "#1f2937" }}>
+                    📊 Comparación: plan vs ejecución
+                  </p>
+                  <p style={{ marginBottom: 8, fontSize: "12px", color: "#6b7280", lineHeight: "1.5" }}>
+                    Analizamos cómo ejecutaste versus cómo planeaste. Los insights abajo te ayudan a consolidar mejoras y evitar recaídas.
+                  </p>
+                </div>
+
+                <div style={{ marginBottom: 12, border: "1px solid #e5e7eb", borderRadius: 10, padding: 12 }}>
+                  <p style={{ marginBottom: 8, fontWeight: 600, fontSize: "13px" }}>✅ Qué mejoraste</p>
+                  {debriefAnalysis?.confirmed_successes?.length ? (
+                    <ul style={{ marginBottom: 0 }}>
+                      {debriefAnalysis.confirmed_successes.slice(0, 3).map((item) => (
+                        <li key={item} style={{ fontSize: "13px", marginBottom: "6px" }}>{item}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="small">Sin mejoras confirmadas en este ciclo.</p>
+                  )}
+                </div>
+
+                <div style={{ marginBottom: 12, border: "1px solid #e5e7eb", borderRadius: 10, padding: 12 }}>
+                  <p style={{ marginBottom: 8, fontWeight: 600, fontSize: "13px" }}>🔍 Tus puntos ciegos</p>
+                  {postExecutionBlindSpots.length > 0 ? (
+                    <ul style={{ marginBottom: 0 }}>
+                      {postExecutionBlindSpots.map((item) => (
+                        <li key={item} style={{ fontSize: "13px", marginBottom: "6px" }}>{item}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="small">Sin puntos ciegos críticos detectados.</p>
+                  )}
+                </div>
+
+                <div style={{ marginBottom: 12, border: "1px solid #e5e7eb", borderRadius: 10, padding: 12 }}>
+                  <p style={{ marginBottom: 8, fontWeight: 600, fontSize: "13px" }}>💡 Conclusión de evolución</p>
+                  <p className="small" style={{ marginBottom: 0 }}>
+                    {debriefAnalysis?.personal_patterns?.[0] ?? "La comparación plan vs ejecución define una base clara de mejora para el próximo ciclo."}
+                  </p>
+                </div>
+
+                <div style={{ marginBottom: 12, border: "1px solid #e5e7eb", borderRadius: 10, padding: 12 }}>
+                  <p style={{ marginBottom: 8, fontWeight: 600, fontSize: "13px" }}>🎯 3 acciones para la próxima negociación</p>
+                  <ul style={{ marginBottom: 0 }}>
+                    {postExecutionActions.map((item) => (
+                      <li key={item} style={{ fontSize: "13px", marginBottom: "6px" }}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+
+                {selectedCase.status !== "cerrado" && (
+                  <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid #e5e7eb" }}>
+                    <p style={{ marginBottom: 12, fontSize: "14px", fontWeight: 600, color: "#1f2937" }}>
+                      ⭐ Último paso: calificá tu experiencia
+                    </p>
+                    <div className="row" style={{ marginBottom: 12 }}>
+                      <label className="small" htmlFor="confidence-end">Confianza final (1-10)</label>
+                      <input
+                        id="confidence-end"
+                        type="number"
+                        min={1}
+                        max={10}
+                        value={closeMetrics.confidence_end}
+                        onChange={(e) =>
+                          setCloseMetrics((prev) => ({
+                            ...prev,
+                            confidence_end: Math.min(10, Math.max(1, Number(e.target.value) || 1)),
+                          }))
+                        }
+                      />
+                      <label className="small" htmlFor="quality-result">Calidad acuerdo: resultado (1-5)</label>
+                      <input
+                        id="quality-result"
+                        type="number"
+                        min={1}
+                        max={5}
+                        value={closeMetrics.agreement_quality_result}
+                        onChange={(e) =>
+                          setCloseMetrics((prev) => ({
+                            ...prev,
+                            agreement_quality_result: Math.min(5, Math.max(1, Number(e.target.value) || 1)),
+                          }))
+                        }
+                      />
+                      <label className="small" htmlFor="quality-relationship">Calidad acuerdo: relación (1-5)</label>
+                      <input
+                        id="quality-relationship"
+                        type="number"
+                        min={1}
+                        max={5}
+                        value={closeMetrics.agreement_quality_relationship}
+                        onChange={(e) =>
+                          setCloseMetrics((prev) => ({
+                            ...prev,
+                            agreement_quality_relationship: Math.min(5, Math.max(1, Number(e.target.value) || 1)),
+                          }))
+                        }
+                      />
+                      <label className="small" htmlFor="quality-sustainability">Calidad acuerdo: sostenibilidad (1-5)</label>
+                      <input
+                        id="quality-sustainability"
+                        type="number"
+                        min={1}
+                        max={5}
+                        value={closeMetrics.agreement_quality_sustainability}
+                        onChange={(e) =>
+                          setCloseMetrics((prev) => ({
+                            ...prev,
+                            agreement_quality_sustainability: Math.min(5, Math.max(1, Number(e.target.value) || 1)),
+                          }))
+                        }
+                      />
+                    </div>
+                    <button onClick={handleCloseCase} disabled={loading}>
+                      Cerrar caso y generar memo
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
             {selectedCase.status === "cerrado" && selectedCase.final_memo && (
               <div className="card">
-                <h2>Memo Ejecutivo Final</h2>
-                <p>{selectedCase.final_memo.strategic_synthesis}</p>
-                <p>
-                  <strong>Patrón observado:</strong> {selectedCase.final_memo.observed_thinking_pattern}
-                </p>
-                <p>
-                  <strong>Principio transferible:</strong>{" "}
-                  {selectedCase.final_memo.consolidated_transferable_principle}
-                </p>
+                <h2>📋 Memo Ejecutivo Final</h2>
+                
+                <div style={{ marginBottom: 16, paddingBottom: 16, borderBottom: "1px solid #e5e7eb" }}>
+                  <p style={{ marginBottom: 8, fontWeight: 600, fontSize: "14px", color: "#1f2937" }}>Tu aprendizaje en este caso</p>
+                  <p className="small" style={{ marginBottom: 10, lineHeight: "1.6", color: "#4b5563" }}>
+                    {selectedCase.final_memo.strategic_synthesis}
+                  </p>
+                  <p style={{ marginBottom: 0, fontSize: "12px", color: "#6b7280", fontStyle: "italic" }}>
+                    <strong>Patrón identificado:</strong> {selectedCase.final_memo.observed_thinking_pattern}
+                  </p>
+                </div>
+
+                <div style={{ marginBottom: 16, paddingBottom: 16, borderBottom: "1px solid #e5e7eb" }}>
+                  <p style={{ marginBottom: 10, fontWeight: 600, fontSize: "14px", color: "#1f2937" }}>🎯 3 aspectos prioritarios a trabajar</p>
+                  {selectedCase.final_memo.observations_and_next_steps && selectedCase.final_memo.observations_and_next_steps.length > 0 ? (
+                    <ul style={{ marginBottom: 0 }}>
+                      {selectedCase.final_memo.observations_and_next_steps.slice(0, 3).map((item, idx) => (
+                        <li key={idx} style={{ fontSize: "13px", marginBottom: "8px", lineHeight: "1.5" }}>{item}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="small">Sin recomendaciones específicas en este momento.</p>
+                  )}
+                </div>
+
+                <div>
+                  <p style={{ marginBottom: 10, fontWeight: 600, fontSize: "14px", color: "#1f2937" }}>💎 Principio transferible para tu próxima negociación</p>
+                  <p className="small" style={{ marginBottom: 0, lineHeight: "1.6", paddingLeft: 12, borderLeft: "3px solid #3b82f6", color: "#1f2937" }}>
+                    {selectedCase.final_memo.consolidated_transferable_principle}
+                  </p>
+                </div>
               </div>
             )}
           </>

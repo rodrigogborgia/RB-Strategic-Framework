@@ -43,7 +43,8 @@ describe("Integración desactivación automática de membresía por vencimiento"
     const members = await api.adminListCohortMembers(cohortId);
     const member = members.find(u => u.id === userId);
     expect(member).toBeDefined();
-    // El backend debe desactivar automáticamente
+    // El backend debe desactivar automáticamente cuando expiry_date < now
     expect(member?.is_active).toBe(false);
+    expect(member?.membership_active).toBe(false);
   });
 });

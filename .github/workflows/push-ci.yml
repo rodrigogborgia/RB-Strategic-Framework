@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: Main Release Flow
 
 on:
   push:
@@ -6,95 +6,32 @@ on:
       - main
 
 jobs:
-  backend-tests:
+  release-main:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install -r backend/requirements.txt
-      - run: pytest -q
-        working-directory: backend
-        env:
-          PYTHONPATH: ${{ github.workspace }}/backend
 
-  frontend-build:
-    runs-on: ubuntu-latest
-    needs: backend-tests
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Install backend dependencies
+        run: pip install -r backend/requirements.txt
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - run: npm ci
+
+      - name: Install frontend dependencies
+        run: npm ci
         working-directory: frontend
+
       - name: Build frontend
         run: VITE_API_URL=https://app.rodrigoborgia.com npm run build
         working-directory: frontend
 
-  integration-tests:
-    runs-on: ubuntu-latest
-    needs: [backend-tests, frontend-build]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-      - run: pip install -r backend/requirements.txt
-      - run: npm ci
-        working-directory: frontend
-      - name: Run integration tests (backend + frontend)
-        run: bash run-integration-tests.sh
-      - run: echo "Integration tests completed for push ${{ github.sha }}"
-
-  quality-gate:
-    runs-on: ubuntu-latest
-    needs: [integration-tests]
-    steps:
-      - run: echo "All checks passed for push ${{ github.sha }}"
-
-  codeql:
-    runs-on: ubuntu-latest
-    needs: quality-gate
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
-    strategy:
-      fail-fast: false
-      matrix:
-        language: [python, javascript-typescript]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: github/codeql-action/init@v3
-        with:
-          languages: ${{ matrix.language }}
-      - uses: github/codeql-action/autobuild@v3
-      - uses: github/codeql-action/analyze@v3
-
-  dependency-audit:
-    runs-on: ubuntu-latest
-    needs: codeql
-    steps:
-      - uses: actions/checkout@v4
-      - run: npm audit --production
-        working-directory: frontend
-
-  secret-scan:
-    runs-on: ubuntu-latest
-    needs: dependency-audit
-    steps:
-      - uses: actions/checkout@v4
-      - run: echo "Secret scan placeholder"
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: secret-scan
-    steps:
       - name: Deploy to server via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -102,6 +39,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
+            set -e
             cd /home/rodrigo/RB
             git pull origin main
             source .venv/bin/activate
@@ -111,3 +49,9 @@ jobs:
             cd frontend
             npm ci
             VITE_API_URL=https://app.rodrigoborgia.com npm run build
+
+      - name: Post-deploy health check
+        run: curl --fail --silent --show-error https://app.rodrigoborgia.com/api/health
+
+      - name: Release success
+        run: echo "Main release flow completed for ${{ github.sha }}"

@@ -108,6 +108,14 @@ export interface AnalysisOutput {
   preparation_level: "Inicial" | "Estructurado" | "Avanzado";
 }
 
+export interface DebriefAnalysis {
+  strategic_gaps: string[];
+  identified_errors: string[];
+  confirmed_successes: string[];
+  improvement_opportunities: string[];
+  personal_patterns: string[];
+}
+
 export interface FinalMemo {
   strategic_synthesis: string;
   observations_and_next_steps: string[];
@@ -135,6 +143,7 @@ export interface CaseListItem {
 export interface CaseRead extends CaseListItem {
   preparation: Partial<PreparationInput>;
   analysis: Partial<AnalysisOutput>;
+  debrief_analysis: Partial<DebriefAnalysis>;
   debrief: Partial<DebriefInput>;
   final_memo: Partial<FinalMemo>;
 }

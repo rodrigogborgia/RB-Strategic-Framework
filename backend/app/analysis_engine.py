@@ -424,14 +424,162 @@ def analyze_preparation(data: PreparationInput, mode: FeedbackMode) -> AnalysisO
     )
 
 
-def build_final_memo(
+def analyze_debrief(
     preparation: PreparationInput,
     analysis: AnalysisOutput,
     debrief: DebriefInput,
 ) -> dict:
+    """Segundo análisis automático: Comparar preparación vs. ejecución real.
+    
+    Genera insights sobre brechas estratégicas, errores, aciertos y oportunidades de mejora.
+    """
+    strategic_gaps: list[str] = []
+    identified_errors: list[str] = []
+    confirmed_successes: list[str] = []
+    improvement_opportunities: list[str] = []
+    personal_patterns: list[str] = []
+
+    # BRECHAS ESTRATÉGICAS: Dónde la preparación no predijo la realidad
+    
+    # Brecha 1: Objetivo explícito vs. real logrado
+    if _contains_any(debrief.real_result.explicit_objective_achieved, ["no", "no logr", "fracas", "no se", "fallé"]):
+        strategic_gaps.append(
+            f"Brecha crítica: Objetivo explícito no logrado. Preparaste para '{preparation.objective.explicit_objective}' pero no se concretó. "
+            f"Posible causa: subestimaste poder relativo de contraparte o sobrestimaste tu MAAN."
+        )
+    
+    # Brecha 2: Señales no observadas
+    if _contains_any(debrief.observed_dynamics.where_power_shifted, ["no como", "inesperado", "sorpresa", "cambio"]):
+        strategic_gaps.append(
+            "Brecha de lectura: El poder se movió de forma distinta a lo esperado. Tu 'key_signal' no detectó la verdadera dinámica. "
+            "Revisar qué indicadores realmente predecían cambios en esa negociación."
+        )
+    
+    # Brecha 3: MAAN no fue el que esperabas
+    if _contains_any(debrief.real_result.what_remains_open, ["opción", "alternativa", "backup"]) and \
+       _contains_any(preparation.power_alternatives.maan + " " + preparation.power_alternatives.breakpoint, 
+                    ["no tenía", "no existía", "distinto"]):
+        strategic_gaps.append(
+            "Brecha en alternativas: Tu MAAN puede haber sido distinto en la negociación real que en la preparación. "
+            "Esto afectó tu poder de negociación percibido."
+        )
+
+    # ERRORES IDENTIFICADOS
+    
+    # Error 1: Secuencia de concesiones mal calibrada
+    if _contains_any(debrief.self_diagnosis.main_strategic_error, ["concesión", "cedí", "rápido", "temprano", "mucho"]):
+        identified_errors.append(
+            f"Error estratégico confirmado por ti: {debrief.self_diagnosis.main_strategic_error}. "
+            f"Tu preparación indicaba secuencia de concesiones: '{preparation.strategy.concession_sequence}'. "
+            f"Aprendizaje: La ejecución validó que tu secuencia estaba mal calibrada."
+        )
+    
+    # Error 2: Hipótesis sobre contraparte falló
+    if _contains_any(debrief.observed_dynamics.decisive_objection, ["inesperado", "no anticipé", "no lo vi"]):
+        identified_errors.append(
+            f"Error en diagnóstico de contraparte: Anticipaste que la contraparte era '{preparation.strategy.counterpart_hypothesis}', "
+            f"pero la objeción decisiva fue '{debrief.observed_dynamics.decisive_objection}'. "
+            f"Esto sugiere una subestimación en tu lectura de motivaciones reales."
+        )
+    
+    # Error 3: Variable emocional no manejada
+    if _contains_any(debrief.self_diagnosis.main_strategic_error, ["emoción", "ansiedad", "frustración", "enojo", "miedo"]) or \
+       _contains_any(debrief.observed_dynamics.where_power_shifted, ["emoc", "reac", "frustración"]):
+        identified_errors.append(
+            f"Gestión emocional: Tu variable emocional preparada era '{preparation.risk.emotional_variable}', "
+            f"pero parece que en la ejecución esto afectó tu decisión. Este es un patrón donde práctica deliberada es crítica."
+        )
+
+    # ACIERTOS CONFIRMADOS: Qué funcionó exactamente como preparaste
+    
+    # Acierto 1: Objetivo real logrado
+    if _contains_any(debrief.real_result.real_objective_achieved, ["sí", "logré", "se logró", "alcancé", "sí, se"]):
+        confirmed_successes.append(
+            f"Acierto estratégico: Lograste tu objetivo REAL: '{debrief.real_result.real_objective_achieved}'. "
+            f"Ésto valida que tu diferenciación entre objetivo explícito y real estuvo bien pensada."
+        )
+    
+    # Acierto 2: MAAN funcionó como respaldo
+    if _contains_any(debrief.real_result.what_remains_open, ["pendiente", "poco", "menor"]) and \
+       _contains_any(preparation.power_alternatives.maan, ["alternativa", "opción"]):
+        confirmed_successes.append(
+            "Acierto en poder de negociación: Tu MAAN te dio respaldo. La preparación fue correcta al definir una alternativa clara."
+        )
+    
+    # Acierto 3: Señal clave observada correctamente
+    if _contains_any(debrief.observed_dynamics.decisive_objection, preparation.risk.key_signal):
+        confirmed_successes.append(
+            f"Acierto en diagnóstico: Detectaste correctamente la señal clave '{preparation.risk.key_signal}' "
+            f"que resultó ser la objeción decisiva. Tus skills de observación funcionaron."
+        )
+
+    # OPORTUNIDADES DE MEJORA
+    
+    # Mejora 1: Ciclo de información más denso
+    if _contains_any(preparation.strategy.counterpart_hypothesis, ["pregun", "abrir"]) and \
+       _contains_any(debrief.observed_dynamics.where_power_shifted, ["inesperado", "sorpresa"]):
+        improvement_opportunities.append(
+            "En la próxima: Amplía la fase de intercambio de información. Tu estrategia preparada sugería preguntas abiertas, "
+            "pero parece que no fue suficiente para mapear las verdaderas limitaciones de la contraparte."
+        )
+    
+    # Mejora 2: Protocolo de manejo de escalada
+    if _contains_any(debrief.observed_dynamics.where_power_shifted, ["tensión", "conflicto", "difícil"]) and \
+       _contains_any(preparation.strategy.concession_sequence, ["flexible", "ceder"]):
+        improvement_opportunities.append(
+            "En la próxima: Define explícitamente un protocolo de desescalada (pausas, reglas de turno, cierre escrito). "
+            "Parece que necesitarás límites más explícitos en negociaciones con tensión real."
+        )
+    
+    # Mejora 3: Reserva de valor
+    if _contains_any(debrief.real_result.what_remains_open, ["precio", "término", "costo"]):
+        improvement_opportunities.append(
+            "En la próxima: Prepara variables no monetarias adicionales para sumar valor en etapa final. "
+            "La negociación se jugó por precio/términos; tienes opciones de ampliar la mesa."
+        )
+    
+    # Mejora 4: Autoconocimiento emocional
+    if _contains_any(debrief.self_diagnosis.decision_to_change, ["emoción", "reac", "respuesta"]):
+        improvement_opportunities.append(
+            f"En la próxima: Prior a ejecutar, ejercita manejo de '{preparation.risk.emotional_variable}'. "
+            f"Tu decisión de cambio es '{debrief.self_diagnosis.decision_to_change}'. Esto sugiere sesgo emocional predecible."
+        )
+
+    # PATRONES PERSONALES (si aplica - esto sería mejorado en casos múltiples)
+    # Por ahora, agregamos un patrón inicial basado en el debrief actual
+    
+    if _contains_any(debrief.self_diagnosis.main_strategic_error, ["concesión", "cedí", "rápido"]) and \
+       _contains_any(debrief.self_diagnosis.decision_to_change, ["no ceder", "más lento", "esperar"]):
+        personal_patterns.append(
+            "Patrón observado: Tendencia a ceder valor demasiado temprano. En próximas negociaciones, "
+            "implementa una regla personal: 'esperar 3 contraoferta antes de mover'."
+        )
+    
+    if _contains_any(debrief.self_diagnosis.main_strategic_error, ["emoción", "ansiedad"]):
+        personal_patterns.append(
+            "Patrón observado: Gestión emocional es tu punto crítico. Considera preparativa específica: "
+            "prácticas de respiración, walk-away script escrito, checkpoint de realidad antes de ceder."
+        )
+
+    return {
+        "strategic_gaps": strategic_gaps,
+        "identified_errors": identified_errors,
+        "confirmed_successes": confirmed_successes,
+        "improvement_opportunities": improvement_opportunities,
+        "personal_patterns": personal_patterns,
+    }
+
+
+def build_final_memo(
+    preparation: PreparationInput,
+    analysis: AnalysisOutput,
+    debrief: DebriefInput,
+    debrief_analysis: dict | None = None,
+) -> dict:
     synthesis = (
         f"Caso enfocado en {preparation.context.negotiation_type.lower()} con objetivo explícito '{preparation.objective.explicit_objective}'. "
-        f"El objetivo real fue '{preparation.objective.real_objective}' y la MAAN definida fue '{preparation.power_alternatives.maan}'."
+        f"El objetivo real fue '{preparation.objective.real_objective}' y la MAAN definida fue '{preparation.power_alternatives.maan}'. "
+        f"Resultado: {debrief.real_result.explicit_objective_achieved}."
     )
 
     thinking_pattern = (
@@ -440,9 +588,22 @@ def build_final_memo(
         else "Se observa un patrón reactivo con definición parcial de variables críticas antes de negociar."
     )
 
+    # Consolidar observaciones: del análisis de preparación + análisis de debrief (si existe)
+    observations_and_next_steps = [*analysis.observations, *analysis.suggestions, *analysis.next_steps]
+    
+    if debrief_analysis:
+        observations_and_next_steps.extend([
+            "--- APRENDIZAJES DE LA EJECUCIÓN ---",
+            *debrief_analysis.get("strategic_gaps", []),
+            *debrief_analysis.get("identified_errors", []),
+            *debrief_analysis.get("confirmed_successes", []),
+            *debrief_analysis.get("improvement_opportunities", []),
+            *debrief_analysis.get("personal_patterns", []),
+        ])
+
     return {
         "strategic_synthesis": synthesis,
-        "observations_and_next_steps": [*analysis.observations, *analysis.suggestions, *analysis.next_steps],
+        "observations_and_next_steps": observations_and_next_steps,
         "open_inconsistencies": analysis.inconsistencies,
         "observed_thinking_pattern": thinking_pattern,
         "consolidated_transferable_principle": debrief.transferable_lesson,

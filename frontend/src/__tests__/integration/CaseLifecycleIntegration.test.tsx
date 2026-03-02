@@ -98,7 +98,9 @@ describe("Integración flujo completo de caso", () => {
     }
     // Realizar análisis
     const analyzed = await api.analyzeCase(caseId);
-    expect(analyzed).toHaveProperty("main_findings");
+    expect(analyzed).toHaveProperty("observations");
+    expect(analyzed).toHaveProperty("suggestions");
+    expect(Array.isArray(analyzed.observations)).toBe(true);
     // Realizar debrief antes de cerrar
     const debrief = await api.saveDebrief(caseId, {
       real_result: {

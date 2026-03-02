@@ -364,6 +364,15 @@ button.danger:hover {
   }
 }
 
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
 @media (max-width: 1200px) {
   .workflow-track {
     grid-template-columns: repeat(2, minmax(0, 1fr));

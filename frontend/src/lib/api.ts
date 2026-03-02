@@ -19,7 +19,7 @@ import type {
   UserProfile,
 } from "./types";
 
-const API_BASE = process.env.VITE_API_URL || "http://localhost:8000";
+const API_BASE = (typeof __VITE_API_URL__ !== "undefined" && __VITE_API_URL__) || "http://localhost:8000";
 const AUTH_TOKEN_KEY = "rb_auth_token";
 
 let authToken = localStorage.getItem(AUTH_TOKEN_KEY);

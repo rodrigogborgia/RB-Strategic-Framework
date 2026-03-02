@@ -172,6 +172,15 @@ class DebriefInput(BaseModel):
     free_disclaimer: str = Field(default="", max_length=900)
 
 
+class DebriefAnalysis(BaseModel):
+    """Análisis automático del debrief vs. preparación - Segundo aprendizaje"""
+    strategic_gaps: list[str]  # Brechas: dónde la preparación no predijo la realidad
+    identified_errors: list[str]  # Errores y suposiciones fallidas
+    confirmed_successes: list[str]  # Qué funcionó exactamente como preparaste
+    improvement_opportunities: list[str]  # Qué cambiarías en la próxima
+    personal_patterns: list[str]  # Patrones en tu comportamiento (si aplica)
+
+
 class FinalMemo(BaseModel):
     strategic_synthesis: str
     observations_and_next_steps: list[str]
@@ -197,6 +206,7 @@ class CaseRead(BaseModel):
     preparation: dict[str, Any]
     analysis: dict[str, Any]
     debrief: dict[str, Any]
+    debrief_analysis: dict[str, Any]
     final_memo: dict[str, Any]
     clarity_score: int
     inconsistency_count: int

@@ -102,6 +102,7 @@ class Case(SQLModel, table=True):
     preparation: dict = Field(default_factory=dict, sa_column=Column(JSON))
     analysis: dict = Field(default_factory=dict, sa_column=Column(JSON))
     debrief: dict = Field(default_factory=dict, sa_column=Column(JSON))
+    debrief_analysis: dict = Field(default_factory=dict, sa_column=Column(JSON))  # Análisis automático del debrief
     final_memo: dict = Field(default_factory=dict, sa_column=Column(JSON))
 
     clarity_score: int = Field(default=0)

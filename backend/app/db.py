@@ -30,6 +30,7 @@ def _ensure_case_columns() -> None:
             "agreement_quality_relationship": "INTEGER",
             "agreement_quality_sustainability": "INTEGER",
             "closed_at": "DATETIME",
+            "debrief_analysis": "JSON DEFAULT '{}'",
         }
 
         for col_name, col_type in migration_columns.items():
