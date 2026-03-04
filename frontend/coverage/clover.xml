@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<coverage generated="1772475245889" clover="3.2.0">
-  <project timestamp="1772475245889" name="All files">
+<coverage generated="1772587860140" clover="3.2.0">
+  <project timestamp="1772587860140" name="All files">
     <metrics statements="60" coveredstatements="28" conditionals="37" coveredconditionals="11" methods="30" coveredmethods="17" elements="127" coveredelements="56" complexity="0" loc="60" ncloc="60" packages="1" files="1" classes="1"/>
     <file name="api.ts" path="/Users/rodrigoborgia/RB/frontend/src/lib/api.ts">
       <metrics statements="60" coveredstatements="28" conditionals="37" coveredconditionals="11" methods="30" coveredmethods="17"/>

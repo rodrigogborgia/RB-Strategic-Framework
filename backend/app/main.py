@@ -96,6 +96,23 @@ app.add_middleware(
 )
 
 
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    # Log the error details
+    error_msg = f"Error en {request.method} {request.url.path}: {str(exc)}"
+    print(f"❌ {error_msg}")
+    print(f"Stack trace: {traceback.format_exc()}")
+    
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": "Internal Server Error",
+            "error": str(exc),
+            "path": request.url.path,
+        }
+    )
+
+
 def _save_version(session: Session, case_id: int, event: str, payload: dict) -> None:
     session.add(CaseVersion(case_id=case_id, event=event, payload=payload))
 
@@ -328,6 +345,43 @@ def admin_update_cohort_member(
     session.commit()
     return {"ok": True}
 
+# ============== HEALTH CHECK & DIAGNOSTICS ==============
+
+@app.get("/api/health")
+def health_check() -> dict:
+    """Simple health check endpoint"""
+    return {"status": "ok", "message": "API is running"}
+
+@app.get("/api/diagnostics/db")
+def diagnose_database(session: Session = Depends(get_session)) -> dict:
+    """Diagnose database connectivity and basic functionality"""
+    try:
+        # Test database connection
+        test_query = session.exec(select(Cohort).limit(1)).first()
+        
+        # Count users
+        user_count = len(session.exec(select(User)).all())
+        
+        # Count cohorts
+        cohort_count = len(session.exec(select(Cohort)).all())
+        
+        return {
+            "status": "ok",
+            "database": "connected",
+            "user_count": user_count,
+            "cohort_count": cohort_count,
+            "message": "Database is working correctly"
+        }
+    except Exception as e:
+        print(f"❌ Database diagnostic failed: {str(e)}")
+        print(f"Stack trace: {traceback.format_exc()}")
+        return {
+            "status": "error",
+            "database": "disconnected",
+            "error": str(e),
+            "message": "Failed to connect to database"
+        }
+
 @app.post("/api/auth/login", response_model=TokenResponse)
 def login(payload: LoginInput, session: Session = Depends(get_session)) -> TokenResponse:
     statement = select(User).where(User.email == payload.email)
@@ -523,41 +577,61 @@ def admin_list_cohort_members(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> list[dict]:
-    _require_admin(current_user)
-    cohort = session.get(Cohort, cohort_id)
-    if not cohort:
-        raise HTTPException(status_code=404, detail="Cohorte no encontrada")
+    try:
+        _require_admin(current_user)
+        cohort = session.get(Cohort, cohort_id)
+        if not cohort:
+            raise HTTPException(status_code=404, detail="Cohorte no encontrada")
 
-    memberships = session.exec(
-        select(CohortMembership, User)
-        .join(User, CohortMembership.user_id == User.id)
-        .where(CohortMembership.cohort_id == cohort_id)
-        .order_by(User.full_name.asc(), User.email.asc())
-    ).all()
-    
-    result = []
-    now = _utc_now()
-    for membership, user in memberships:
-        # Desactivar automáticamente membresías expiradas
-        if membership.expiry_date and membership.is_active:
-            # Convertir a timezone-aware si es necesario para comparar
-            expiry_dt = membership.expiry_date
-            if expiry_dt.tzinfo is None:
-                expiry_dt = expiry_dt.replace(tzinfo=UTC)
-            if expiry_dt < now:
-                membership.is_active = False
-                session.add(membership)
+        print(f"📋 Fetching members for cohort {cohort_id}")
         
-        result.append({
-            "id": user.id,
-            "email": user.email,
-            "full_name": user.full_name,
-            "role": user.role,
-            "is_active": membership.is_active,  # Usar estado de la membresía, no del usuario
-            "membership_active": membership.is_active,  # Campo duplicado por compatibilidad
-        })
-    
-    session.commit()
+        memberships = session.exec(
+            select(CohortMembership, User)
+            .join(User, CohortMembership.user_id == User.id)
+            .where(CohortMembership.cohort_id == cohort_id)
+            .order_by(User.full_name.asc(), User.email.asc())
+        ).all()
+        
+        print(f"✅ Found {len(memberships)} memberships")
+        
+        result = []
+        now = _utc_now()
+        for membership, user in memberships:
+            try:
+                # Desactivar automáticamente membresías expiradas
+                if membership.expiry_date and membership.is_active:
+                    # Convertir a timezone-aware si es necesario para comparar
+                    expiry_dt = membership.expiry_date
+                    if expiry_dt.tzinfo is None:
+                        expiry_dt = expiry_dt.replace(tzinfo=UTC)
+                    if expiry_dt < now:
+                        membership.is_active = False
+                        session.add(membership)
+                
+                result.append({
+                    "id": user.id,
+                    "email": user.email,
+                    "full_name": user.full_name,
+                    "role": user.role.value if hasattr(user.role, 'value') else str(user.role),
+                    "is_active": membership.is_active,
+                    "membership_active": membership.is_active,
+                })
+            except Exception as e:
+                print(f"⚠️ Error processing member {user.id}: {str(e)}")
+                raise
+        
+        session.commit()
+        print(f"✅ Successfully retrieved {len(result)} members for cohort {cohort_id}")
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error in admin_list_cohort_members: {str(e)}")
+        print(f"Stack trace: {traceback.format_exc()}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error fetching cohort members: {str(e)}"
+        )
     return result
 
 
