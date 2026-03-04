@@ -23,7 +23,12 @@ def upsert_contact_in_brevo(email: str, concern: str, source: str = "modal") -> 
     api_client = sib_api_v3_sdk.ApiClient(configuration)
     contacts_api = sib_api_v3_sdk.ContactsApi(api_client)
 
-    source_label = "Lead Magnet: Protocolo IA" if source == "lead_magnet" else "Lead Magnet: Asesoría Equipos"
+    source_labels = {
+        "lead_magnet": "Lead Magnet: Protocolo IA",
+        "modal": "Lead Magnet: Asesoría Equipos",
+        "demo": "Demo: Exploración Framework",
+    }
+    source_label = source_labels.get(source, "Lead Magnet: Asesoría Equipos")
 
     attributes = {
         settings.brevo_interest_attribute: concern,

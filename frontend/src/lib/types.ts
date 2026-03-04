@@ -213,3 +213,15 @@ export interface PublicLeadCaptureResponse {
   ok: boolean;
   message: string;
 }
+
+export interface DemoStartInput {
+  email: string;
+}
+
+export interface DemoStartResponse {
+  access_token: string;
+  token_type: "bearer";
+  user: UserProfile;
+  default_case_id: number | null;
+  message: string;
+}

@@ -1,5 +1,9 @@
+from datetime import UTC, datetime
+
 from sqlalchemy import text
-from sqlmodel import Session, SQLModel, create_engine
+from sqlmodel import Session, SQLModel, create_engine, select
+
+from .models import Case, CaseOrigin, CaseStatus, FeedbackMode
 
 DATABASE_URL = "sqlite:///./rb_framework.db"
 
@@ -93,109 +97,92 @@ def _ensure_cohort_membership_columns() -> None:
                 conn.execute(text(f"ALTER TABLE 'cohortmembership' ADD COLUMN {col_name} {col_type}"))
 
 
-def _seed_demo_case() -> None:
-    """Create a demo closed case for public exploration if it doesn't exist"""
-    from datetime import datetime, timedelta
+DEMO_CASE_TITLE = "DEMO: Negociación Salarial - Caso Modelo Cerrado"
 
-    from sqlmodel import select
 
-    from .models import Case, CaseStatus, FeedbackMode, User
+def seed_demo_case_for_user(session: Session, user_id: int) -> Case:
+    existing_demo = session.exec(
+        select(Case)
+        .where(Case.owner_user_id == user_id)
+        .where(Case.title == DEMO_CASE_TITLE)
+        .order_by(Case.created_at.desc())
+    ).first()
+    if existing_demo:
+        return existing_demo
 
-    with Session(engine) as session:
-        # Check if demo case already exists
-        existing_demo = session.exec(
-            select(Case).where(Case.title == "DEMO: Negociación Salarial - Caso Modelo Cerrado")
-        ).first()
-        if existing_demo:
-            return
-
-        # Get or create admin user (should exist from bootstrap)
-        admin_user = session.exec(
-            select(User).where(User.email == "admin@rb.local")
-        ).first()
-        if not admin_user:
-            return  # Skip if admin doesn't exist yet
-
-        # Create demo case
-        demo_case = Case(
-            title="DEMO: Negociación Salarial - Caso Modelo Cerrado",
-            owner_user_id=admin_user.id,
-            status=CaseStatus.CERRADO,
-            mode=FeedbackMode.PROFESIONAL,
-            origin="sparring",
-            is_read_only=True,
-            confidence_start=5,
-            confidence_end=8,
-            agreement_quality_result=8,
-            agreement_quality_relationship=9,
-            agreement_quality_sustainability=8,
-            closed_at=datetime.utcnow(),
-            preparation={
-                "context": {
-                    "negotiation_type": "Negociación Salarial por Cambio de Rol",
-                    "impact_level": "Alto",
-                    "counterpart_relationship": "Mi Gerente Directo",
-                },
-                "objective": {
-                    "explicit_objective": "Obtener aumento salarial del 15%",
-                    "real_objective": "Validar valor percibido en la organización y asegurar crecimiento de carrera",
-                    "minimum_acceptable_result": "Aumento del 10% + revisión en 6 meses",
-                },
-                "power_alternatives": {
-                    "maan": "Buscar oportunidades en otras empresas del mismo sector",
-                    "counterpart_perceived_strength": "Alta - posición estable en la organización",
-                    "breakpoint": "Si el aumento es inferior al 8%, evaluaré otras opciones",
-                },
-                "strategy": {
-                    "estimated_zopa": "Aumento entre 10%-18%",
-                    "concession_sequence": "Primero aumento, luego beneficios adicionales, luego capacitación",
-                    "counterpart_hypothesis": "Busca retenerme con un paquete competitivo pero prudente",
-                },
-                "risk": {
-                    "emotional_variable": "Impaciencia - podría reaccionar rápido si el primer offer es bajo",
-                    "main_risk": "Que rechace mi solicitud y genere tensión en la relación",
-                    "key_signal": "Disposición a negociar vs. posición cerrada desde el inicio",
-                },
+    now = datetime.now(UTC)
+    demo_case = Case(
+        title=DEMO_CASE_TITLE,
+        owner_user_id=user_id,
+        status=CaseStatus.CERRADO,
+        mode=FeedbackMode.PROFESIONAL,
+        origin=CaseOrigin.SPARRING.value,
+        is_read_only=True,
+        confidence_start=5,
+        confidence_end=8,
+        agreement_quality_result=8,
+        agreement_quality_relationship=9,
+        agreement_quality_sustainability=8,
+        closed_at=now,
+        preparation={
+            "context": {
+                "negotiation_type": "Negociación Salarial por Cambio de Rol",
+                "impact_level": "Alto",
+                "counterpart_relationship": "Mi Gerente Directo",
             },
-            debrief={
-                "real_result": {
-                    "explicit_objective_achieved": "Sí - obtuve 12% de aumento",
-                    "real_objective_achieved": "Sí - validé que tengo valor y además conseguí revisión en 6 meses",
-                    "what_remains_open": "Detalles de capacitación aún por definir con RRHH",
-                },
-                "observed_dynamics": {
-                    "where_power_shifted": "Cuando mostré datos de mercado, mi gerente reconoció el valor",
-                    "decisive_objection": "Presupuesto limitado - pero negoció dentro de ese límite",
-                    "concession_that_changed_structure": "Ofrecí plazos más largos para la implementación del aumento",
-                },
-                "self_diagnosis": {
-                    "main_strategic_error": "Debería haber preparado benchmarks más exhaustivos",
-                    "main_strategic_success": "Mantuve la calma y no reaccioné emocionalmente",
-                    "decision_to_change": "En la próxima, presentaré el análisis de mercado desde el inicio",
-                },
-                "transferable_lesson": "El poder en la negociación no es solo sobre alternativas, sino sobre demostración de valor concreto",
-                "free_disclaimer": "Caso modelo para exploración. Los números son ilustrativos.",
+            "objective": {
+                "explicit_objective": "Obtener aumento salarial del 15%",
+                "real_objective": "Validar valor percibido en la organización y asegurar crecimiento de carrera",
+                "minimum_acceptable_result": "Aumento del 10% + revisión en 6 meses",
             },
-            debrief_analysis={
-                "strategic_gaps": [
-                    "Faltó mayor análisis de presupuesto histórico de la organización"
-                ],
-                "identified_errors": [],
-                "confirmed_successes": [
-                    "Preparación estructurada del MAAN",
-                    "Mantenimiento del control emocional"
-                ],
-                "improvement_opportunities": [
-                    "Investigar más sobre rangos internos de la misma posición"
-                ],
-                "personal_patterns": [
-                    "Tendencia a ceder en el tiempo cuando hay restricción presupuestaria"
-                ],
+            "power_alternatives": {
+                "maan": "Buscar oportunidades en otras empresas del mismo sector",
+                "counterpart_perceived_strength": "Alta - posición estable en la organización",
+                "breakpoint": "Si el aumento es inferior al 8%, evaluaré otras opciones",
             },
-        )
+            "strategy": {
+                "estimated_zopa": "Aumento entre 10%-18%",
+                "concession_sequence": "Primero aumento, luego beneficios adicionales, luego capacitación",
+                "counterpart_hypothesis": "Busca retenerme con un paquete competitivo pero prudente",
+            },
+            "risk": {
+                "emotional_variable": "Impaciencia - podría reaccionar rápido si la primera oferta es baja",
+                "main_risk": "Que rechace mi solicitud y genere tensión en la relación",
+                "key_signal": "Disposición a negociar vs. posición cerrada desde el inicio",
+            },
+        },
+        debrief={
+            "real_result": {
+                "explicit_objective_achieved": "Sí - obtuve 12% de aumento",
+                "real_objective_achieved": "Sí - validé que tengo valor y además conseguí revisión en 6 meses",
+                "what_remains_open": "Detalles de capacitación aún por definir con RRHH",
+            },
+            "observed_dynamics": {
+                "where_power_shifted": "Cuando mostré datos de mercado, mi gerente reconoció el valor",
+                "decisive_objection": "Presupuesto limitado - pero negoció dentro de ese límite",
+                "concession_that_changed_structure": "Ofrecí plazos más largos para la implementación del aumento",
+            },
+            "self_diagnosis": {
+                "main_strategic_error": "Debería haber preparado benchmarks más exhaustivos",
+                "main_strategic_success": "Mantuve la calma y no reaccioné emocionalmente",
+                "decision_to_change": "En la próxima, presentaré el análisis de mercado desde el inicio",
+            },
+            "transferable_lesson": "El poder en la negociación no es solo sobre alternativas, sino sobre demostración de valor concreto",
+            "free_disclaimer": "Caso modelo para exploración. Los números son ilustrativos.",
+        },
+        debrief_analysis={
+            "strategic_gaps": ["Faltó mayor análisis de presupuesto histórico de la organización"],
+            "identified_errors": [],
+            "confirmed_successes": ["Preparación estructurada del MAAN", "Mantenimiento del control emocional"],
+            "improvement_opportunities": ["Investigar más sobre rangos internos de la misma posición"],
+            "personal_patterns": ["Tendencia a ceder en el tiempo cuando hay restricción presupuestaria"],
+        },
+    )
 
-        session.add(demo_case)
-        session.commit()
+    session.add(demo_case)
+    session.commit()
+    session.refresh(demo_case)
+    return demo_case
 
 
 def init_db() -> None:
@@ -203,7 +190,6 @@ def init_db() -> None:
     _ensure_case_columns()
     _ensure_leader_evaluation_columns()
     _ensure_cohort_membership_columns()
-    _seed_demo_case()
 
 
 def get_session():

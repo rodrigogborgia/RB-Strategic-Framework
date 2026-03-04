@@ -3,6 +3,7 @@ from fastapi import Body
 
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
+from secrets import token_urlsafe
 
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,7 +11,7 @@ from sqlmodel import Session, select
 
 from .analysis_engine import analyze_preparation, analyze_debrief, build_final_memo
 from .auth import create_access_token, get_current_user, hash_password, verify_password
-from .db import engine, get_session, init_db
+from .db import engine, get_session, init_db, seed_demo_case_for_user
 from .models import (
     Case,
     CaseOrigin,
@@ -45,6 +46,8 @@ from .schemas import (
     LeaderEvaluationCreate,
     LeaderEvaluationRead,
     LoginInput,
+    DemoStartInput,
+    DemoStartResponse,
     PreparationInput,
     PublicLeadCaptureInput,
     PublicLeadCaptureResponse,
@@ -370,6 +373,55 @@ def capture_public_lead(payload: PublicLeadCaptureInput) -> PublicLeadCaptureRes
     return PublicLeadCaptureResponse(
         ok=True,
         message="Protocolo de contacto iniciado. Recibirá un correo con los próximos pasos",
+    )
+
+
+@app.post("/api/public/demo/start", response_model=DemoStartResponse)
+def start_public_demo(payload: DemoStartInput, session: Session = Depends(get_session)) -> DemoStartResponse:
+    email = payload.email.strip().lower()
+    if "@" not in email or "." not in email.split("@")[-1]:
+        raise HTTPException(status_code=400, detail="Email inválido")
+
+    existing_user = session.exec(select(User).where(User.email == email)).first()
+    if existing_user and existing_user.role != UserRole.STUDENT:
+        raise HTTPException(status_code=409, detail="Este email ya está asociado a una cuenta administrativa")
+
+    if existing_user:
+        demo_user = existing_user
+    else:
+        random_password = token_urlsafe(24)
+        demo_user = User(
+            email=email,
+            password_hash=hash_password(random_password),
+            full_name="",
+            role=UserRole.STUDENT,
+            is_active=True,
+        )
+        session.add(demo_user)
+        session.commit()
+        session.refresh(demo_user)
+
+    demo_case = seed_demo_case_for_user(session, demo_user.id or 0)
+
+    demo_message = "Demo iniciado. Accedé al dashboard para explorar el caso modelo."
+    try:
+        from .brevo_engine import upsert_contact_in_brevo
+
+        upsert_contact_in_brevo(
+            email,
+            "Solicitud demo: explorar caso cerrado de negociación salarial",
+            "demo",
+        )
+    except RuntimeError as exc:
+        print(f"⚠️ No se pudo enviar el lead demo a Brevo ({email}): {exc}")
+        demo_message = "Demo iniciado. Brevo no disponible en este entorno, pero el acceso de prueba fue creado."
+
+    token = create_access_token(subject=demo_user.email)
+    return DemoStartResponse(
+        access_token=token,
+        user=_to_user_profile(session, demo_user),
+        default_case_id=demo_case.id,
+        message=demo_message,
     )
 
 @app.get("/api/diagnostics/db")

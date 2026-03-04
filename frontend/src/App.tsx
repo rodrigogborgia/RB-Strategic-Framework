@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 
 import { api, getAuthToken, setAuthToken } from "./lib/api";
 import brandLogo from "./assets/rb-logo.svg";
-// import Testimonials from "./components/Testimonials";
+import Testimonials from "./components/Testimonials";
 import type {
   AdminAnonymousMetricsSummary,
   AdminUserRead,
@@ -228,6 +228,9 @@ function App() {
   const [contactTeamSize, setContactTeamSize] = useState("");
   const [contactMessage, setContactMessage] = useState("");
   const [contactSuccess, setContactSuccess] = useState("");
+  const [showDemoModal, setShowDemoModal] = useState(false);
+  const [demoEmail, setDemoEmail] = useState("");
+  const [demoLoading, setDemoLoading] = useState(false);
   const [leadName, setLeadName] = useState("");
   const [leadEmail, setLeadEmail] = useState("");
   const [leadPhone, setLeadPhone] = useState("");
@@ -670,32 +673,31 @@ function App() {
 
   async function handleDemoLogin() {
     try {
-      setAuthLoading(true);
+      if (!demoEmail.trim()) {
+        setError("Ingresá tu email para iniciar la demo.");
+        return;
+      }
+      setDemoLoading(true);
       setError("");
-      const response = await api.login("admin@rb.local", "admin1234");
+      const response = await api.startPublicDemo(demoEmail.trim());
       setAuthToken(response.access_token);
       setAuthUser(response.user);
-      setExperienceMode(response.user.role === "admin" ? "sesion_en_vivo" : response.user.effective_mode);
+      setExperienceMode(response.user.effective_mode);
       setSuccess("");
-      
-      // Cargar casos después del login
-      const casesData = await api.listCases();
-      setCases(casesData);
-      
-      // Buscar el primer caso cerrado
-      const closedCase = casesData.find((c) => c.status === "cerrado");
-      if (closedCase) {
-        setSelectedId(closedCase.id);
-      } else if (casesData.length > 0) {
-        // Si no hay casos cerrados, usar el primero disponible
-        setSelectedId(casesData[0].id);
+      setShowDemoModal(false);
+      setDemoEmail("");
+      if (response.default_case_id) {
+        setSelectedId(response.default_case_id);
       }
+      window.location.assign("/dashboard");
     } catch (e) {
       setError((e as Error).message);
     } finally {
-      setAuthLoading(false);
+      setDemoLoading(false);
     }
   }
+
+  function handleLogout() {
     setAuthToken(null);
     setAuthUser(null);
     setCases([]);
@@ -1080,12 +1082,6 @@ function App() {
     setDebrief((prev) => ({ ...prev, [group]: value }));
   }
 
-  const isGuestRoute = typeof window !== "undefined" && window.location.pathname === "/invitado";
-
-  function handleGuestAccess() {
-    window.location.assign("/invitado");
-  }
-
   async function handleSubmitContact(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!contactEmail.trim() || !contactMessage.trim()) {
@@ -1105,14 +1101,14 @@ function App() {
   async function handleSubmitLeadMagnet(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!leadEmail.trim()) {
-      setError("Ingresá tu email para recibir el protocolo.");
+      setError("Ingresá tu email para que podamos agendar una primera sesión.");
       return;
     }
     try {
       setError("");
       setLeadSuccess("");
-      await api.capturePublicLead(leadEmail.trim(), "Solicitud de Protocolo de 48hs", "lead_magnet");
-      setLeadSuccess("Protocolo de contacto iniciado. Recibirá un correo con los próximos pasos");
+      await api.capturePublicLead(leadEmail.trim(), "Solicitud de primera sesión estratégica", "lead_magnet");
+      setLeadSuccess("Protocolo de contacto iniciado. Le escribiré para coordinar la primera sesión");
       setLeadName("");
       setLeadEmail("");
       setLeadPhone("");
@@ -1134,6 +1130,29 @@ function App() {
   if (!authUser) {
     return (
       <div className="landing-page">
+        <section className="landing-client-access">
+          <h4>Acceso clientes</h4>
+          <input
+            placeholder="Email"
+            value={authEmail}
+            onChange={(e) => setAuthEmail(e.target.value)}
+          />
+          <input
+            type="password"
+            placeholder="Contraseña"
+            value={authPassword}
+            onChange={(e) => setAuthPassword(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                handleLogin().catch(() => undefined);
+              }
+            }}
+          />
+          <button onClick={() => handleLogin().catch(() => undefined)} disabled={authLoading}>
+            {authLoading ? "Ingresando..." : "Ingresar"}
+          </button>
+        </section>
+
         <main className="landing-main">
           {error && <div className="error">{error}</div>}
           <section className="landing-hero">
@@ -1141,17 +1160,13 @@ function App() {
               <img src={brandLogo} alt="RB logo" className="brand-logo" />
               <span className="landing-brand-name">RB Strategic Framework</span>
             </div>
-            {isGuestRoute && (
-              <p className="landing-guest-badge">Acceso invitado activo</p>
-            )}
             <h1 className="landing-title">Rigor Estratégico para Negociaciones de Alto Impacto</h1>
             <p className="landing-subtitle">
               Deje de improvisar. Use IA para auditar su preparación y descubrir lo que la contraparte no quiere perder.
             </p>
             <div className="landing-cta-row">
-              <button onClick={handleGuestAccess}>Probar Sparring (Acceso Demo)</button>
-              <button className="cta-demo" onClick={() => handleDemoLogin().catch(() => undefined)} disabled={authLoading}>
-                {authLoading ? "Cargando..." : "Explorar el Framework (Demo)"}
+              <button className="cta-demo" onClick={() => setShowDemoModal(true)} disabled={demoLoading}>
+                {demoLoading ? "Cargando..." : "Explorar el Framework (Demo)"}
               </button>
               <button className="secondary" onClick={() => setShowContactModal(true)}>
                 Solicitar Asesoría para Equipos
@@ -1177,54 +1192,38 @@ function App() {
             </div>
           </section>
 
-          {/* <Testimonials /> */}
-        </main>
+          <Testimonials />
 
-        <aside className="landing-side">
-          <div className="landing-card landing-card-protocol">
-            <h3>Protocolo de 48 Horas</h3>
-            <p className="small" style={{ marginBottom: 12 }}>
-              ¿Tiene una negociación crítica en los próximos dos días? Deje su correo para recibir la guía de auditoría rápida del RB Strategic Framework y detectar qué es lo que el otro no está dispuesto a perder.
+          <section className="landing-conversion">
+            <div className="landing-card landing-card-protocol">
+              <h3>Protocolo de 48 Horas</h3>
+              <p className="small" style={{ marginBottom: 12 }}>
+                Si enfrenta una negociación crítica en las próximas 48 horas, conversemos hoy.
+                Deje su correo y coordinamos una primera sesión estratégica para definir su margen real de maniobra.
+              </p>
+              <form onSubmit={handleSubmitLeadMagnet} className="landing-form">
+                <input
+                  type="email"
+                  placeholder="Tu email"
+                  value={leadEmail}
+                  onChange={(e) => setLeadEmail(e.target.value)}
+                  required
+                />
+                <button type="submit" className="btn-primary">Quiero agendar primera sesión</button>
+              </form>
+              {leadSuccess && <p className="success-message" style={{ marginTop: 10 }}>{leadSuccess}</p>}
+            </div>
+          </section>
+
+          <footer className="landing-footer">
+            <p className="small">Contacto directo: <a href="mailto:hola@rodrigoborgia.com">hola@rodrigoborgia.com</a></p>
+            <p className="small">
+              <a href="https://api.whatsapp.com/send?phone=3416087362" target="_blank" rel="noreferrer">
+                ¿Tiene una urgencia estratégica? Hablemos por WhatsApp
+              </a>
             </p>
-            <form onSubmit={handleSubmitLeadMagnet} className="landing-form">
-              <input
-                type="email"
-                placeholder="Tu email"
-                value={leadEmail}
-                onChange={(e) => setLeadEmail(e.target.value)}
-                required
-              />
-              <button type="submit" className="btn-primary">Obtener Protocolo</button>
-            </form>
-            {leadSuccess && <p className="success-message" style={{ marginTop: 10 }}>{leadSuccess}</p>}
-          </div>
-
-          <div className="landing-card landing-card-login">
-            <h3>Acceso de clientes</h3>
-            <p className="small" style={{ marginBottom: 12 }}>Ingresá con tu email y contraseña.</p>
-            <input
-              placeholder="Email"
-              value={authEmail}
-              onChange={(e) => setAuthEmail(e.target.value)}
-            />
-            <div style={{ height: 8 }} />
-            <input
-              type="password"
-              placeholder="Contraseña"
-              value={authPassword}
-              onChange={(e) => setAuthPassword(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  handleLogin().catch(() => undefined);
-                }
-              }}
-            />
-            <div style={{ height: 10 }} />
-            <button onClick={() => handleLogin().catch(() => undefined)} disabled={authLoading}>
-              {authLoading ? "Ingresando..." : "Ingresar"}
-            </button>
-          </div>
-        </aside>
+          </footer>
+        </main>
 
         {showContactModal && (
           <div className="landing-modal-overlay" onClick={() => setShowContactModal(false)}>
@@ -1259,6 +1258,40 @@ function App() {
                 </div>
               </form>
               {contactSuccess && <p className="small" style={{ marginTop: 10 }}>{contactSuccess}</p>}
+            </div>
+          </div>
+        )}
+
+        {showDemoModal && (
+          <div className="landing-modal-overlay" onClick={() => setShowDemoModal(false)}>
+            <div className="landing-modal" onClick={(e) => e.stopPropagation()}>
+              <h3>Explorar el Framework (Demo)</h3>
+              <p className="small" style={{ marginBottom: 10 }}>
+                Dejá tu email y te llevamos directo a un caso modelo cerrado para ver Poder y Alternativas, Riesgos y Memo Ejecutivo Final.
+              </p>
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  handleDemoLogin().catch(() => undefined);
+                }}
+                className="landing-form"
+              >
+                <input
+                  type="email"
+                  placeholder="Email corporativo"
+                  value={demoEmail}
+                  onChange={(e) => setDemoEmail(e.target.value)}
+                  required
+                />
+                <div className="landing-cta-row" style={{ marginTop: 10 }}>
+                  <button type="submit" className="btn-primary" disabled={demoLoading}>
+                    {demoLoading ? "Iniciando demo..." : "Entrar al Demo"}
+                  </button>
+                  <button type="button" className="secondary" onClick={() => setShowDemoModal(false)}>
+                    Cerrar
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}
