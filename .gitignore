@@ -8,6 +8,7 @@ backend/.env
 # Node
 node_modules/
 dist/
+*.tsbuildinfo
 
 # Local DB
 *.db
