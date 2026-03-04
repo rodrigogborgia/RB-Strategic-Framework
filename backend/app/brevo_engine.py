@@ -123,7 +123,7 @@ def send_admin_notification(
     )
 
     try:
-        response = transactional_api.send_transactional_email(send_smtp_email)
+        response = transactional_api.send_transac_email(send_smtp_email)
         logger.info(f"Notificación enviada al admin ({settings.public_lead_notification_email})")
     except ApiException as exc:
         logger.warning(f"No se pudo enviar notificación al admin: {exc}")
