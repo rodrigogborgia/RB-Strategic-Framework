@@ -48,12 +48,10 @@ jobs:
             pip install --upgrade pip
             pip install -r backend/requirements.txt
             sudo systemctl restart backend.service
+            curl --fail --silent --show-error http://127.0.0.1:8000/api/health
             cd frontend
             npm ci
             VITE_API_URL=https://rodrigoborgia.com npm run build
-
-      - name: Post-deploy health check
-        run: curl --fail --silent --show-error https://rodrigoborgia.com/api/health
 
       - name: Release success
         run: echo "Main release flow completed for ${{ github.sha }}"
