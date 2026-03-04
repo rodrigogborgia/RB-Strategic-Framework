@@ -71,10 +71,33 @@ def _ensure_leader_evaluation_columns() -> None:
                 conn.execute(text(f"ALTER TABLE 'leaderevaluation' ADD COLUMN {col_name} {col_type}"))
 
 
+def _ensure_cohort_membership_columns() -> None:
+    with engine.begin() as conn:
+        table_exists = conn.execute(
+            text("SELECT name FROM sqlite_master WHERE type='table' AND name='cohortmembership'")
+        ).first()
+        if not table_exists:
+            return
+
+        existing_columns = {
+            row[1]
+            for row in conn.execute(text("PRAGMA table_info('cohortmembership')")).fetchall()
+        }
+
+        migration_columns = {
+            "expiry_date": "DATETIME",
+        }
+
+        for col_name, col_type in migration_columns.items():
+            if col_name not in existing_columns:
+                conn.execute(text(f"ALTER TABLE 'cohortmembership' ADD COLUMN {col_name} {col_type}"))
+
+
 def init_db() -> None:
     SQLModel.metadata.create_all(engine)
     _ensure_case_columns()
     _ensure_leader_evaluation_columns()
+    _ensure_cohort_membership_columns()
 
 
 def get_session():
