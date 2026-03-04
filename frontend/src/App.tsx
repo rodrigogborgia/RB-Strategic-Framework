@@ -1117,7 +1117,7 @@ function App() {
   async function handleSubmitLeadMagnet(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!leadEmail.trim()) {
-      setError("Ingresá tu email para que podamos coordinar el protocolo.");
+      setError("Ingresá tu email para que podamos coordinar una sesión de asesoramiento.");
       return;
     }
     try {
@@ -1125,7 +1125,7 @@ function App() {
       setLeadSuccess("");
       trackProtocolo48hSubmitted();
       await api.protocolo48h(leadEmail.trim());
-      setLeadSuccess("Email registrado. Recibirás los detalles del protocolo en breve");
+      setLeadSuccess("Solicitud recibida. En breve nos comunicaremos para agendar su sesión de asesoramiento.");
       setLeadEmail("");
     } catch (e) {
       const errorMsg = (e as Error).message;
@@ -1223,8 +1223,8 @@ function App() {
             <div className="landing-card landing-card-protocol">
               <h3>¿Negociación crítica en 48-72 horas?</h3>
               <p className="small" style={{ marginBottom: 12 }}>
-                Si tiene una charla importante mañana o dentro de 2 días, agende una sesión de auditoría hoy. 
-                En 90 minutos mapeamos poder, riesgos y margen real de maniobra. Sabe exactamente qué puede ceder sin regalar valor.
+                Si tiene una charla importante mañana o dentro de 2 días, agende una sesión de asesoramiento hoy.
+                En 90 minutos mapeamos poder, riesgos y margen real de maniobra para que llegue con claridad y control a la negociación.
               </p>
               <form onSubmit={handleSubmitLeadMagnet} className="landing-form">
                 <input
@@ -1234,7 +1234,7 @@ function App() {
                   onChange={(e) => setLeadEmail(e.target.value)}
                   required
                 />
-                <button type="submit" className="btn-primary">Agendar sesión de auditoría</button>
+                <button type="submit" className="btn-primary">Agendar sesión de asesoramiento</button>
               </form>
               {leadSuccess && <p className="success-message" style={{ marginTop: 10 }}>{leadSuccess}</p>}
             </div>

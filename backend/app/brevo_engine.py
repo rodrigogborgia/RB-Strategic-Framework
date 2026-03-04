@@ -105,8 +105,8 @@ def send_admin_notification(
 """
 
     sender = {
-        "name": "RB Framework",
-        "email": "noreply@rb-framework.local"
+        "name": settings.brevo_sender_name,
+        "email": settings.brevo_sender_email,
     }
     
     to = [
