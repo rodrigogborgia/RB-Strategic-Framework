@@ -1084,15 +1084,24 @@ function App() {
 
   async function handleSubmitContact(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!contactEmail.trim() || !contactMessage.trim()) {
-      setError("Completá email y preocupación en negociación para solicitar asesoría.");
+    if (!contactName.trim() || !contactEmail.trim() || !contactTeamSize.trim() || !contactMessage.trim()) {
+      setError("Completá todos los campos para solicitar asesoría.");
       return;
     }
     try {
       setError("");
       setContactSuccess("");
-      await api.capturePublicLead(contactEmail.trim(), contactMessage.trim(), "modal");
-      setContactSuccess("Protocolo de contacto iniciado. Recibirá un correo con los próximos pasos");
+      await api.solicitorAsesoria(
+        contactEmail.trim(),
+        contactName.trim(),
+        contactTeamSize.trim(),
+        contactMessage.trim()
+      );
+      setContactSuccess("Solicitud de asesoría registrada. Te contactaremos pronto con los próximos pasos");
+      setContactName("");
+      setContactEmail("");
+      setContactTeamSize("");
+      setContactMessage("");
     } catch (e) {
       setError((e as Error).message);
     }
@@ -1101,17 +1110,15 @@ function App() {
   async function handleSubmitLeadMagnet(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!leadEmail.trim()) {
-      setError("Ingresá tu email para que podamos agendar una primera sesión.");
+      setError("Ingresá tu email para que podamos coordinar el protocolo.");
       return;
     }
     try {
       setError("");
       setLeadSuccess("");
-      await api.capturePublicLead(leadEmail.trim(), "Solicitud de primera sesión estratégica", "lead_magnet");
-      setLeadSuccess("Protocolo de contacto iniciado. Le escribiré para coordinar la primera sesión");
-      setLeadName("");
+      await api.protocolo48h(leadEmail.trim());
+      setLeadSuccess("Email registrado. Recibirás los detalles del protocolo en breve");
       setLeadEmail("");
-      setLeadPhone("");
     } catch (e) {
       setError((e as Error).message);
     }

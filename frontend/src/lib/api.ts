@@ -94,6 +94,16 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ email }),
     }),
+  solicitorAsesoria: (email: string, nombre: string, tamaño_equipo: string, preocupacion: string) =>
+    request<PublicLeadCaptureResponse>("/api/public/solicitar-asesoria", {
+      method: "POST",
+      body: JSON.stringify({ email, nombre, tamaño_equipo, preocupacion }),
+    }),
+  protocolo48h: (email: string) =>
+    request<PublicLeadCaptureResponse>("/api/public/protocolo-48h", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
   adminUpdateCohortMembership: (cohortId: number, userId: number, payload: { is_active: boolean; expiry_date: string | null }) =>
     request<{ ok: boolean }>(`/api/admin/cohorts/${cohortId}/members/${userId}`, {
       method: "PUT",

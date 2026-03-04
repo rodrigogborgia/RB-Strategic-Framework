@@ -43,6 +43,17 @@ class PublicLeadCaptureInput(BaseModel):
     source: str = Field(default="modal", pattern="^(modal|lead_magnet)$")
 
 
+class SolicitorAsesoriaInput(BaseModel):
+    email: str = Field(min_length=5, max_length=190)
+    nombre: str = Field(min_length=2, max_length=120)
+    tamaño_equipo: str = Field(min_length=2, max_length=50)
+    preocupacion: str = Field(min_length=3, max_length=900)
+
+
+class Protocolo48hInput(BaseModel):
+    email: str = Field(min_length=5, max_length=190)
+
+
 class PublicLeadCaptureResponse(BaseModel):
     ok: bool = True
     message: str

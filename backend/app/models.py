@@ -144,3 +144,13 @@ class LeaderEvaluation(SQLModel, table=True):
     next_action: str = Field(default="", max_length=280)
 
     created_at: datetime = Field(default_factory=utc_now)
+
+
+class PublicLeadCapture(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    email: str = Field(index=True, max_length=190)
+    source: str = Field(index=True, max_length=30)  # "demo", "solicitar_asesoria", "protocolo_48h"
+    nombre: Optional[str] = Field(default=None, max_length=120)
+    tamaño_equipo: Optional[str] = Field(default=None, max_length=50)
+    preocupacion: Optional[str] = Field(default=None, max_length=900)
+    created_at: datetime = Field(default_factory=utc_now)

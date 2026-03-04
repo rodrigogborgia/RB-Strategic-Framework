@@ -21,6 +21,7 @@ from .models import (
     CohortMembership,
     CohortStatus,
     LeaderEvaluation,
+    PublicLeadCapture,
     User,
     UserRole,
 )
@@ -48,9 +49,11 @@ from .schemas import (
     LoginInput,
     DemoStartInput,
     DemoStartResponse,
+    Protocolo48hInput,
     PreparationInput,
     PublicLeadCaptureInput,
     PublicLeadCaptureResponse,
+    SolicitorAsesoriaInput,
     TokenResponse,
     UserProfile,
 )
@@ -349,6 +352,51 @@ def admin_update_cohort_member(
     session.commit()
     return {"ok": True}
 
+# ============== HELPER FUNCTIONS FOR PUBLIC LEADS ==============
+
+def _log_lead_capture(
+    session: Session, 
+    email: str, 
+    source: str, 
+    nombre: str | None = None,
+    tamaño_equipo: str | None = None,
+    preocupacion: str | None = None
+) -> PublicLeadCapture:
+    """Log public lead capture to database for auditing"""
+    capture = PublicLeadCapture(
+        email=email.strip().lower(),
+        source=source,
+        nombre=nombre.strip() if nombre else None,
+        tamaño_equipo=tamaño_equipo.strip() if tamaño_equipo else None,
+        preocupacion=preocupacion.strip() if preocupacion else None,
+    )
+    session.add(capture)
+    session.commit()
+    session.refresh(capture)
+    return capture
+
+
+def _notify_admin_of_lead(
+    email: str,
+    source: str,
+    nombre: str | None = None,
+    tamaño_equipo: str | None = None,
+    preocupacion: str | None = None,
+) -> None:
+    """Notify admin via Brevo when new lead captured"""
+    try:
+        from .brevo_engine import send_admin_notification
+        
+        send_admin_notification(
+            lead_email=email,
+            source=source,
+            nombre=nombre,
+            tamaño_equipo=tamaño_equipo,
+            preocupacion=preocupacion,
+        )
+    except Exception as exc:
+        print(f"⚠️ No se pudo enviar notificación al admin ({email}): {exc}")
+
 # ============== HEALTH CHECK & DIAGNOSTICS ==============
 
 @app.get("/api/health")
@@ -358,12 +406,24 @@ def health_check() -> dict:
 
 
 @app.post("/api/public/leads/contact", response_model=PublicLeadCaptureResponse)
-def capture_public_lead(payload: PublicLeadCaptureInput) -> PublicLeadCaptureResponse:
+def capture_public_lead(
+    payload: PublicLeadCaptureInput,
+    session: Session = Depends(get_session)
+) -> PublicLeadCaptureResponse:
+    email = payload.email.strip().lower()
+    
+    # Log to database
+    _log_lead_capture(session, email, payload.source, preocupacion=payload.preocupacion_negociacion)
+    
+    # Notify admin
+    _notify_admin_of_lead(email, payload.source, preocupacion=payload.preocupacion_negociacion)
+    
+    # Sync to Brevo
     try:
         from .brevo_engine import upsert_contact_in_brevo
 
         upsert_contact_in_brevo(
-            payload.email.strip(), 
+            email, 
             payload.preocupacion_negociacion.strip(),
             payload.source
         )
@@ -403,6 +463,12 @@ def start_public_demo(payload: DemoStartInput, session: Session = Depends(get_se
 
     demo_case = seed_demo_case_for_user(session, demo_user.id or 0)
 
+    # Log to database
+    _log_lead_capture(session, email, "demo", preocupacion="Exploración del framework con caso modelo de negociación salarial")
+
+    # Notify admin
+    _notify_admin_of_lead(email, "demo", preocupacion="Solicitó demo del framework")
+
     demo_message = "Demo iniciado. Accedé al dashboard para explorar el caso modelo."
     try:
         from .brevo_engine import upsert_contact_in_brevo
@@ -422,6 +488,94 @@ def start_public_demo(payload: DemoStartInput, session: Session = Depends(get_se
         user=_to_user_profile(session, demo_user),
         default_case_id=demo_case.id,
         message=demo_message,
+    )
+
+
+@app.post("/api/public/solicitar-asesoria", response_model=PublicLeadCaptureResponse)
+def solicitar_asesoria(
+    payload: SolicitorAsesoriaInput,
+    session: Session = Depends(get_session)
+) -> PublicLeadCaptureResponse:
+    """Solicitud de asesoría directa: Nombre, email, tamaño equipo, preocupación"""
+    email = payload.email.strip().lower()
+    
+    # Log to database
+    _log_lead_capture(
+        session,
+        email,
+        "solicitar_asesoria",
+        nombre=payload.nombre,
+        tamaño_equipo=payload.tamaño_equipo,
+        preocupacion=payload.preocupacion
+    )
+    
+    # Notify admin
+    _notify_admin_of_lead(
+        email,
+        "solicitar_asesoria",
+        nombre=payload.nombre,
+        tamaño_equipo=payload.tamaño_equipo,
+        preocupacion=payload.preocupacion
+    )
+    
+    # Sync to Brevo
+    try:
+        from .brevo_engine import upsert_contact_in_brevo
+        
+        upsert_contact_in_brevo(
+            email,
+            f"Asesoría solicitada - Equipo: {payload.tamaño_equipo} - {payload.preocupacion}",
+            "solicitar_asesoria"
+        )
+    except RuntimeError as exc:
+        # Log but don't fail - graceful degradation
+        print(f"⚠️ No se pudo enviar solicitud de asesoría a Brevo ({email}): {exc}")
+    
+    return PublicLeadCaptureResponse(
+        ok=True,
+        message="Solicitud de asesoría registrada. Te contactaremos pronto con los próximos pasos",
+    )
+
+
+@app.post("/api/public/protocolo-48h", response_model=PublicLeadCaptureResponse)
+def protocolo_48h(
+    payload: Protocolo48hInput,
+    session: Session = Depends(get_session)
+) -> PublicLeadCaptureResponse:
+    """Protocolo 48 Horas lead capture"""
+    email = payload.email.strip().lower()
+    
+    # Log to database
+    _log_lead_capture(
+        session,
+        email,
+        "protocolo_48h",
+        preocupacion="Interés en protocolo de 48 horas"
+    )
+    
+    # Notify admin
+    _notify_admin_of_lead(
+        email,
+        "protocolo_48h",
+        preocupacion="Solicitó protocolo de 48 horas"
+    )
+    
+    # Sync to Brevo
+    try:
+        from .brevo_engine import upsert_contact_in_brevo
+        
+        upsert_contact_in_brevo(
+            email,
+            "Interés en protocolo de 48 horas para negociaciones",
+            "protocolo_48h"
+        )
+    except RuntimeError as exc:
+        # Log but don't fail - graceful degradation
+        print(f"⚠️ No se pudo enviar lead protocolo a Brevo ({email}): {exc}")
+    
+    return PublicLeadCaptureResponse(
+        ok=True,
+        message="Email registrado. Recibirás los detalles del protocolo en breve",
     )
 
 @app.get("/api/diagnostics/db")
