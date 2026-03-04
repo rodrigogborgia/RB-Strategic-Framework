@@ -1575,7 +1575,7 @@ function App() {
                   { key: "cerrado", label: "Cierre", actionKey: "close" },
                 ].map((step) => {
                   const active =
-                    (step.key === selectedCase.status && !(step.key === "ejecutado_pendiente_debrief" && hasSavedDebrief)) ||
+                    (step.key === selectedCase.status && !(step.key === "ejecutado_pendiente_debrief" && hasSavedDebrief) && !(step.key === "cerrado")) ||
                     (step.key === "cerrado" && selectedCase.status === "ejecutado_pendiente_debrief" && hasSavedDebrief);
                   const done =
                     statusRank(step.key as CaseStatus) < statusRank(selectedCase.status) ||
@@ -1758,7 +1758,7 @@ function App() {
             </div>
 
             <div className="card">
-              <h2>Análisis</h2>
+              <h2>Análisis de tu preparación</h2>
               {isCaseClosed && <span className="readonly-badge">Solo lectura</span>}
               {isCaseClosed && (
                 <p className="small" style={{ marginBottom: 12 }}>
