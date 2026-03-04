@@ -28,7 +28,7 @@ def upsert_contact_in_brevo(email: str, concern: str, source: str = "modal") -> 
         "modal": "Lead Magnet: Asesoría Equipos",
         "demo": "Demo: Exploración Framework",
         "solicitar_asesoria": "Solicitud: Asesoría Directa",
-        "protocolo_48h": "Lead Magnet: Protocolo 48h",
+        "protocolo_48h": "Solicitud: Asesoramiento 48h",
     }
     source_label = source_labels.get(source, "Lead Magnet: Asesoría Equipos")
 
@@ -84,7 +84,7 @@ def send_admin_notification(
         "modal": "Asesoría Equipos",
         "demo": "Demo Framework",
         "solicitar_asesoria": "Asesoría Directa",
-        "protocolo_48h": "Protocolo 48h",
+        "protocolo_48h": "Asesoramiento 48h",
     }
     source_label = source_labels.get(source, "Contacto Público")
 

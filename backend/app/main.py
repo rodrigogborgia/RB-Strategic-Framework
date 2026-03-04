@@ -550,32 +550,32 @@ def protocolo_48h(
         session,
         email,
         "protocolo_48h",
-        preocupacion="Interés en protocolo de 48 horas"
+        preocupacion="Interés en sesión de asesoramiento en 48 horas"
     )
-    
+
     # Notify admin
     _notify_admin_of_lead(
         email,
         "protocolo_48h",
-        preocupacion="Solicitó protocolo de 48 horas"
+        preocupacion="Solicitó sesión de asesoramiento en 48 horas"
     )
-    
+
     # Sync to Brevo
     try:
         from .brevo_engine import upsert_contact_in_brevo
-        
+
         upsert_contact_in_brevo(
             email,
-            "Interés en protocolo de 48 horas para negociaciones",
+            "Interés en sesión de asesoramiento en 48 horas",
             "protocolo_48h"
         )
     except RuntimeError as exc:
         # Log but don't fail - graceful degradation
-        print(f"⚠️ No se pudo enviar lead protocolo a Brevo ({email}): {exc}")
-    
+        print(f"⚠️ No se pudo enviar lead de asesoramiento 48h a Brevo ({email}): {exc}")
+
     return PublicLeadCaptureResponse(
         ok=True,
-        message="Email registrado. Recibirás los detalles del protocolo en breve",
+        message="Solicitud recibida. En breve nos comunicaremos para agendar su sesión de asesoramiento.",
     )
 
 @app.get("/api/diagnostics/db")
