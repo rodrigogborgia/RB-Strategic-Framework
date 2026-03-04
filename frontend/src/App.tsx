@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 
 import { api, getAuthToken, setAuthToken } from "./lib/api";
+import { trackEvent, trackDemoModalViewed, trackDemoStarted, trackAsesoriaModalViewed, trackAsesoriaSubmitted, trackProtocolo48hSubmitted, trackError } from "./lib/analytics";
 import brandLogo from "./assets/rb-logo.svg";
 import Testimonials from "./components/Testimonials";
 import type {
@@ -679,6 +680,7 @@ function App() {
       }
       setDemoLoading(true);
       setError("");
+      trackDemoStarted(demoEmail.trim());
       const response = await api.startPublicDemo(demoEmail.trim());
       setAuthToken(response.access_token);
       setAuthUser(response.user);
@@ -691,7 +693,9 @@ function App() {
       }
       window.location.assign("/dashboard");
     } catch (e) {
-      setError((e as Error).message);
+      const errorMsg = (e as Error).message;
+      setError(errorMsg);
+      trackError(errorMsg, 'demo_login');
     } finally {
       setDemoLoading(false);
     }
@@ -1091,6 +1095,7 @@ function App() {
     try {
       setError("");
       setContactSuccess("");
+      trackAsesoriaSubmitted(contactName.trim());
       await api.solicitorAsesoria(
         contactEmail.trim(),
         contactName.trim(),
@@ -1103,7 +1108,9 @@ function App() {
       setContactTeamSize("");
       setContactMessage("");
     } catch (e) {
-      setError((e as Error).message);
+      const errorMsg = (e as Error).message;
+      setError(errorMsg);
+      trackError(errorMsg, 'asesor_submit');
     }
   }
 
@@ -1116,11 +1123,14 @@ function App() {
     try {
       setError("");
       setLeadSuccess("");
+      trackProtocolo48hSubmitted();
       await api.protocolo48h(leadEmail.trim());
       setLeadSuccess("Email registrado. Recibirás los detalles del protocolo en breve");
       setLeadEmail("");
     } catch (e) {
-      setError((e as Error).message);
+      const errorMsg = (e as Error).message;
+      setError(errorMsg);
+      trackError(errorMsg, 'protocolo_submit');
     }
   }
 
@@ -1173,10 +1183,17 @@ function App() {
               dónde está el verdadero poder, qué riesgos asechan y cómo girar a tu favor sin escalar conflicto.
             </p>
             <div className="landing-cta-row">
-              <button className="cta-demo" onClick={() => setShowDemoModal(true)} disabled={demoLoading}>
+              <button 
+                className="cta-demo" 
+                onClick={() => { trackDemoModalViewed(); setShowDemoModal(true); }} 
+                disabled={demoLoading}
+              >
                 {demoLoading ? "Cargando..." : "Explorar caso modelo (Demo)"}
               </button>
-              <button className="secondary" onClick={() => setShowContactModal(true)}>
+              <button 
+                className="secondary" 
+                onClick={() => { trackAsesoriaModalViewed(); setShowContactModal(true); }}
+              >
                 Asesoría directa para tu equipo
               </button>
             </div>

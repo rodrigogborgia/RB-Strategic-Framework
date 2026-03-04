@@ -1,0 +1,111 @@
+{
+  "analyticsConfig": {
+    "ga4MeasurementId": "G-XXXXXXX",
+    "setupDocumentation": "See ANALYTICS_SETUP.md for complete setup guide",
+    "events": [
+      {
+        "name": "demo_modal_viewed",
+        "description": "User clicks on 'Explorar Framework Demo' button",
+        "parameters": {
+          "location": "landing_hero",
+          "button_text": "Explorar Framework Demo"
+        },
+        "tracking": "automatic",
+        "location": "src/App.tsx line ~1180"
+      },
+      {
+        "name": "demo_started",
+        "description": "User submits demo email form",
+        "parameters": {
+          "email_hash": "hashed email for privacy",
+          "source": "landing"
+        },
+        "tracking": "automatic",
+        "location": "src/App.tsx handleDemoLogin()"
+      },
+      {
+        "name": "asesoria_modal_viewed",
+        "description": "User clicks on 'Asesoría directa' button",
+        "parameters": {
+          "location": "landing_hero",
+          "button_text": "Asesoría para Equipos"
+        },
+        "tracking": "automatic",
+        "location": "src/App.tsx line ~1188"
+      },
+      {
+        "name": "lead_captured_asesoria",
+        "description": "User submits asesoría form (3+ fields: nombre, email, tamaño_equipo, preocupacion)",
+        "parameters": {
+          "nombre_hash": "hashed name for privacy",
+          "source": "modal_asesoria",
+          "source_label": "Solicitud: Asesoría Directa"
+        },
+        "tracking": "automatic",
+        "location": "src/App.tsx handleSubmitContact()"
+      },
+      {
+        "name": "protocolo_modal_viewed",
+        "description": "User views 'Protocolo 48h' section (no explicit view event, logged via scroll)",
+        "parameters": {},
+        "tracking": "manual",
+        "location": "Landing page"
+      },
+      {
+        "name": "lead_captured_protocolo",
+        "description": "User submits protocolo 48h email",
+        "parameters": {
+          "source": "protocolo_48h",
+          "source_label": "Lead Magnet: Protocolo 48h"
+        },
+        "tracking": "automatic",
+        "location": "src/App.tsx handleSubmitLeadMagnet()"
+      },
+      {
+        "name": "error_occurred",
+        "description": "Error in any of the lead capture forms",
+        "parameters": {
+          "error_message": "error details",
+          "context": "demo_login|asesor_submit|protocolo_submit",
+          "timestamp": "ISO8601"
+        },
+        "tracking": "automatic",
+        "location": "src/App.tsx catch blocks"
+      }
+    ],
+    "conversionTrackingGoals": [
+      {
+        "name": "Demo Started",
+        "event": "demo_started",
+        "description": "User initiated demo flow"
+      },
+      {
+        "name": "Asesoría Lead Captured",
+        "event": "lead_captured_asesoria",
+        "description": "Valid asesoría request submitted"
+      },
+      {
+        "name": "Protocolo 48h Lead Captured",
+        "event": "lead_captured_protocolo",
+        "description": "Protocolo 48h email captured"
+      }
+    ],
+    "measurementImplementation": {
+      "frontend_tracking": "src/lib/analytics.ts",
+      "event_dispatch_integration": "src/App.tsx",
+      "ga4_setup_script": "frontend/index.html (lines ~56-65)",
+      "note": "Events automatically tracked when forms are submitted. No additional code needed beyond setup."
+    },
+    "dataLayerStructure": {
+      "description": "GA4 uses standard gtag.js API",
+      "exampleEvent": {
+        "eventName": "demo_modal_viewed",
+        "parameters": {
+          "timestamp": "2026-03-04T19:30:00.000Z",
+          "location": "landing_hero",
+          "button_text": "Explorar Framework Demo"
+        }
+      }
+    }
+  }
+}

@@ -55,7 +55,7 @@ echo "[4/5] Ejecutando tests de integración frontend..."
 npm run test:ci
 
 echo "[5/5] Ejecutando build frontend de producción..."
-VITE_API_URL=https://app.rodrigoborgia.com npm run build
+VITE_API_URL=https://rodrigoborgia.com npm run build
 popd > /dev/null
 
 echo "✔ Gate local completado: tests y build OK."

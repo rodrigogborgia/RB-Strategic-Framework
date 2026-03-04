@@ -10,7 +10,7 @@ const publicDir = path.join(projectRoot, "public");
 
 mkdirSync(publicDir, { recursive: true });
 
-const rawSiteUrl = process.env.VITE_SITE_URL || "https://app.rodrigoborgia.com";
+const rawSiteUrl = process.env.VITE_SITE_URL || "https://rodrigoborgia.com";
 const siteUrl = rawSiteUrl.replace(/\/+$/, "");
 const buildDate = new Date().toISOString().slice(0, 10);
 

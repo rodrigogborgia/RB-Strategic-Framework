@@ -29,7 +29,7 @@ jobs:
         working-directory: frontend
 
       - name: Build frontend
-        run: VITE_API_URL=https://app.rodrigoborgia.com npm run build
+        run: VITE_API_URL=https://rodrigoborgia.com npm run build
         working-directory: frontend
 
       - name: Deploy to server via SSH
@@ -48,10 +48,10 @@ jobs:
             sudo systemctl restart backend.service
             cd frontend
             npm ci
-            VITE_API_URL=https://app.rodrigoborgia.com npm run build
+            VITE_API_URL=https://rodrigoborgia.com npm run build
 
       - name: Post-deploy health check
-        run: curl --fail --silent --show-error https://app.rodrigoborgia.com/api/health
+        run: curl --fail --silent --show-error https://rodrigoborgia.com/api/health
 
       - name: Release success
         run: echo "Main release flow completed for ${{ github.sha }}"

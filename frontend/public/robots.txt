@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://app.rodrigoborgia.com/sitemap.xml
+Sitemap: https://rodrigoborgia.com/sitemap.xml
