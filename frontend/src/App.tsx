@@ -1167,16 +1167,17 @@ function App() {
               <img src={brandLogo} alt="RB logo" className="brand-logo" />
               <span className="landing-brand-name">RB Strategic Framework</span>
             </div>
-            <h1 className="landing-title">Rigor Estratégico para Negociaciones de Alto Impacto</h1>
+            <h1 className="landing-title">Rigor Estratégico para Decisiones Críticas</h1>
             <p className="landing-subtitle">
-              Deje de improvisar. Use IA para auditar su preparación y descubrir lo que la contraparte no quiere perder.
+              No puedes estar en todo. Pero antes de cada negociación importante, necesitas ver lo que otros pierden de vista: 
+              dónde está el verdadero poder, qué riesgos asechan y cómo girar a tu favor sin escalar conflicto.
             </p>
             <div className="landing-cta-row">
               <button className="cta-demo" onClick={() => setShowDemoModal(true)} disabled={demoLoading}>
-                {demoLoading ? "Cargando..." : "Explorar el Framework (Demo)"}
+                {demoLoading ? "Cargando..." : "Explorar caso modelo (Demo)"}
               </button>
               <button className="secondary" onClick={() => setShowContactModal(true)}>
-                Solicitar Asesoría para Equipos
+                Asesoría directa para tu equipo
               </button>
             </div>
           </section>
@@ -1186,15 +1187,15 @@ function App() {
             <div className="landing-steps">
               <article className="landing-step-card">
                 <h3>A) Preparación Estructurada</h3>
-                <p>Bloques de Poder y Riesgo para definir objetivo, MAAN/BATNA, límites de acuerdo y señales críticas.</p>
+                <p>Defina poder real (MAAN, BATNA, ZOPA), límites de acuerdo, objetivos explícitos vs reales y señales de riesgo. Sin rigor, improvisa.</p>
               </article>
               <article className="landing-step-card">
-                <h3>B) Auditoría de IA</h3>
-                <p>Detección de incoherencias, preguntas de clarificación y prioridades tácticas antes de ejecutar.</p>
+                <h3>B) Auditoría con IA</h3>
+                <p>Detector automático de brechas estratégicas: qué olvidó, dónde es vulnerable, qué concesiones son trampas. Todo antes de que la contraparte encuentre sus puntos débiles.</p>
               </article>
               <article className="landing-step-card">
-                <h3>C) Debrief de Aprendizaje</h3>
-                <p>Comparación entre plan y ejecución para extraer principios transferibles y elevar performance negociadora.</p>
+                <h3>C) Debrief + Aprendizaje</h3>
+                <p>Después de ejecutar, compare plan vs realidad. Extraiga principios transferibles. La próxima negociación es más clara porque aprendió de esta.</p>
               </article>
             </div>
           </section>
@@ -1203,10 +1204,10 @@ function App() {
 
           <section className="landing-conversion">
             <div className="landing-card landing-card-protocol">
-              <h3>Protocolo de 48 Horas</h3>
+              <h3>¿Negociación crítica en 48-72 horas?</h3>
               <p className="small" style={{ marginBottom: 12 }}>
-                Si enfrenta una negociación crítica en las próximas 48 horas, conversemos hoy.
-                Deje su correo y coordinamos una primera sesión estratégica para definir su margen real de maniobra.
+                Si tiene una charla importante mañana o dentro de 2 días, agende una sesión de auditoría hoy. 
+                En 90 minutos mapeamos poder, riesgos y margen real de maniobra. Sabe exactamente qué puede ceder sin regalar valor.
               </p>
               <form onSubmit={handleSubmitLeadMagnet} className="landing-form">
                 <input
@@ -1216,7 +1217,7 @@ function App() {
                   onChange={(e) => setLeadEmail(e.target.value)}
                   required
                 />
-                <button type="submit" className="btn-primary">Quiero agendar primera sesión</button>
+                <button type="submit" className="btn-primary">Agendar sesión de auditoría</button>
               </form>
               {leadSuccess && <p className="success-message" style={{ marginTop: 10 }}>{leadSuccess}</p>}
             </div>

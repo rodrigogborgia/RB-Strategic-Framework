@@ -10,19 +10,19 @@ interface Testimonial {
 const testimonials: Testimonial[] = [
   {
     quote:
-      "La experiencia con Rodrigo ha sido un gran aporte para el equipo de BREMEN. La dinámica logra un clima en el que surgen gran cantidad de oportunidades para trabajar los distintos aspectos de las relaciones.",
+      "La experiencia con Rodrigo cambió cómo conducimos decisiones estratégicas en BREMEN. El equipo aprendió a vincular visiones diferentes, a sostener límites sin escalar, y a transformar conflicto en claridad. Ahora las negociaciones internas y externas son mucho más efectivas.",
     author: "JÁLID DEL AZAR",
     role: "Gerente General, BREMEN TOOLS.",
   },
   {
     quote:
-      "¡Gracias Rodrigo por acercarnos la posibilidad de abordar el trabajo el equipo inter áreas y de una forma tan lúdica como esta! Estamos muy contentos con la jornada.",
+      "Trabajar estructura de negociación con Rodrigo no fue teórico. Fue entrenamiento real para decisiones de presupuesto, alianzas inter-áreas y conversaciones difíciles. El equipo aprendió a preguntar antes de ceder, a mapear poder, a reconocer cuándo están en territorio peligroso.",
     author: "PAULA MATTIELLO",
     role: "Chief Branding Officer, VASSER.",
   },
   {
     quote:
-      "Lo que trabajamos con Rodrigo no fue comunicación 'teórica', sino entrenamiento real para situaciones de alta presión. Nuestro equipo aprendió a desactivar conflictos, sostener límites y conducir conversaciones difíciles sin escalar ni perder autoridad. Se nota claramente la diferencia entre antes y después del entrenamiento.",
+      "Lo que trabajamos con Rodrigo fue entrenamiento real para situaciones de alta presión. No fue coaching teórico. Fue auditoría de decisiones reales: cómo desactivar conflictos sin perder autoridad, cómo sostener límites, cómo conducir conversaciones difíciles sin escalar. Se nota claramente la diferencia entre antes y después. Nuestro equipo toma mejores decisiones.",
     author: "GUSTAVO BARBA",
     role: "Director, Barrio Los Alisos, Nordelta.",
     highlighted: true,
