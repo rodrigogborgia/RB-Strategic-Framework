@@ -203,3 +203,13 @@ export interface CaseTemplate {
   mode: FeedbackMode;
   ideal_for: string;
 }
+
+export interface PublicLeadCaptureInput {
+  email: string;
+  preocupacion_negociacion: string;
+}
+
+export interface PublicLeadCaptureResponse {
+  ok: boolean;
+  message: string;
+}

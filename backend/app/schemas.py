@@ -25,6 +25,17 @@ class LoginInput(BaseModel):
     password: str
 
 
+class PublicLeadCaptureInput(BaseModel):
+    email: str = Field(min_length=5, max_length=190)
+    preocupacion_negociacion: str = Field(min_length=3, max_length=900)
+    source: str = Field(default="modal", pattern="^(modal|lead_magnet)$")
+
+
+class PublicLeadCaptureResponse(BaseModel):
+    ok: bool = True
+    message: str
+
+
 class UserProfile(BaseModel):
     id: int
     email: str

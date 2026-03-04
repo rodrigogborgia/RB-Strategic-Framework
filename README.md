@@ -159,4 +159,66 @@ La aplicación tiene lógica incorporada sobre:
 
 ---
 
-**Acceso:** https://app.rodrigoborgia.com
+## Configuración e Integración de CRM (Brevo)
+
+La landing page captura leads a través de dos canales:
+
+1. **Modal "Solicitar Asesoría para Equipos"** → Clasificado como `Lead Magnet: Asesoría Equipos`
+2. **Formulario Lateral "Protocolo de 48 Horas"** → Clasificado como `Lead Magnet: Protocolo IA`
+
+Ambos feeds se sincronizan automáticamente con **Brevo** (lista ID 3: "Cómo usar la IA para preparar nuestras negociaciones").
+
+### Configurar Brevo
+
+1. **Crear tu cuenta:**
+   - Ve a [Brevo](https://www.brevo.com)
+   - Registrate y confirma tu email
+
+2. **Obtener API Key:**
+   - Accedé a [Configuración → Cuenta → API](https://my.brevo.com/settings/account/api)
+   - Generá una nueva API key
+   - Copialá en un lugar seguro (no la commitees al repo)
+
+3. **Configurar variables de entorno:**
+   - Opción A (local): Creá `backend/.env` con:
+     ```
+     BREVO_API_KEY=your_api_key_here
+     BREVO_LIST_ID=3
+     ```
+   - Opción B (producción/secreto externo): Creá `~/.rb-secrets/backend.env` con las mismas variables. El `settings.py` la leerá automáticamente sin comprometer secrets en git.
+
+4. **Verificar la configuración:**
+   ```bash
+   cd backend
+   source ../.venv/bin/activate
+   python -c "from app.brevo_engine import upsert_contact_in_brevo; print('✓ Brevo configurado')"
+   ```
+
+### Atributos personalizados en Brevo
+
+Para diferenciar leads por origen, asegúrate de que tu cuenta Brevo tenga estos atributos:
+
+- **PREOCUPACION_NEGOCIACION**: Captura la preocupación o tipo de negociación (tipo texto)
+- **LEAD_SOURCE**: Captura la fuente del lead ("Lead Magnet: Protocolo IA" o "Lead Magnet: Asesoría Equipos")
+
+Si no existen, créalos desde Brevo → CRM → Atributos personalizados.
+
+### Flujo de captura
+
+Cuando alguien completa un formulario en la landing:
+
+1. **Frontend** envía `{email, preocupacion_negociacion, source}`
+2. **Backend** valida el payload en `PublicLeadCaptureInput`
+3. **brevo_engine.py** mapea el `source` al label correcto:
+   - `"lead_magnet"` → `"Lead Magnet: Protocolo IA"`
+   - `"modal"` → `"Lead Magnet: Asesoría Equipos"`
+4. **API Brevo** crea/actualiza el contacto en la Lista ID 3
+5. **Sistema registra** un log:
+   ```
+   Lead capturado exitosamente: email=..., source=..., list_id=3
+   ```
+
+Brevo dispara automáticamente la secuencia de emails configurada para esa lista.
+
+---
+

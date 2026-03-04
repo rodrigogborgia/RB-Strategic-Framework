@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 
 import { api, getAuthToken, setAuthToken } from "./lib/api";
 import brandLogo from "./assets/rb-logo.svg";
+// import Testimonials from "./components/Testimonials";
 import type {
   AdminAnonymousMetricsSummary,
   AdminUserRead,
@@ -221,6 +222,16 @@ function App() {
   const [success, setSuccess] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [isDebriefAnalyzing, setIsDebriefAnalyzing] = useState(false);
+  const [showContactModal, setShowContactModal] = useState(false);
+  const [contactName, setContactName] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
+  const [contactTeamSize, setContactTeamSize] = useState("");
+  const [contactMessage, setContactMessage] = useState("");
+  const [contactSuccess, setContactSuccess] = useState("");
+  const [leadName, setLeadName] = useState("");
+  const [leadEmail, setLeadEmail] = useState("");
+  const [leadPhone, setLeadPhone] = useState("");
+  const [leadSuccess, setLeadSuccess] = useState("");
   const [showAdvancedPreparation, setShowAdvancedPreparation] = useState(false);
   const [showAdvancedDebrief, setShowAdvancedDebrief] = useState(false);
   const [showFullAnalysis, setShowFullAnalysis] = useState(false);
@@ -657,7 +668,34 @@ function App() {
     }
   }
 
-  function handleLogout() {
+  async function handleDemoLogin() {
+    try {
+      setAuthLoading(true);
+      setError("");
+      const response = await api.login("admin@rb.local", "admin1234");
+      setAuthToken(response.access_token);
+      setAuthUser(response.user);
+      setExperienceMode(response.user.role === "admin" ? "sesion_en_vivo" : response.user.effective_mode);
+      setSuccess("");
+      
+      // Cargar casos después del login
+      const casesData = await api.listCases();
+      setCases(casesData);
+      
+      // Buscar el primer caso cerrado
+      const closedCase = casesData.find((c) => c.status === "cerrado");
+      if (closedCase) {
+        setSelectedId(closedCase.id);
+      } else if (casesData.length > 0) {
+        // Si no hay casos cerrados, usar el primero disponible
+        setSelectedId(casesData[0].id);
+      }
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setAuthLoading(false);
+    }
+  }
     setAuthToken(null);
     setAuthUser(null);
     setCases([]);
@@ -1042,6 +1080,47 @@ function App() {
     setDebrief((prev) => ({ ...prev, [group]: value }));
   }
 
+  const isGuestRoute = typeof window !== "undefined" && window.location.pathname === "/invitado";
+
+  function handleGuestAccess() {
+    window.location.assign("/invitado");
+  }
+
+  async function handleSubmitContact(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!contactEmail.trim() || !contactMessage.trim()) {
+      setError("Completá email y preocupación en negociación para solicitar asesoría.");
+      return;
+    }
+    try {
+      setError("");
+      setContactSuccess("");
+      await api.capturePublicLead(contactEmail.trim(), contactMessage.trim(), "modal");
+      setContactSuccess("Protocolo de contacto iniciado. Recibirá un correo con los próximos pasos");
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
+  async function handleSubmitLeadMagnet(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!leadEmail.trim()) {
+      setError("Ingresá tu email para recibir el protocolo.");
+      return;
+    }
+    try {
+      setError("");
+      setLeadSuccess("");
+      await api.capturePublicLead(leadEmail.trim(), "Solicitud de Protocolo de 48hs", "lead_magnet");
+      setLeadSuccess("Protocolo de contacto iniciado. Recibirá un correo con los próximos pasos");
+      setLeadName("");
+      setLeadEmail("");
+      setLeadPhone("");
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
   if (authChecking) {
     return (
       <div className="page" style={{ gridTemplateColumns: "1fr" }}>
@@ -1054,15 +1133,74 @@ function App() {
 
   if (!authUser) {
     return (
-      <div className="page" style={{ gridTemplateColumns: "1fr" }}>
-        <main className="main" style={{ maxWidth: 520, margin: "0 auto", width: "100%", paddingTop: 56 }}>
+      <div className="landing-page">
+        <main className="landing-main">
           {error && <div className="error">{error}</div>}
-          <div className="card">
-            <div className="brand-block">
+          <section className="landing-hero">
+            <div className="landing-brand">
               <img src={brandLogo} alt="RB logo" className="brand-logo" />
-              <h2 className="brand-title">RB Strategic Framework</h2>
-              <p className="brand-subtitle">Capacitación + seguimiento mensual con evidencia de progreso</p>
+              <span className="landing-brand-name">RB Strategic Framework</span>
             </div>
+            {isGuestRoute && (
+              <p className="landing-guest-badge">Acceso invitado activo</p>
+            )}
+            <h1 className="landing-title">Rigor Estratégico para Negociaciones de Alto Impacto</h1>
+            <p className="landing-subtitle">
+              Deje de improvisar. Use IA para auditar su preparación y descubrir lo que la contraparte no quiere perder.
+            </p>
+            <div className="landing-cta-row">
+              <button onClick={handleGuestAccess}>Probar Sparring (Acceso Demo)</button>
+              <button className="cta-demo" onClick={() => handleDemoLogin().catch(() => undefined)} disabled={authLoading}>
+                {authLoading ? "Cargando..." : "Explorar el Framework (Demo)"}
+              </button>
+              <button className="secondary" onClick={() => setShowContactModal(true)}>
+                Solicitar Asesoría para Equipos
+              </button>
+            </div>
+          </section>
+
+          <section className="landing-methodology">
+            <h2>Metodología RB Strategic Framework</h2>
+            <div className="landing-steps">
+              <article className="landing-step-card">
+                <h3>A) Preparación Estructurada</h3>
+                <p>Bloques de Poder y Riesgo para definir objetivo, MAAN/BATNA, límites de acuerdo y señales críticas.</p>
+              </article>
+              <article className="landing-step-card">
+                <h3>B) Auditoría de IA</h3>
+                <p>Detección de incoherencias, preguntas de clarificación y prioridades tácticas antes de ejecutar.</p>
+              </article>
+              <article className="landing-step-card">
+                <h3>C) Debrief de Aprendizaje</h3>
+                <p>Comparación entre plan y ejecución para extraer principios transferibles y elevar performance negociadora.</p>
+              </article>
+            </div>
+          </section>
+
+          {/* <Testimonials /> */}
+        </main>
+
+        <aside className="landing-side">
+          <div className="landing-card landing-card-protocol">
+            <h3>Protocolo de 48 Horas</h3>
+            <p className="small" style={{ marginBottom: 12 }}>
+              ¿Tiene una negociación crítica en los próximos dos días? Deje su correo para recibir la guía de auditoría rápida del RB Strategic Framework y detectar qué es lo que el otro no está dispuesto a perder.
+            </p>
+            <form onSubmit={handleSubmitLeadMagnet} className="landing-form">
+              <input
+                type="email"
+                placeholder="Tu email"
+                value={leadEmail}
+                onChange={(e) => setLeadEmail(e.target.value)}
+                required
+              />
+              <button type="submit" className="btn-primary">Obtener Protocolo</button>
+            </form>
+            {leadSuccess && <p className="success-message" style={{ marginTop: 10 }}>{leadSuccess}</p>}
+          </div>
+
+          <div className="landing-card landing-card-login">
+            <h3>Acceso de clientes</h3>
             <p className="small" style={{ marginBottom: 12 }}>Ingresá con tu email y contraseña.</p>
             <input
               placeholder="Email"
@@ -1086,7 +1224,44 @@ function App() {
               {authLoading ? "Ingresando..." : "Ingresar"}
             </button>
           </div>
-        </main>
+        </aside>
+
+        {showContactModal && (
+          <div className="landing-modal-overlay" onClick={() => setShowContactModal(false)}>
+            <div className="landing-modal" onClick={(e) => e.stopPropagation()}>
+              <h3>Solicitar Asesoría para Equipos</h3>
+              <form onSubmit={handleSubmitContact} className="landing-form">
+                <input
+                  placeholder="Nombre"
+                  value={contactName}
+                  onChange={(e) => setContactName(e.target.value)}
+                />
+                <input
+                  placeholder="Email corporativo"
+                  value={contactEmail}
+                  onChange={(e) => setContactEmail(e.target.value)}
+                />
+                <input
+                  placeholder="Tamaño del equipo"
+                  value={contactTeamSize}
+                  onChange={(e) => setContactTeamSize(e.target.value)}
+                />
+                <textarea
+                  placeholder="Preocupación en negociación"
+                  value={contactMessage}
+                  onChange={(e) => setContactMessage(e.target.value)}
+                />
+                <div className="landing-cta-row" style={{ marginTop: 10 }}>
+                  <button type="submit">Enviar solicitud</button>
+                  <button type="button" className="secondary" onClick={() => setShowContactModal(false)}>
+                    Cerrar
+                  </button>
+                </div>
+              </form>
+              {contactSuccess && <p className="small" style={{ marginTop: 10 }}>{contactSuccess}</p>}
+            </div>
+          </div>
+        )}
       </div>
     );
   }

@@ -46,6 +46,8 @@ from .schemas import (
     LeaderEvaluationRead,
     LoginInput,
     PreparationInput,
+    PublicLeadCaptureInput,
+    PublicLeadCaptureResponse,
     TokenResponse,
     UserProfile,
 )
@@ -350,6 +352,25 @@ def admin_update_cohort_member(
 def health_check() -> dict:
     """Simple health check endpoint"""
     return {"status": "ok", "message": "API is running"}
+
+
+@app.post("/api/public/leads/contact", response_model=PublicLeadCaptureResponse)
+def capture_public_lead(payload: PublicLeadCaptureInput) -> PublicLeadCaptureResponse:
+    try:
+        from .brevo_engine import upsert_contact_in_brevo
+
+        upsert_contact_in_brevo(
+            payload.email.strip(), 
+            payload.preocupacion_negociacion.strip(),
+            payload.source
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=502, detail=f"No se pudo enviar el lead a Brevo: {exc}")
+
+    return PublicLeadCaptureResponse(
+        ok=True,
+        message="Protocolo de contacto iniciado. Recibirá un correo con los próximos pasos",
+    )
 
 @app.get("/api/diagnostics/db")
 def diagnose_database(session: Session = Depends(get_session)) -> dict:

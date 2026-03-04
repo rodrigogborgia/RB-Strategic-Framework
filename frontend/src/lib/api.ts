@@ -14,6 +14,7 @@ import type {
   LeaderEvaluationCreate,
   LeaderEvaluationRead,
   PreparationInput,
+  PublicLeadCaptureResponse,
   StudentMetricsSummary,
   TokenResponse,
   UserProfile,
@@ -81,6 +82,11 @@ export const api = {
     request<TokenResponse>("/api/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
+    }),
+  capturePublicLead: (email: string, preocupacion_negociacion: string, source: string = "modal") =>
+    request<PublicLeadCaptureResponse>("/api/public/leads/contact", {
+      method: "POST",
+      body: JSON.stringify({ email, preocupacion_negociacion, source }),
     }),
   adminUpdateCohortMembership: (cohortId: number, userId: number, payload: { is_active: boolean; expiry_date: string | null }) =>
     request<{ ok: boolean }>(`/api/admin/cohorts/${cohortId}/members/${userId}`, {

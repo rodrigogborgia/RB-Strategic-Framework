@@ -7,4 +7,5 @@ python-jose[cryptography]==3.5.0
 passlib==1.7.4
 pytest==9.0.2
 ecdsa==0.19.1
+sib-api-v3-sdk==7.6.0
 

@@ -39,6 +39,10 @@ class Settings:
     bootstrap_admin_email: str = os.getenv("BOOTSTRAP_ADMIN_EMAIL", "admin@rb.local")
     bootstrap_admin_password: str = os.getenv("BOOTSTRAP_ADMIN_PASSWORD", "admin1234")
     bootstrap_admin_full_name: str = os.getenv("BOOTSTRAP_ADMIN_FULL_NAME", "Administrador RB")
+    brevo_api_key: str = os.getenv("BREVO_API_KEY", "")
+    brevo_list_id: int = int(os.getenv("BREVO_LIST_ID", "3"))
+    brevo_interest_attribute: str = os.getenv("BREVO_INTEREST_ATTRIBUTE", "PREOCUPACION_NEGOCIACION")
+    brevo_source_attribute: str = os.getenv("BREVO_SOURCE_ATTRIBUTE", "LEAD_SOURCE")
     frontend_origins: tuple[str, ...] = tuple(
         origin.strip()
         for origin in os.getenv(
