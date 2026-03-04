@@ -23,7 +23,6 @@ from .models import (
     User,
     UserRole,
 )
-from .openai_engine import analyze_preparation_with_openai
 from .schemas import (
     AdminAnonymousMetricsSummary,
     AdminUserCreate,
@@ -866,6 +865,7 @@ def analyze_case(
     provider_used = "rules"
     if settings.analysis_provider == "openai":
         try:
+            from .openai_engine import analyze_preparation_with_openai
             analysis = analyze_preparation_with_openai(preparation, case.mode)
             provider_used = "openai"
         except Exception:

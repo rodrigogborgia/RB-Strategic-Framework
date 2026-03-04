@@ -15,6 +15,8 @@ Elegí el tipo de caso:
 
 Podés partir de cero o usar uno de los 7 casos modelo precargados para inspirarte o adaptar a tu contexto.
 
+Si creás desde plantilla, la app asigna automáticamente el origen del caso según tu modo efectivo de acceso (**Sesión en Vivo** o **Sparring**).
+
 ### 2. Preparar (Primera entrada de datos)
 Completá los bloques de preparación estratégica con lo mínimo necesario:
 - **Contexto**: Tipo de negociación, nivel de impacto, tu relación con la contraparte
@@ -57,6 +59,8 @@ El sistema ahora compara tu preparación con tu ejecución real y te devuelve:
 
 Este análisis es **el corazón del aprendizaje**: compara tu plan + tu ejecución + tu autodiagnóstico para extraer lecciones concretas.
 
+> Nota técnica: si el análisis automático del debrief falla por un error puntual, el debrief igual se guarda para no perder información de la negociación.
+
 ### 6. Cerrar (Reporte final)
 Evaluás los resultados:
 - **Confianza final** en tu capacidad de negociación
@@ -67,6 +71,27 @@ El sistema genera un **memo ejecutivo final** que consolida:
 - Todas las oportunidades de mejora identificadas
 - Tu patrón de pensamiento observado
 - Principio transferible (la lección que llevas a la próxima)
+
+---
+
+## Experiencias de uso
+
+La plataforma está diseñada para acompañar dos contextos reales de aprendizaje y performance:
+
+- **Sesión en Vivo**: para trabajar casos durante una cohorte activa, con foco en entrenamiento aplicado y seguimiento cercano.
+- **Sparring**: para sostener la práctica en el tiempo, transformar experiencias reales en aprendizaje transferible y consolidar hábitos.
+
+Además, ofrece dos perfiles de uso complementarios:
+
+- **Alumno**: prepara, ejecuta, analiza y cierra sus casos con trazabilidad de evolución.
+- **Admin/Profesor**: acompaña el proceso con gestión de usuarios/cohortes, métricas agregadas y evaluaciones de liderazgo.
+
+En la operación actual, el acceso del alumno se resuelve principalmente por membresía de cohorte:
+
+- Con cohorte activa: experiencia por defecto en **Sesión en Vivo**.
+- Sin cohorte activa: experiencia por defecto en **Sparring**.
+
+La capa de suscripción/abono está prevista en el roadmap técnico, pero hoy el funcionamiento principal está centrado en cohortes y membresías.
 
 ---
 

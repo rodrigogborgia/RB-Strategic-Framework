@@ -43,6 +43,12 @@ popd > /dev/null
 
 echo "[3/5] Ejecutando tests unitarios frontend..."
 pushd "$FRONTEND_DIR" > /dev/null
+
+NODE_MAJOR=$(node -p 'process.versions.node.split(".")[0]')
+if [[ "$NODE_MAJOR" -ge 22 ]]; then
+  echo "⚠️  Node $(node -v) detectado. Se recomienda Node 20.x (ver .nvmrc) para evitar warnings transitorios de jsdom/punycode."
+fi
+
 npm run test:unit:ci
 
 echo "[4/5] Ejecutando tests de integración frontend..."

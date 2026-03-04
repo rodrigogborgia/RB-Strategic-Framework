@@ -1,0 +1,18 @@
+{
+  "name": "RB Strategic Framework",
+  "short_name": "RB Framework",
+  "description": "Sparring personal para negociación: preparación estratégica, debrief y aprendizaje transferible.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "/rb-logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
