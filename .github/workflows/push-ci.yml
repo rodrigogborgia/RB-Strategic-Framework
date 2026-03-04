@@ -48,7 +48,18 @@ jobs:
             pip install --upgrade pip
             pip install -r backend/requirements.txt
             sudo systemctl restart backend.service
-            curl --fail --silent --show-error http://127.0.0.1:8000/api/health
+            for i in {1..30}; do
+              if curl --fail --silent --show-error http://127.0.0.1:8000/api/health; then
+                break
+              fi
+              if [ "$i" -eq 30 ]; then
+                echo "Backend did not become healthy in time"
+                sudo systemctl --no-pager --full status backend.service || true
+                sudo journalctl -u backend.service -n 80 --no-pager || true
+                exit 1
+              fi
+              sleep 1
+            done
             cd frontend
             npm ci
             VITE_API_URL=https://rodrigoborgia.com npm run build
