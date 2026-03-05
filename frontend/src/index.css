@@ -1108,6 +1108,10 @@ button.danger:hover {
   color: #f97316;
 }
 
+.testimonial-card:nth-child(2) .testimonial-quote {
+  color: #93c5fd;
+}
+
 .testimonial-highlighted {
   border: 1px solid #10b981;
   background: linear-gradient(135deg, #0f1729 0%, #111111 100%);

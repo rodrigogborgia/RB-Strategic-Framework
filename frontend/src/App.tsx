@@ -194,7 +194,7 @@ const reputationSignals: ReputationSignal[] = [
 const testimonialBasedCases: CaseNarrative[] = [
   {
     title: "Caso 01 - Conflicto inter-areas por prioridades",
-    source: "Dirección General, sector industrial",
+    source: "Asesoría a equipo directivo",
     situation: "Equipo ejecutivo con visiones contrapuestas y conversaciones de alta friccion en decisiones estrategicas. Ataques personales emergentes.",
     risk: "Escalada del conflicto interno, perdida de foco y deterioro en negociaciones internas y externas. Riesgo de desintegración del equipo.",
     intervention: "Entrenamiento aplicado para sostener limites emotivos, conectar intereses y convertir conflicto en claridad operativa. Simulación de escenarios críticos.",
@@ -202,15 +202,15 @@ const testimonialBasedCases: CaseNarrative[] = [
   },
   {
     title: "Caso 02 - Presupuesto y alianzas bajo emoción",
-    source: "Chief Branding Officer, sector comercial",
+    source: "Equipo comercial desafiante de alto nivel",
     situation: "Conversaciones de presupuesto donde el resentimiento acumulado generaba concesiones impulsivas. Sin estructura de negociación compartida.",
-    risk: "Concesiones prematuras por frustración, decisiones desalineadas, vulnerabilidad en conversaciones futuras. Resentimientos foguados.",
+    risk: "Concesiones prematuras por frustración, decisiones desalineadas, vulnerabilidad en conversaciones futuras. Resentimientos fraguados.",
     intervention: "Mapeo de poder emocional y estructural, preparación para reconocer cuándo la emoción invade la decisión, definición de criterios previos.",
     result: "Mejora documentada en calidad de decisión en 2 ciclos de presupuesto. Menos concesiones impulsivas, mayor perspectiva de largo plazo.",
   },
   {
     title: "Caso 03 - Alta presión, autoridad y perspectiva a largo plazo",
-    source: "Dirección ejecutiva, real estate",
+    source: "Equipo de dirección en Real Estate",
     situation: "Escenarios de negociación de alto impacto donde la presión activaba respuestas emocionales que erosionaban autoridad a largo plazo.",
     risk: "Respuesta reactiva bajo rabia, pérdida de control de la conversación, deterioro de relaciones estratégicas futuras. Autoridad comprometida.",
     intervention: "Auditoría de decisiones reales, simulación de escenarios de alta presión, trabajo táctico para sostener límites sin ataques personales.",
@@ -324,6 +324,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [isDebriefAnalyzing, setIsDebriefAnalyzing] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
+  const [contactModalType, setContactModalType] = useState<"asesoria" | "caso-critico">("asesoria");
   const [contactName, setContactName] = useState("");
   const [contactEmail, setContactEmail] = useState("");
   const [contactTeamSize, setContactTeamSize] = useState("");
@@ -1279,7 +1280,7 @@ function App() {
             </div>
             <h1 className="landing-title">El estado emocional define negociaciones, no la estrategia</h1>
             <p className="landing-subtitle">
-              La mayoría de negociaciones críticas no fracasan por falta de estrategia. Fracasan porque <strong>las emociones nublan la visión</strong>: <strong>ataques personales, resentimientos foguados, pérdida de perspectiva</strong>.
+              La mayoría de negociaciones críticas no fracasan por falta de estrategia. Fracasan porque <strong>las emociones nublan la visión</strong>: <strong>ataques personales, resentimientos fraguados, pérdida de perspectiva</strong>.
               Te enseñamos a <strong>preparar y simular</strong> para que mantengas <strong>claridad bajo presión</strong>.
             </p>
             <div className="landing-cta-row">
@@ -1292,7 +1293,7 @@ function App() {
               </button>
               <button 
                 className="secondary" 
-                onClick={() => { trackAsesoriaModalViewed(); setShowContactModal(true); }}
+                onClick={() => { trackAsesoriaModalViewed(); setContactModalType("asesoria"); setShowContactModal(true); }}
               >
                 Asesoría directa para tu equipo
               </button>
@@ -1399,17 +1400,14 @@ function App() {
               <button
                 className="secondary"
                 onClick={() => {
-                  trackEvent("reputation_signals_viewed", { section: "landing_reputation" });
+                  trackEvent("caso_critico_modal_viewed", { section: "landing_reputation" });
+                  setContactModalType("caso-critico");
                   setShowContactModal(true);
                 }}
               >
-                Conversar un caso critico
+                Conversar un caso crítico
               </button>
             </div>
-            <p className="landing-reputation-note">
-              Para mostrar los logos oficiales, sube los archivos a: frontend/public/logos/hbr.png, frontend/public/logos/ucema.png,
-              frontend/public/logos/wow.png y frontend/public/logos/uces.png.
-            </p>
           </section>
 
           <section className="landing-cases">
@@ -1471,7 +1469,12 @@ function App() {
         {showContactModal && (
           <div className="landing-modal-overlay" onClick={() => setShowContactModal(false)}>
             <div className="landing-modal" onClick={(e) => e.stopPropagation()}>
-              <h3>Solicitar Asesoría para Equipos</h3>
+              <h3>{contactModalType === "caso-critico" ? "¿Negociación crítica en 48-72 horas?" : "Solicitar Asesoría para Equipos"}</h3>
+              {contactModalType === "caso-critico" && (
+                <p style={{ marginBottom: "16px", color: "#94a3b8", lineHeight: "1.6" }}>
+                  Si tiene una charla importante mañana o dentro de 2 días, agende una sesión de asesoramiento hoy. En 90 minutos mapeamos poder, riesgos y margen real de maniobra para que llegue con claridad y control a la negociación.
+                </p>
+              )}
               <form onSubmit={handleSubmitContact} className="landing-form">
                 <input
                   placeholder="Nombre"

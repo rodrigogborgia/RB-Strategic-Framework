@@ -43,7 +43,7 @@ export default function Testimonials() {
   return (
     <section className="testimonials-section">
       <div className="testimonials-container">
-        <h2 className="testimonials-title">Evidencia de Transformación: Del Concepto al Hábito Real</h2>
+        <h2 className="testimonials-title">Evidencia de transformación: del concepto al hábito real</h2>
 
         {/* Grid Desktop */}
         <div className="testimonials-grid">
