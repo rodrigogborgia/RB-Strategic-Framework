@@ -128,3 +128,149 @@ def send_admin_notification(
     except ApiException as exc:
         logger.warning(f"No se pudo enviar notificación al admin: {exc}")
 
+
+def send_case_closure_email(
+    user_email: str,
+    case_title: str,
+    final_memo: dict,
+) -> None:
+    """Send case closure summary email to user via Brevo"""
+    if not settings.brevo_api_key:
+        logger.warning("BREVO_API_KEY no configurada, no se envió email de cierre de caso")
+        return
+
+    try:
+        import sib_api_v3_sdk
+        from sib_api_v3_sdk.rest import ApiException
+    except ImportError as exc:
+        logger.error(f"Dependencia sib_api_v3_sdk no instalada: {exc}")
+        return
+
+    configuration = sib_api_v3_sdk.Configuration()
+    configuration.api_key["api-key"] = settings.brevo_api_key
+
+    api_client = sib_api_v3_sdk.ApiClient(configuration)
+    transactional_api = sib_api_v3_sdk.TransactionalEmailsApi(api_client)
+
+    # Extract memo fields
+    strategic_synthesis = final_memo.get("strategic_synthesis", "")
+    observations = final_memo.get("observations_and_next_steps", [])
+    inconsistencies = final_memo.get("open_inconsistencies", [])
+    thinking_pattern = final_memo.get("observed_thinking_pattern", "")
+    transferable_principle = final_memo.get("consolidated_transferable_principle", "")
+
+    # Build HTML email body with landing page aesthetic
+    html_body = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; background: #0f1419; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
+    <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+        <!-- Header -->
+        <div style="text-align: center; margin-bottom: 32px;">
+            <h1 style="color: #60a5fa; font-size: 24px; margin: 0 0 8px 0;">✅ Caso Cerrado</h1>
+            <h2 style="color: #e5e7eb; font-size: 18px; margin: 0; font-weight: 600;">{case_title}</h2>
+        </div>
+
+        <!-- Main Container -->
+        <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid #2a2a2a; border-radius: 12px; padding: 24px; margin-bottom: 20px;">
+            
+            <!-- Strategic Synthesis -->
+            <div style="margin-bottom: 24px;">
+                <h3 style="color: #60a5fa; font-size: 16px; margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 0.05em;">
+                    🎯 Síntesis Estratégica
+                </h3>
+                <p style="color: #cbd5e1; font-size: 14px; line-height: 1.6; margin: 0;">
+                    {strategic_synthesis}
+                </p>
+            </div>
+
+            <!-- Observations and Next Steps -->
+            {f'''
+            <div style="margin-bottom: 24px;">
+                <h3 style="color: #60a5fa; font-size: 16px; margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 0.05em;">
+                    📋 Observaciones y Próximos Pasos
+                </h3>
+                <ul style="color: #cbd5e1; font-size: 14px; line-height: 1.6; margin: 0; padding-left: 20px;">
+                    {"".join([f"<li style='margin-bottom: 8px;'>{obs}</li>" for obs in observations])}
+                </ul>
+            </div>
+            ''' if observations else ''}
+
+            <!-- Thinking Pattern -->
+            {f'''
+            <div style="margin-bottom: 24px;">
+                <h3 style="color: #60a5fa; font-size: 16px; margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 0.05em;">
+                    🧠 Patrón de Pensamiento Observado
+                </h3>
+                <p style="color: #cbd5e1; font-size: 14px; line-height: 1.6; margin: 0;">
+                    {thinking_pattern}
+                </p>
+            </div>
+            ''' if thinking_pattern else ''}
+
+            <!-- Transferable Principle -->
+            {f'''
+            <div style="margin-bottom: 24px;">
+                <h3 style="color: #60a5fa; font-size: 16px; margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 0.05em;">
+                    💡 Principio Transferible Consolidado
+                </h3>
+                <div style="background: rgba(59, 130, 246, 0.1); border-left: 3px solid #3b82f6; padding: 12px; border-radius: 6px;">
+                    <p style="color: #bfdbfe; font-size: 14px; line-height: 1.6; margin: 0; font-weight: 600;">
+                        {transferable_principle}
+                    </p>
+                </div>
+            </div>
+            ''' if transferable_principle else ''}
+
+            <!-- Open Inconsistencies -->
+            {f'''
+            <div style="margin-bottom: 0;">
+                <h3 style="color: #fca5a5; font-size: 16px; margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 0.05em;">
+                    ⚠️ Inconsistencias Abiertas
+                </h3>
+                <ul style="color: #fecaca; font-size: 14px; line-height: 1.6; margin: 0; padding-left: 20px;">
+                    {"".join([f"<li style='margin-bottom: 8px;'>{inc}</li>" for inc in inconsistencies])}
+                </ul>
+            </div>
+            ''' if inconsistencies else ''}
+
+        </div>
+
+        <!-- Footer -->
+        <div style="text-align: center; padding-top: 20px; border-top: 1px solid #262626;">
+            <p style="color: #94a3b8; font-size: 13px; margin: 0 0 8px 0;">
+                Este resumen ejecutivo se ha generado automáticamente al cerrar tu caso.
+            </p>
+            <p style="color: #94a3b8; font-size: 13px; margin: 0;">
+                <a href="#" style="color: #60a5fa; text-decoration: none;">Volver a la plataforma →</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>
+"""
+
+    sender = {
+        "name": settings.brevo_sender_name,
+        "email": settings.brevo_sender_email,
+    }
+    
+    to = [{"email": user_email}]
+
+    send_smtp_email = sib_api_v3_sdk.SendSmtpEmail(
+        to=to,
+        html_content=html_body,
+        sender=sender,
+        subject=f"✅ Resumen Ejecutivo: {case_title}",
+    )
+
+    try:
+        response = transactional_api.send_transac_email(send_smtp_email)
+        logger.info(f"Email de cierre enviado exitosamente a {user_email} para caso '{case_title}'")
+    except ApiException as exc:
+        logger.warning(f"No se pudo enviar email de cierre a {user_email}: {exc}")
+

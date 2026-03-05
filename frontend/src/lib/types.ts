@@ -99,6 +99,60 @@ export interface DebriefInput {
   free_disclaimer: string;
 }
 
+// Nuevas estructuras para visualización estratégica
+export interface PowerDashboard {
+  your_maan: string;
+  your_maan_value: string | null;
+  your_urgency: string;
+  counterpart_maan_hypothesis: string;
+  counterpart_urgency: string;
+  relative_power_assessment: string;
+  power_explanation: string;
+}
+
+export interface RiskMatrixItem {
+  risk_description: string;
+  probability: string;
+  impact: string;
+  alert_signal: string;
+  contingency_plan: string;
+}
+
+export interface RiskMatrix {
+  risks: RiskMatrixItem[];
+}
+
+export interface ConcessionMapItem {
+  level: string;
+  value: string;
+  condition: string;
+  order: number;
+}
+
+export interface ConcessionMap {
+  concessions: ConcessionMapItem[];
+  total_flexibility: string;
+}
+
+export interface PreNegotiationSummary {
+  power_position: string;
+  key_moves: string[];
+  critical_signal: string;
+  red_line: string;
+  if_stalled: string;
+}
+
+export interface DebriefComparativeItem {
+  dimension: string;
+  prepared: string;
+  what_happened: string;
+  gap: string;
+}
+
+export interface DebriefComparative {
+  comparisons: DebriefComparativeItem[];
+}
+
 export interface AnalysisOutput {
   clarification_questions: string[];
   observations: string[];
@@ -106,6 +160,11 @@ export interface AnalysisOutput {
   next_steps: string[];
   inconsistencies: string[];
   preparation_level: "Inicial" | "Estructurado" | "Avanzado";
+  // Nuevos outputs estructurados
+  power_dashboard?: PowerDashboard;
+  risk_matrix?: RiskMatrix;
+  concession_map?: ConcessionMap;
+  pre_negotiation_summary?: PreNegotiationSummary;
 }
 
 export interface DebriefAnalysis {
@@ -114,6 +173,8 @@ export interface DebriefAnalysis {
   confirmed_successes: string[];
   improvement_opportunities: string[];
   personal_patterns: string[];
+  // Nuevo: comparativa visual
+  debrief_comparative?: DebriefComparative;
 }
 
 export interface FinalMemo {

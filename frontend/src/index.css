@@ -690,14 +690,18 @@ body {
 .main {
   padding: 28px;
   overflow: auto;
+  background: #0f1419;
+  color: #e5e7eb;
+  min-height: 100vh;
 }
 
 .card {
-  background: white;
-  border: 1px solid #e2e8f0;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid #2a2a2a;
   border-radius: 10px;
   padding: 20px;
   margin-bottom: 18px;
+  color: #e5e7eb;
 }
 
 input,
@@ -707,8 +711,17 @@ button {
   width: 100%;
   padding: 10px;
   border-radius: 8px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid #3f4654;
   font-size: 14px;
+  background: rgba(30, 41, 59, 0.8);
+  color: #e5e7eb;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+input::placeholder,
+textarea::placeholder,
+select::placeholder {
+  color: #94a3b8;
 }
 
 textarea {
@@ -717,27 +730,31 @@ textarea {
 }
 
 button {
-  background: #009688;
+  background: #3b82f6;
   color: white;
-  border: 1px solid #009688;
+  border: 1px solid #3b82f6;
   cursor: pointer;
-  transition: background-color 0.2s ease, border-color 0.2s ease;
+  font-weight: 600;
 }
 
 button:hover {
-  background: #00796b;
-  border-color: #00796b;
+  background: #2563eb;
+  border-color: #2563eb;
+}
+
+button:active {
+  background: #1d4ed8;
 }
 
 button.secondary {
-  background: white;
-  color: #003366;
-  border: 1px solid #003366;
+  background: transparent;
+  color: #60a5fa;
+  border: 1px solid #3f4654;
 }
 
 button.secondary:hover {
-  background: #f4f8ff;
-  border-color: #003366;
+  background: rgba(59, 130, 246, 0.1);
+  border-color: #60a5fa;
 }
 
 .row {
@@ -747,34 +764,42 @@ button.secondary:hover {
 }
 
 .list-item {
-  border: 1px solid #e2e8f0;
+  border: 1px solid #2a2a2a;
   border-radius: 8px;
   padding: 10px;
   margin-bottom: 8px;
   cursor: pointer;
+  background: rgba(30, 41, 59, 0.5);
+  color: #cbd5e1;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.list-item:hover {
+  background: rgba(59, 130, 246, 0.15);
 }
 
 .list-item.active {
-  border-color: #009688;
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.2);
 }
 
 h1,
 h2,
 h3 {
   margin: 0 0 12px;
-  color: #003366;
+  color: #60a5fa;
   font-family: "Lora", Georgia, serif;
 }
 
 .small {
   font-size: 12px;
-  color: #333333;
+  color: #cbd5e1;
 }
 
 .error {
   color: #fca5a5;
-  background: #7f1d1d;
-  border: 1px solid #dc2626;
+  background: rgba(127, 29, 29, 0.3);
+  border: 1px solid #7f453c;
   border-radius: 6px;
   padding: 10px 12px;
   margin-bottom: 12px;
@@ -811,15 +836,15 @@ h3 {
 }
 
 button.danger {
-  background: #ffffff;
-  color: #b91c1c;
-  border: 1px solid #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+  color: #fca5a5;
+  border: 1px solid #7f453c;
   margin-left: auto;
 }
 
 button.danger:hover {
-  background: #fef2f2;
-  color: #991b1b;
+  background: rgba(239, 68, 68, 0.2);
+  color: #fecaca;
   border-color: #dc2626;
 }
 
@@ -841,7 +866,7 @@ button.danger:hover {
 
 .brand-subtitle {
   margin: 0 0 8px;
-  color: #333333;
+  color: #cbd5e1;
   font-size: 13px;
 }
 
@@ -855,15 +880,15 @@ button.danger:hover {
 }
 
 .context-badge.teacher {
-  background: #fff7ed;
-  border: 1px solid #fb923c;
-  color: #9a3412;
+  background: rgba(249, 115, 22, 0.15);
+  border: 1px solid #7c5c2c;
+  color: #fed7aa;
 }
 
 .context-badge.student {
-  background: #eff6ff;
-  border: 1px solid #60a5fa;
-  color: #1d4ed8;
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid #3f4654;
+  color: #bfdbfe;
 }
 
 .teacher-grid {
@@ -1273,5 +1298,110 @@ button.danger:hover {
 @media (max-width: 640px) {
   .workflow-track {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Responsive layout helpers for Strategic Dashboards */
+.mobile-only {
+  display: none;
+}
+
+.desktop-only {
+  display: block;
+}
+
+@media (max-width: 768px) {
+  .mobile-only {
+    display: flex;
+  }
+  
+  .desktop-only {
+    display: none;
+  }
+}
+
+/* Print-friendly styles for Strategic Dashboards */
+@media print {
+  /* Hide navigation, buttons, and non-essential elements */
+  nav,
+  button,
+  .landing-client-access,
+  .workflow-navigation,
+  .mobile-only {
+    display: none !important;
+  }
+
+  /* Show desktop/table layout for printing */
+  .desktop-only {
+    display: block !important;
+  }
+
+  /* Reset page colors for printing */
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  /* Dashboard containers */
+  .strategic-dashboard-container {
+    page-break-inside: avoid;
+    margin-bottom: 20px;
+    border: 1px solid #333 !important;
+    background: white !important;
+  }
+
+  /* Ensure titles are visible */
+  h3 {
+    color: black !important;
+    page-break-after: avoid;
+  }
+
+  /* Table styling for print */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  table th {
+    background: #f0f0f0 !important;
+    color: black !important;
+    border: 1px solid #333 !important;
+    padding: 8px !important;
+  }
+
+  table td {
+    border: 1px solid #666 !important;
+    padding: 8px !important;
+    color: black !important;
+  }
+
+  /* Preserve important color indicators in grayscale */
+  .risk-impact-badge {
+    border: 1px solid #333 !important;
+    color: black !important;
+  }
+
+  /* Cards and boxes */
+  .summary-block,
+  .power-card,
+  .concession-level {
+    page-break-inside: avoid;
+    border: 1px solid #333 !important;
+    background: white !important;
+    color: black !important;
+  }
+
+  /* Prevent orphaned content */
+  p, li, div {
+    orphans: 3;
+    widows: 3;
+  }
+
+  /* Keep related content together */
+  .pre-negotiation-summary,
+  .risk-matrix-view,
+  .concession-map-view,
+  .debrief-comparative-view {
+    page-break-inside: avoid;
   }
 }

@@ -1,10 +1,14 @@
 # RB Strategic Framework
 
+> **Plataforma de entrenamiento profesional para preparar negociaciones estratégicas y convertir cada experiencia real en aprendizaje transferible mediante análisis visual y feedback automatizado.**
+
 ## Propósito
 
 Esta aplicación te ayuda a preparar negociaciones con rigor estratégico y a aprender de cada experiencia real. No es solo un template para organizar información: es un **sparring personal** que detecta incoherencias, te hace las preguntas difíciles antes de sentarte a negociar, y te guía para convertir cada caso en práctica deliberada.
 
 El objetivo es que desarrolles disciplina de preparación y capacidad de autoevaluación honesta, pasando de comprensión conceptual a cambio observable de hábitos en negociación real.
+
+**Protocolo 48h**: Si tenés una negociación importante en 2 días, el sistema mapea tu poder, riesgos y margen de maniobra en 90 minutos mediante dashboards visuales que te dan claridad y control inmediato.
 
 ## Cómo la usa el estudiante: flujo de aprendizaje
 
@@ -38,6 +42,37 @@ El sistema revisa tu preparación y te devuelve:
 
 **Ciclo de mejora:** Podés actualizar tu preparación y pedir análisis de nuevo. Ver el historial (`/cases/{id}/versions`) para observar cómo evolucionó tu pensamiento.
 
+#### 🎯 Dashboards Estratégicos Visuales
+
+Además del análisis en texto, el sistema genera **dashboards estratégicos visuales** que mapean tu posición en 90 minutos:
+
+1. **Dashboard de Poder**: Comparación visual lado a lado de tu poder vs. la contraparte
+   - Evaluación de urgencia (Alta/Media/Baja)
+   - Fortaleza de tu MAAN
+   - Assessment de poder relativo con justificación
+
+2. **Matriz de Riesgos Priorizada**: 3-5 riesgos clave con:
+   - Probabilidad estimada
+   - Impacto codificado por color (Crítico/Alto/Medio/Bajo)
+   - Señal de alerta específica a observar
+   - Plan B contingente
+
+3. **Mapa de Concesiones**: Estructura de 5 niveles de flexibilidad
+   - 🎯 Meta aspiracional
+   - 🤝 Concesiones preparadas (que estás dispuesto a dar)
+   - 🚧 Valor de reserva (tu walkaway point)
+   - 🔴 Punto de ruptura (límites rojos)
+   - 💪 Valor MAAN (tu alternativa real)
+
+4. **Síntesis Pre-Negociación**: Resumen ejecutivo en 5 bloques
+   - Contexto estratégico
+   - Tu objetivo claro
+   - Fortalezas a aprovechar
+   - Riesgos a monitorear
+   - Primera jugada recomendada
+
+**Protocolo 48 Horas**: Si tenés una charla importante mañana o en 48 horas, estos dashboards te dan claridad y control inmediato sobre tu posición estratégica.
+
 ### 4. Ejecutar + Debrief (Captura de realidad)
 Después de negociar en la vida real, registrá lo que pasó realmente:
 - **¿Lograste tu objetivo explícito?** Qué sucedió vs. qué esperabas
@@ -59,6 +94,17 @@ El sistema ahora compara tu preparación con tu ejecución real y te devuelve:
 
 Este análisis es **el corazón del aprendizaje**: compara tu plan + tu ejecución + tu autodiagnóstico para extraer lecciones concretas.
 
+#### 🔄 Dashboard Comparativo: Preparación vs. Realidad
+
+El sistema genera una **tabla comparativa en 5 dimensiones**:
+- **Objetivo**: Lo que preparaste vs. lo que lograste
+- **Poder**: Tu assessment inicial vs. cómo se movió realmente
+- **Riesgo**: Qué anticipaste vs. qué te sorprendió
+- **Concesiones**: Tu plan vs. lo que terminaste cediendo
+- **Estrategia**: Tu hipótesis vs. lo que funcionó
+
+Cada dimensión muestra la **brecha** con código de color (verde = acierto, amarillo = aprendizaje) para identificar rápidamente dónde mejorar tu calibración estratégica.
+
 > Nota técnica: si el análisis automático del debrief falla por un error puntual, el debrief igual se guarda para no perder información de la negociación.
 
 ### 6. Cerrar (Reporte final)
@@ -71,6 +117,25 @@ El sistema genera un **memo ejecutivo final** que consolida:
 - Todas las oportunidades de mejora identificadas
 - Tu patrón de pensamiento observado
 - Principio transferible (la lección que llevas a la próxima)
+
+**📧 Email automático**: Al cerrar el caso, recibís por email un resumen ejecutivo con estética profesional que incluye todos los puntos del memo final. Podés guardarlo, imprimirlo o compartirlo para tener tu aprendizaje siempre disponible.
+
+---
+
+## Capacidades adicionales
+
+### 📱 Responsive Mobile
+Todos los dashboards estratégicos tienen diseño adaptativo. En pantallas < 768px, las tablas se transforman automáticamente en cards verticales para facilitar la lectura en celular justo antes de tu negociación.
+
+### 🖨️ Print-Friendly
+Formato optimizado para imprimir tu síntesis pre-negociación. Los dashboards mantienen su estructura, eliminan elementos de navegación y ajustan colores para ahorro de tinta.
+
+### 🧹 Cleanup Script
+Para limpiar datos de prueba sin perder la estructura de usuarios/cohortes:
+```bash
+python backend/clear_test_data.py
+# O con flag: python backend/clear_test_data.py --keep-admin
+```
 
 ---
 
@@ -219,6 +284,156 @@ Cuando alguien completa un formulario en la landing:
    ```
 
 Brevo dispara automáticamente la secuencia de emails configurada para esa lista.
+
+---
+
+## Instalación y Desarrollo
+
+### Stack Tecnológico
+
+**Backend:**
+- Python 3.14 con FastAPI
+- SQLModel para modelos de datos
+- SQLite para desarrollo (Postgres-ready para producción)
+- Motor de análisis basado en reglas (300+ patrones de detección)
+- Integración Brevo para email transaccional
+
+**Frontend:**
+- React + TypeScript
+- Vite como build tool
+- Testing con Jest + React Testing Library
+- Dark mode con diseño elegant (estética landing page)
+
+### Setup Inicial
+
+1. **Clonar el repositorio**
+   ```bash
+   git clone [repo-url]
+   cd RB
+   ```
+
+2. **Configurar Python virtual environment**
+   ```bash
+   python3.14 -m venv .venv
+   source .venv/bin/activate
+   ```
+
+3. **Instalar dependencias backend**
+   ```bash
+   cd backend
+   pip install -r requirements.txt
+   cd ..
+   ```
+
+4. **Instalar dependencias frontend**
+   ```bash
+   cd frontend
+   npm install
+   cd ..
+   ```
+
+5. **Configurar variables de entorno** (opcional para producción)
+   ```bash
+   # Crear backend/.env o ~/.rb-secrets/backend.env
+   BREVO_API_KEY=your_key_here
+   BREVO_LIST_ID=3
+   PUBLIC_LEAD_NOTIFICATION_EMAIL=admin@example.com
+   ```
+
+6. **Iniciar base de datos**
+   ```bash
+   cd backend
+   # La DB SQLite se crea automáticamente al primer run
+   ```
+
+### Desarrollo Local
+
+**Terminal 1 - Backend:**
+```bash
+cd backend
+source ../.venv/bin/activate
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+**Terminal 2 - Frontend:**
+```bash
+cd frontend
+npm run dev
+# Abre http://localhost:5173
+```
+
+### Testing
+
+**Tests completos (backend + frontend + build):**
+```bash
+bash run-integration-tests.sh
+```
+
+**Solo backend:**
+```bash
+cd backend
+source ../.venv/bin/activate
+pytest
+```
+
+**Solo frontend unit tests:**
+```bash
+cd frontend
+npm run test:unit:ci
+```
+
+**Solo frontend integration tests:**
+```bash
+cd frontend
+npm run test:ci
+```
+
+### Build de Producción
+
+```bash
+cd frontend
+npm run build
+# Output en frontend/dist/
+```
+
+Los archivos estáticos pueden servirse con cualquier servidor web (nginx, Caddy, Vercel, etc.). El backend se despliega como servicio FastAPI con Uvicorn.
+
+### Estructura del Proyecto
+
+```
+RB/
+├── backend/
+│   ├── app/
+│   │   ├── main.py              # FastAPI app + endpoints
+│   │   ├── models.py            # SQLModel schemas
+│   │   ├── schemas.py           # Pydantic validation
+│   │   ├── analysis_engine.py   # Motor de análisis estratégico
+│   │   ├── brevo_engine.py      # Integración email
+│   │   ├── templates.py         # Casos modelo
+│   │   ├── auth.py              # JWT authentication
+│   │   ├── db.py                # Database setup
+│   │   └── settings.py          # Configuración
+│   ├── tests/                   # Tests de integración
+│   ├── clear_test_data.py       # Script cleanup
+│   └── requirements.txt
+├── frontend/
+│   ├── src/
+│   │   ├── App.tsx              # Componente principal
+│   │   ├── components/
+│   │   │   ├── StrategicDashboards.tsx  # Dashboards visuales
+│   │   │   └── ...
+│   │   ├── lib/
+│   │   │   ├── api.ts           # Cliente HTTP
+│   │   │   ├── types.ts         # TypeScript types
+│   │   │   └── analytics.ts     # Google Analytics
+│   │   └── __tests__/           # Unit + integration tests
+│   ├── public/                  # Assets estáticos
+│   ├── package.json
+│   └── vite.config.ts
+├── docs/                        # Documentación adicional
+├── run-integration-tests.sh     # Gate completo de tests
+└── README.md                    # Este archivo
+```
 
 ---
 

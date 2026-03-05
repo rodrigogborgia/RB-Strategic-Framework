@@ -1,7 +1,249 @@
 from __future__ import annotations
 
 from .models import FeedbackMode
-from .schemas import AnalysisOutput, DebriefInput, PreparationInput
+from .schemas import (
+    AnalysisOutput,
+    ConcessionMap,
+    ConcessionMapItem,
+    DebriefComparative,
+    DebriefComparativeItem,
+    DebriefInput,
+    PowerDashboard,
+    PreNegotiationSummary,
+    PreparationInput,
+    RiskMatrix,
+    RiskMatrixItem,
+)
+
+
+def _contains_any(text: str, tokens: list[str]) -> bool:
+    lowered = text.lower()
+    return any(token in lowered for token in tokens)
+
+
+def _assess_urgency(text: str) -> str:
+    """Evalúa nivel de urgencia basándose en palabras clave"""
+    if _contains_any(text, ["urgente", "inmediato", "ya", "ahora", "hoy", "deadline", "mañana", "pronto", "rápido"]):
+        return "alta"
+    elif _contains_any(text, ["no urgente", "flexible", "tiempo", "explorator", "largo plazo", "sin prisa"]):
+        return "baja"
+    return "media"
+
+
+def _build_power_dashboard(data: PreparationInput) -> PowerDashboard:
+    """Construye el dashboard de poder relativo"""
+    your_urgency = _assess_urgency(
+        data.context.impact_level + " " + data.objective.minimum_acceptable_result + " " + data.risk.main_risk
+    )
+    
+    counterpart_urgency = _assess_urgency(
+        data.power_alternatives.counterpart_perceived_strength + " " + data.strategy.counterpart_hypothesis
+    )
+    
+    # Determinar poder relativo
+    maan_strong = _contains_any(
+        data.power_alternatives.maan,
+        ["alternativa", "plan b", "opción", "otra empresa", "proveedor alternativo", "oferta", "competidor"]
+    )
+    
+    counterpart_strong = _contains_any(
+        data.power_alternatives.counterpart_perceived_strength,
+        ["fuerte", "monopolio", "dominante", "único", "exclusivo", "no alternativa", "dependencia"]
+    )
+    
+    # Lógica de poder relativo
+    if maan_strong and not counterpart_strong and your_urgency != "alta":
+        assessment = "favorable"
+        explanation = "Tienes MAAN claro y la contraparte parece tener limitaciones estructurales."
+    elif counterpart_strong and not maan_strong:
+        assessment = "desfavorable"
+        explanation = "Tu MAAN es débil o poco específico y la contraparte tiene alta fortaleza percibida."
+    elif your_urgency == "alta" and counterpart_urgency == "baja":
+        assessment = "desfavorable"
+        explanation = "Tu urgencia es mayor que la de la contraparte, lo que reduce tu poder de negociación."
+    elif your_urgency == "baja" and counterpart_urgency == "alta":
+        assessment = "favorable"
+        explanation = "La contraparte parece tener mayor urgencia, lo que aumenta tu poder relativo."
+    else:
+        assessment = "equilibrado"
+        explanation = "Ambas partes tienen alternativas y urgencias comparables."
+    
+    # Extraer hipótesis de MAAN de contraparte
+    counterpart_maan = data.strategy.counterpart_hypothesis if data.strategy.counterpart_hypothesis else "No especificado en hipótesis"
+    
+    return PowerDashboard(
+        your_maan=data.power_alternatives.maan,
+        your_maan_value=None,  # Podría extraerse si hay números
+        your_urgency=your_urgency,
+        counterpart_maan_hypothesis=counterpart_maan,
+        counterpart_urgency=counterpart_urgency,
+        relative_power_assessment=assessment,
+        power_explanation=explanation,
+    )
+
+
+def _build_risk_matrix(data: PreparationInput) -> RiskMatrix:
+    """Construye matriz de riesgos priorizada"""
+    risks: list[RiskMatrixItem] = []
+    
+    # Riesgo principal (siempre presente)
+    main_impact = "crítico" if _contains_any(
+        data.context.impact_level,
+        ["alto", "crítico", "estratégico", "vital", "decisivo"]
+    ) else "alto"
+    
+    main_prob = "alta" if data.risk.main_risk else "media"
+    
+    risks.append(RiskMatrixItem(
+        risk_description=data.risk.main_risk,
+        probability=main_prob,
+        impact=main_impact,
+        alert_signal=data.risk.key_signal if data.risk.key_signal else "No definida",
+        contingency_plan=data.power_alternatives.breakpoint if data.power_alternatives.breakpoint else "Activar MAAN",
+    ))
+    
+    # Riesgo emocional (si existe)
+    if data.risk.emotional_variable:
+        risks.append(RiskMatrixItem(
+            risk_description=f"Riesgo emocional: {data.risk.emotional_variable}",
+            probability="media",
+            impact="alto",
+            alert_signal="Cambio en tono, interrupción, reacción defensiva",
+            contingency_plan="Pausa táctica, respiración, volver a objetivo real",
+        ))
+    
+    # Riesgo de concesión prematura (si se detecta)
+    if _contains_any(data.strategy.concession_sequence, ["rápido", "inmediato", "flexible", "ceder"]):
+        risks.append(RiskMatrixItem(
+            risk_description="Riesgo de ceder valor demasiado temprano",
+            probability="media",
+            impact="medio",
+            alert_signal="Presión para cerrar rápido, 'última oferta'",
+            contingency_plan="Regla: esperar al menos 2 contraofertas antes de mover",
+        ))
+    
+    # Riesgo relacional (si hay relación en curso)
+    if _contains_any(data.context.counterpart_relationship, ["largo plazo", "en curso", "recurrente", "cliente"]):
+        risks.append(RiskMatrixItem(
+            risk_description="Riesgo de dañar relación de largo plazo",
+            probability="media",
+            impact="alto",
+            alert_signal="Tono defensivo, pérdida de rapport",
+            contingency_plan="Transparencia de criterios, cierre con próximos pasos claros",
+        ))
+    
+    return RiskMatrix(risks=risks)
+
+
+def _build_concession_map(data: PreparationInput) -> ConcessionMap:
+    """Construye mapa explícito de margen de maniobra"""
+    concessions: list[ConcessionMapItem] = []
+    
+    # Objetivo aspiracional
+    concessions.append(ConcessionMapItem(
+        level="aspiracional",
+        value=data.objective.explicit_objective,
+        condition="Si logro condiciones ideales",
+        order=1,
+    ))
+    
+    # Valor de reserva / mínimo aceptable
+    if data.objective.minimum_acceptable_result:
+        concessions.append(ConcessionMapItem(
+            level="valor_reserva",
+            value=data.objective.minimum_acceptable_result,
+            condition="Límite mínimo - no bajar de esto",
+            order=3,
+        ))
+    
+    # Breakpoint
+    if data.power_alternatives.breakpoint:
+        concessions.append(ConcessionMapItem(
+            level="breakpoint",
+            value=data.power_alternatives.breakpoint,
+            condition="Condición para activar MAAN y salir",
+            order=4,
+        ))
+    
+    # MAAN value
+    concessions.append(ConcessionMapItem(
+        level="maan_value",
+        value=data.power_alternatives.maan,
+        condition="Valor de tu mejor alternativa sin acuerdo",
+        order=5,
+    ))
+    
+    # Intentar extraer concesiones intermedias de la secuencia
+    if data.strategy.concession_sequence:
+        concessions.append(ConcessionMapItem(
+            level="primera_concesión",
+            value=f"Basado en: {data.strategy.concession_sequence[:100]}...",
+            condition="Si la contraparte muestra señales cooperativas",
+            order=2,
+        ))
+    
+    # Calcular flexibilidad total (si hay números detectables)
+    flexibility = "Definir valores cuantitativos específicos para calcular margen exacto"
+    
+    return ConcessionMap(
+        concessions=sorted(concessions, key=lambda x: x.order),
+        total_flexibility=flexibility,
+    )
+
+
+def _build_pre_negotiation_summary(
+    data: PreparationInput, 
+    power_dashboard: PowerDashboard, 
+    inconsistencies: list[str]
+) -> PreNegotiationSummary:
+    """Genera síntesis ejecutiva para llevar a la mesa"""
+    
+    # Posición de poder
+    power_map = {
+        "favorable": "fuerte",
+        "equilibrado": "equilibrada",
+        "desfavorable": "débil"
+    }
+    power_position = f"{power_map[power_dashboard.relative_power_assessment]} ({power_dashboard.power_explanation})"
+    
+    # Key moves (máximo 3)
+    key_moves = []
+    
+    # Move 1: Apertura
+    key_moves.append(f"Apertura: Plantear objetivo '{data.objective.explicit_objective}' y explorar intereses mutuos")
+    
+    # Move 2: Basado en estrategia
+    if data.strategy.concession_sequence:
+        key_moves.append(f"Secuencia: {data.strategy.concession_sequence[:80]}...")
+    else:
+        key_moves.append("Escuchar y mapear alternativas antes de mover")
+    
+    # Move 3: Cierre
+    if data.power_alternatives.breakpoint:
+        key_moves.append(f"Límite: Si llegan a '{data.power_alternatives.breakpoint[:60]}...', activar MAAN")
+    else:
+        key_moves.append("Validar intención de obligarse y plan de implementación antes de cerrar")
+    
+    # Señal crítica
+    critical_signal = data.risk.key_signal if data.risk.key_signal else "Observar cambios en tono y disposición a reciprocar información"
+    
+    # Línea roja
+    red_line = data.objective.minimum_acceptable_result if data.objective.minimum_acceptable_result else data.power_alternatives.breakpoint
+    if not red_line:
+        red_line = "Definir valor de reserva concreto antes de entrar"
+    
+    # Plan B si se traba
+    if_stalled = f"Activar MAAN: {data.power_alternatives.maan[:80]}"
+    if _contains_any(data.strategy.counterpart_hypothesis, ["pausa", "break", "tiempo"]):
+        if_stalled = "Solicitar pausa táctica y revisar con equipo/coach"
+    
+    return PreNegotiationSummary(
+        power_position=power_position,
+        key_moves=key_moves[:3],  # Máximo 3
+        critical_signal=critical_signal,
+        red_line=red_line,
+        if_stalled=if_stalled,
+    )
 
 
 def _contains_any(text: str, tokens: list[str]) -> bool:
@@ -414,6 +656,12 @@ def analyze_preparation(data: PreparationInput, mode: FeedbackMode) -> AnalysisO
     else:
         level = "Avanzado"
 
+    # Construir dashboards estructurados
+    power_dashboard = _build_power_dashboard(data)
+    risk_matrix = _build_risk_matrix(data)
+    concession_map = _build_concession_map(data)
+    pre_negotiation_summary = _build_pre_negotiation_summary(data, power_dashboard, inconsistencies)
+
     return AnalysisOutput(
         clarification_questions=clarification_questions,
         observations=observations,
@@ -421,6 +669,10 @@ def analyze_preparation(data: PreparationInput, mode: FeedbackMode) -> AnalysisO
         next_steps=next_steps,
         inconsistencies=inconsistencies,
         preparation_level=level,
+        power_dashboard=power_dashboard,
+        risk_matrix=risk_matrix,
+        concession_map=concession_map,
+        pre_negotiation_summary=pre_negotiation_summary,
     )
 
 
@@ -561,13 +813,74 @@ def analyze_debrief(
             "prácticas de respiración, walk-away script escrito, checkpoint de realidad antes de ceder."
         )
 
+    # Construir comparativa visual
+    debrief_comparative = _build_debrief_comparative(preparation, debrief)
+
     return {
         "strategic_gaps": strategic_gaps,
         "identified_errors": identified_errors,
         "confirmed_successes": confirmed_successes,
         "improvement_opportunities": improvement_opportunities,
         "personal_patterns": personal_patterns,
+        "debrief_comparative": debrief_comparative.model_dump() if debrief_comparative else None,
     }
+
+
+def _build_debrief_comparative(preparation: PreparationInput, debrief: DebriefInput) -> DebriefComparative:
+    """Construye comparativa visual preparación vs realidad"""
+    comparisons: list[DebriefComparativeItem] = []
+    
+    # Comparación 1: Objetivo
+    comparisons.append(DebriefComparativeItem(
+        dimension="Objetivo",
+        prepared=preparation.objective.explicit_objective,
+        what_happened=debrief.real_result.explicit_objective_achieved,
+        gap="Logrado" if _contains_any(debrief.real_result.explicit_objective_achieved, ["sí", "logr", "alcancé"]) else "No logrado - revisar supuestos de poder"
+    ))
+    
+    # Comparación 2: MAAN
+    maan_used = _contains_any(
+        debrief.real_result.what_remains_open + " " + debrief.self_diagnosis.main_strategic_success,
+        ["maan", "alternativa", "plan b", "otra opción", "activé"]
+    )
+    comparisons.append(DebriefComparativeItem(
+        dimension="MAAN",
+        prepared=preparation.power_alternatives.maan,
+        what_happened="Activado exitosamente" if maan_used else "No se necesitó activar",
+        gap="MAAN funcionó como respaldo" if maan_used else "Revisar si MAAN era realmente accionable"
+    ))
+    
+    # Comparación 3: Riesgo Principal
+    risk_materialized = _contains_any(
+        debrief.observed_dynamics.decisive_objection + " " + debrief.self_diagnosis.main_strategic_error,
+        preparation.risk.main_risk.lower().split()[:5]  # Primeras palabras del riesgo
+    )
+    comparisons.append(DebriefComparativeItem(
+        dimension="Riesgo",
+        prepared=preparation.risk.main_risk,
+        what_happened=debrief.observed_dynamics.decisive_objection if debrief.observed_dynamics.decisive_objection else "Otro riesgo distinto",
+        gap="Riesgo anticipado correctamente" if risk_materialized else "Falló diagnóstico - objeción real fue diferente"
+    ))
+    
+    # Comparación 4: Poder relativo
+    power_shifted = debrief.observed_dynamics.where_power_shifted
+    comparisons.append(DebriefComparativeItem(
+        dimension="Poder",
+        prepared=f"Tu fortaleza: {preparation.power_alternatives.maan[:60]}...",
+        what_happened=power_shifted if power_shifted else "No hubo cambio significativo",
+        gap="Poder se movió distinto a lo esperado" if _contains_any(power_shifted, ["inesperado", "sorpresa", "cambio"]) else "Lectura de poder fue correcta"
+    ))
+    
+    # Comparación 5: Secuencia de concesiones
+    concession_changed = debrief.observed_dynamics.concession_that_changed_structure
+    comparisons.append(DebriefComparativeItem(
+        dimension="Concesiones",
+        prepared=preparation.strategy.concession_sequence[:80] if preparation.strategy.concession_sequence else "No especificada",
+        what_happened=concession_changed if concession_changed else "Secuencia según plan",
+        gap="Hubo concesión no planeada que cambió estructura" if concession_changed and len(concession_changed) > 5 else "Secuencia mantenida"
+    ))
+    
+    return DebriefComparative(comparisons=comparisons)
 
 
 def build_final_memo(
@@ -606,5 +919,5 @@ def build_final_memo(
         "observations_and_next_steps": observations_and_next_steps,
         "open_inconsistencies": analysis.inconsistencies,
         "observed_thinking_pattern": thinking_pattern,
-        "consolidated_transferable_principle": debrief.transferable_lesson,
+        "consolidated_transferable_principle": debrief.transferable_lesson or "El aprendizaje principal de este caso es observar la brecha entre lo preparado y lo ejecutado para mejorar la calibración estratégica en futuras negociaciones.",
     }

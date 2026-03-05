@@ -275,7 +275,9 @@ def _build_metrics_summary(cases: list[Case], cohort_id: int | None = None) -> d
         ]
         quality_valid = [float(item) for item in quality_parts if item is not None]
         if quality_valid:
-            agreement_quality_values.append(sum(quality_valid) / len(quality_valid))
+            # Clamp each value to 1-5 before averaging
+            quality_clamped = [max(1.0, min(5.0, v)) for v in quality_valid]
+            agreement_quality_values.append(sum(quality_clamped) / len(quality_clamped))
 
         if case.confidence_start is not None and case.confidence_end is not None:
             delta = case.confidence_end - case.confidence_start
@@ -1205,6 +1207,18 @@ def close_case(
 
     session.add(case)
     session.commit()
+
+    # Send closure email to user
+    try:
+        from .brevo_engine import send_case_closure_email
+        send_case_closure_email(
+            user_email=current_user.email,
+            case_title=case.title,
+            final_memo=memo
+        )
+    except Exception as exc:
+        # Don't fail the request if email fails
+        logger.warning(f"Email de cierre no enviado para caso {case_id}: {exc}")
 
     return FinalMemo.model_validate(memo)
 

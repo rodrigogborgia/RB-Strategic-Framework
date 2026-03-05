@@ -4,6 +4,13 @@ import { api, getAuthToken, setAuthToken } from "./lib/api";
 import { trackEvent, trackDemoModalViewed, trackDemoStarted, trackAsesoriaModalViewed, trackAsesoriaSubmitted, trackProtocolo48hSubmitted, trackError } from "./lib/analytics";
 import brandLogo from "./assets/rb-logo.svg";
 import Testimonials from "./components/Testimonials";
+import { 
+  PowerDashboardView, 
+  RiskMatrixView, 
+  ConcessionMapView, 
+  PreNegotiationSummaryView,
+  DebriefComparativeView 
+} from "./components/StrategicDashboards";
 import type {
   AdminAnonymousMetricsSummary,
   AdminUserRead,
@@ -1961,7 +1968,7 @@ function App() {
               <div className="small">Casos cerrados: {studentMetrics.cases_closed}</div>
               <div className="small">Tasa de cierre: {studentMetrics.close_rate}%</div>
               <div className="small">Tiempo de ciclo promedio: {studentMetrics.cycle_days_avg ?? "-"} días</div>
-              <div className="small">Calidad de acuerdo promedio: {studentMetrics.agreement_quality_avg ?? "-"} / 5</div>
+              <div className="small">Calidad de acuerdo promedio: {studentMetrics.agreement_quality_avg ? Math.min(studentMetrics.agreement_quality_avg, 5).toFixed(2) : "-"} / 5</div>
               <div className="small">Delta de confianza promedio: {studentMetrics.confidence_delta_avg ?? "-"}</div>
             </div>
             {studentMetrics.confidence_delta_trend.length > 0 && (
@@ -2010,9 +2017,11 @@ function App() {
               <p className="small">
                 Estado: {statusLabel} · Modo: {selectedCase.mode}
               </p>
-              <p className="small" style={{ marginBottom: 12 }}>
-                Confirmar ejecución: registra que la negociación ocurrió. Guardar y analizar: procesa resultado con IA. Cerrar caso: emite el memo final.
-              </p>
+              {selectedCase.status !== "cerrado" && (
+                <p className="small" style={{ marginBottom: 12, padding: "8px 12px", background: "rgba(59, 130, 246, 0.15)", borderRadius: "6px", border: "1px solid #3f4654", color: "#bfdbfe" }}>
+                  💡 <strong>Flujo:</strong> Preparar → Analizar → Confirmar ejecución → Registrar resultado → Cerrar caso
+                </p>
+              )}
               <div className="row" style={{ marginBottom: 12 }}>
                 <div className="small">Confianza inicial: {selectedCase.confidence_start ?? "-"}</div>
                 <div className="small">Confianza final: {selectedCase.confidence_end ?? "-"}</div>
@@ -2221,7 +2230,10 @@ function App() {
               )}
               {loading && !analysis ? (
                 <div style={{ padding: "16px 0", textAlign: "center" }}>
-                  <p className="small" style={{ marginBottom: 8 }}>IA analizando preparación...</p>
+                  <p className="small" style={{ marginBottom: 8 }}>IA analizando preparación y generando dashboards estratégicos...</p>
+                  <p className="small" style={{ marginBottom: 8, color: "#94a3b8", fontSize: "12px" }}>
+                    Dashboard de poder • Matriz de riesgos • Mapa de concesiones • Síntesis ejecutiva
+                  </p>
                   <div style={{
                     display: "inline-block",
                     fontSize: "24px",
@@ -2238,6 +2250,24 @@ function App() {
                   <p>
                     <strong>Nivel de preparación:</strong> {analysis.preparation_level}
                   </p>
+
+                  {/* Dashboards Estratégicos */}
+                  {analysis.pre_negotiation_summary && (
+                    <PreNegotiationSummaryView summary={analysis.pre_negotiation_summary} />
+                  )}
+                  
+                  {analysis.power_dashboard && (
+                    <PowerDashboardView dashboard={analysis.power_dashboard} />
+                  )}
+                  
+                  {analysis.risk_matrix && (
+                    <RiskMatrixView matrix={analysis.risk_matrix} />
+                  )}
+                  
+                  {analysis.concession_map && (
+                    <ConcessionMapView map={analysis.concession_map} />
+                  )}
+
                   <p>
                     <strong>Qué se evaluó</strong>
                   </p>
@@ -2436,7 +2466,7 @@ function App() {
                       </p>
                     )}
                     {isDebriefAnalyzing && (
-                      <div style={{ marginTop: 16, padding: 12, backgroundColor: "#f0f9ff", borderRadius: 8, textAlign: "center", border: "1px solid #7dd3fc" }}>
+                      <div style={{ marginTop: 16, padding: 12, backgroundColor: "rgba(59, 130, 246, 0.15)", borderRadius: 8, textAlign: "center", border: "1px solid #3f4654", color: "#bfdbfe" }}>
                         <p className="small" style={{ marginBottom: 12, fontWeight: 600, color: "#0369a1" }}>
                           ⚡ IA analizando tu resultado de ejecución...
                         </p>
@@ -2461,7 +2491,13 @@ function App() {
             {!isDebriefAnalyzing && hasSavedDebrief && (
               <div className="card">
                 <h2>Análisis de tu ejecución</h2>
-                <div style={{ marginBottom: 16, border: "1px solid #e5e7eb", borderRadius: 10, padding: 14, backgroundColor: "#fafafa" }}>
+                
+                {/* Comparativa Visual */}
+                {debriefAnalysis?.debrief_comparative && (
+                  <DebriefComparativeView comparative={debriefAnalysis.debrief_comparative} />
+                )}
+
+                <div style={{ marginBottom: 16, border: "1px solid #2a2a2a", borderRadius: 10, padding: 14, backgroundColor: "rgba(15, 23, 42, 0.6)", color: "#cbd5e1" }}>
                   <p style={{ marginBottom: 10, fontSize: "14px", fontWeight: 600, color: "#1f2937" }}>
                     📊 Comparación: plan vs ejecución
                   </p>

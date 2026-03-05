@@ -171,6 +171,69 @@ class PreparationInput(BaseModel):
     risk: RiskBlock
 
 
+# Nuevas estructuras para visualización estratégica
+
+class PowerDashboard(BaseModel):
+    """Dashboard de poder relativo: Tu poder vs. su poder"""
+    your_maan: str
+    your_maan_value: str | None = None  # Valor cuantitativo si aplica
+    your_urgency: str  # "alta" | "media" | "baja"
+    counterpart_maan_hypothesis: str
+    counterpart_urgency: str  # "alta" | "media" | "baja"
+    relative_power_assessment: str  # "favorable" | "equilibrado" | "desfavorable"
+    power_explanation: str  # Por qué llegamos a esa conclusión
+
+
+class RiskMatrixItem(BaseModel):
+    """Item individual en la matriz de riesgos"""
+    risk_description: str
+    probability: str  # "alta" | "media" | "baja"
+    impact: str  # "crítico" | "alto" | "medio" | "bajo"
+    alert_signal: str
+    contingency_plan: str
+
+
+class RiskMatrix(BaseModel):
+    """Matriz completa de riesgos priorizada"""
+    risks: list[RiskMatrixItem]
+
+
+class ConcessionMapItem(BaseModel):
+    """Punto en tu mapa de concesiones"""
+    level: str  # "aspiracional" | "primera_concesión" | "segunda_concesión" | "valor_reserva" | "maan_value"
+    value: str
+    condition: str  # Qué debe pasar para llegar aquí
+    order: int  # Para ordenar
+
+
+class ConcessionMap(BaseModel):
+    """Mapa explícito de tu margen de maniobra"""
+    concessions: list[ConcessionMapItem]
+    total_flexibility: str  # Ej: "$15k entre aspiracional y reserva"
+
+
+class PreNegotiationSummary(BaseModel):
+    """Síntesis ejecutiva para llevar a la mesa"""
+    power_position: str  # "fuerte" | "débil" | "equilibrada" + razón
+    key_moves: list[str]  # Máximo 3 movimientos clave
+    critical_signal: str  # LA señal a observar
+    red_line: str  # No bajar/ceder de esto
+    if_stalled: str  # Plan B si se traba
+
+
+class DebriefComparativeItem(BaseModel):
+    """Comparación preparación vs realidad"""
+    dimension: str  # "MAAN" | "Riesgo" | "Objetivo" | "Poder"
+    prepared: str  # Lo que preparaste
+    what_happened: str  # Lo que realmente pasó
+    gap: str  # Análisis de la brecha
+
+
+class DebriefComparative(BaseModel):
+    """Comparativa visual para debrief"""
+    comparisons: list[DebriefComparativeItem]
+
+
 class AnalysisOutput(BaseModel):
     clarification_questions: list[str]
     observations: list[str]
@@ -178,6 +241,11 @@ class AnalysisOutput(BaseModel):
     next_steps: list[str]
     inconsistencies: list[str]
     preparation_level: str
+    # Nuevos outputs estructurados
+    power_dashboard: PowerDashboard | None = None
+    risk_matrix: RiskMatrix | None = None
+    concession_map: ConcessionMap | None = None
+    pre_negotiation_summary: PreNegotiationSummary | None = None
 
 
 class RealResultBlock(BaseModel):
@@ -213,6 +281,8 @@ class DebriefAnalysis(BaseModel):
     confirmed_successes: list[str]  # Qué funcionó exactamente como preparaste
     improvement_opportunities: list[str]  # Qué cambiarías en la próxima
     personal_patterns: list[str]  # Patrones en tu comportamiento (si aplica)
+    # Nuevo: comparativa visual
+    debrief_comparative: DebriefComparative | None = None
 
 
 class FinalMemo(BaseModel):
