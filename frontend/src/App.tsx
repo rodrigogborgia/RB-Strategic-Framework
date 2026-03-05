@@ -195,26 +195,26 @@ const testimonialBasedCases: CaseNarrative[] = [
   {
     title: "Caso 01 - Conflicto inter-areas por prioridades",
     source: "Basado en testimonio de direccion general industrial",
-    situation: "Equipo ejecutivo con visiones contrapuestas y conversaciones de alta friccion en decisiones estrategicas.",
-    risk: "Escalada del conflicto interno, perdida de foco y deterioro en negociaciones internas y externas.",
-    intervention: "Entrenamiento aplicado para sostener limites, conectar intereses y convertir conflicto en claridad operativa.",
-    result: "Mejor calidad de decision y negociaciones mas efectivas entre areas y con contrapartes externas.",
+    situation: "Equipo ejecutivo con visiones contrapuestas y conversaciones de alta friccion en decisiones estrategicas. Ataques personales emergentes.",
+    risk: "Escalada del conflicto interno, perdida de foco y deterioro en negociaciones internas y externas. Riesgo de desintegración del equipo.",
+    intervention: "Entrenamiento aplicado para sostener limites emotivos, conectar intereses y convertir conflicto en claridad operativa. Simulación de escenarios críticos.",
+    result: "Reducción visible de fricción en 3 semanas. Equipo pasó de ataques personales a discusiones estratégicas estructuradas.",
   },
   {
-    title: "Caso 02 - Presupuesto y alianzas sin criterio comun",
+    title: "Caso 02 - Presupuesto y alianzas bajo emoción",
     source: "Basado en testimonio de liderazgo de marca",
-    situation: "Conversaciones complejas de presupuesto y coordinacion inter-areas sin una estructura de negociacion compartida.",
-    risk: "Concesiones prematuras, decisiones desalineadas y aumento de vulnerabilidad en conversaciones criticas.",
-    intervention: "Mapeo de poder, entrenamiento para preguntar antes de ceder y definicion de alertas de riesgo en tiempo real.",
-    result: "Mayor criterio para negociar, mejor lectura del terreno y decisiones mas solidas frente a objeciones.",
+    situation: "Conversaciones de presupuesto donde el resentimiento acumulado generaba concesiones impulsivas. Sin estructura de negociación compartida.",
+    risk: "Concesiones prematuras por frustración, decisiones desalineadas, vulnerabilidad en conversaciones futuras. Resentimientos foguados.",
+    intervention: "Mapeo de poder emocional y estructural, preparación para reconocer cuándo la emoción invade la decisión, definición de criterios previos.",
+    result: "Mejora documentada en calidad de decisión en 2 ciclos de presupuesto. Menos concesiones impulsivas, mayor perspectiva de largo plazo.",
   },
   {
-    title: "Caso 03 - Alta presion y autoridad en juego",
-    source: "Basado en testimonio de direccion en real estate",
-    situation: "Escenarios de alta presion donde se necesitaba bajar conflicto sin perder autoridad directiva.",
-    risk: "Respuesta reactiva, perdida de control de la conversacion y desgaste del liderazgo.",
-    intervention: "Auditoria de decisiones reales, simulacion de aperturas y trabajo tactico de limites y cierre.",
-    result: "Diferencia visible antes/despues en manejo de conversaciones dificiles y calidad de decisiones del equipo.",
+    title: "Caso 03 - Alta presión, autoridad y perspectiva a largo plazo",
+    source: "Basado en testimonio de dirección en real estate",
+    situation: "Escenarios de negociación de alto impacto donde la presión activaba respuestas emocionales que erosionaban autoridad a largo plazo.",
+    risk: "Respuesta reactiva bajo rabia, pérdida de control de la conversación, deterioro de relaciones estratégicas futuras. Autoridad comprometida.",
+    intervention: "Auditoría de decisiones reales, simulación de escenarios de alta presión, trabajo táctico para sostener límites sin ataques personales.",
+    result: "Diferencia documentada antes/después en evaluaciones internas. Equipo reportó mayor claridad y autoridad percibida bajo presión.",
   },
 ];
 
@@ -1277,10 +1277,10 @@ function App() {
               <img src={brandLogo} alt="RB logo" className="brand-logo" />
               <span className="landing-brand-name">RB Strategic Framework</span>
             </div>
-            <h1 className="landing-title">Rigor Estratégico para Decisiones Críticas</h1>
+            <h1 className="landing-title">El Estado Emocional, No la Estrategia, Define Negociaciones</h1>
             <p className="landing-subtitle">
-              No puedes estar en todo. Pero antes de cada negociación importante, necesitas ver lo que otros pierden de vista: 
-              dónde está el verdadero poder, qué riesgos asechan y cómo girar a tu favor sin escalar conflicto.
+              La mayoría de negociaciones críticas no fracasan por falta de estrategia.<br/>Fracasan porque las emociones nublan la visión: ataques personales, resentimientos foguados, pérdida de perspectiva.
+              Te enseñamos a preparar y simular para que mantengas claridad bajo presión.
             </p>
             <div className="landing-cta-row">
               <button 
@@ -1296,6 +1296,31 @@ function App() {
               >
                 Asesoría directa para tu equipo
               </button>
+            </div>
+          </section>
+
+          <section className="landing-applied-experience">
+            <div className="landing-applied-header">
+              <h2>15 años tomando decisiones en la arena</h2>
+              <p>Experiencia verificada en entornos corporativos donde el estado emocional es crítico.</p>
+            </div>
+            <div className="landing-applied-list">
+              <article className="landing-applied-item">
+                <h3>Negociaciones de inversión bajo presión</h3>
+                <p>Decisiones de millones en contextos adversariales donde un error emocional cuesta dinero real.</p>
+              </article>
+              <article className="landing-applied-item">
+                <h3>Resolución de conflictos inter-áreas con P&L en juego</h3>
+                <p>Equipos enfrentados, resentimientos acumulados, objetivos cruzados. Aprendí a despersonalizar sin perder autoridad.</p>
+              </article>
+              <article className="landing-applied-item">
+                <h3>Alianzas estratégicas bajo presión de tiempo</h3>
+                <p>Cuando el plazo aprieta, los ataques personales emergen. Preparación y simulación son los únicos frenos.</p>
+              </article>
+              <article className="landing-applied-item">
+                <h3>Diseño de estrategia de concesiones con proveedores globales</h3>
+                <p>Donde una concesión prematura (por emoción, no por estrategia) suma millones en el tiempo.</p>
+              </article>
             </div>
           </section>
 
