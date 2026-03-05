@@ -214,6 +214,236 @@ body {
   line-height: 1.6;
 }
 
+.landing-reputation {
+  border: 1px solid #262626;
+  border-radius: 14px;
+  padding: 32px 28px;
+  background: linear-gradient(140deg, rgba(14, 20, 28, 0.85) 0%, rgba(17, 17, 17, 0.9) 100%);
+}
+
+.landing-reputation-header {
+  margin-bottom: 20px;
+  max-width: 860px;
+}
+
+.landing-reputation-kicker {
+  margin: 0 0 8px;
+  color: #93c5fd;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.landing-reputation h2 {
+  margin: 0 0 10px;
+  color: #ffffff;
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+}
+
+.landing-reputation-header p {
+  margin: 0;
+  color: #cbd5e1;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.landing-social-links {
+  margin-top: 14px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.landing-social-links a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 140px;
+  padding: 8px 12px;
+  border: 1px solid #334155;
+  border-radius: 999px;
+  color: #dbeafe;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 700;
+  background: rgba(15, 23, 42, 0.6);
+}
+
+.landing-social-links a:hover {
+  border-color: #60a5fa;
+  color: #ffffff;
+  background: rgba(30, 41, 59, 0.8);
+}
+
+.landing-reputation-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.landing-reputation-card {
+  border: 1px solid #2a2a2a;
+  border-radius: 12px;
+  padding: 18px;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.landing-reputation-card-top {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.landing-reputation-logo-wrap {
+  width: 56px;
+  height: 56px;
+  position: relative;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #334155;
+}
+
+.landing-reputation-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  position: relative;
+  z-index: 2;
+}
+
+.landing-reputation-logo-fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  color: #bfdbfe;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  z-index: 1;
+}
+
+.landing-reputation-card h3 {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 800;
+  color: #f8fafc;
+}
+
+.landing-reputation-card p {
+  margin: 0;
+  color: #cbd5e1;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.landing-reputation-institution {
+  margin: 0 0 6px;
+  color: #60a5fa;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.landing-reputation-meta {
+  margin: 0 0 8px;
+  color: #a5b4fc;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.landing-reputation-proof {
+  margin-top: 10px;
+  border-top: 1px solid #334155;
+  padding-top: 10px;
+  color: #bfdbfe;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.landing-reputation-actions {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.landing-reputation-actions button {
+  width: auto;
+  min-width: 230px;
+}
+
+.landing-reputation-note {
+  margin: 12px 0 0;
+  color: #93c5fd;
+  font-size: 12px;
+}
+
+.landing-cases {
+  border: 1px solid #262626;
+  border-radius: 14px;
+  padding: 32px 28px;
+  background: #101418;
+}
+
+.landing-cases-header {
+  margin-bottom: 20px;
+  max-width: 900px;
+}
+
+.landing-cases h2 {
+  margin: 0 0 10px;
+  color: #ffffff;
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.landing-cases-header p {
+  margin: 0;
+  color: #cbd5e1;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.landing-cases-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.landing-case-card {
+  border: 1px solid #2a2a2a;
+  border-radius: 12px;
+  padding: 16px;
+  background: rgba(17, 17, 17, 0.8);
+}
+
+.landing-case-card h3 {
+  margin: 0 0 8px;
+  color: #ffffff;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.landing-case-card p {
+  margin: 0 0 8px;
+  color: #cbd5e1;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.landing-case-source {
+  color: #93c5fd;
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .landing-side {
   display: grid;
   gap: 16px;
@@ -617,6 +847,14 @@ button.danger:hover {
   }
 
   .landing-steps {
+    grid-template-columns: 1fr;
+  }
+
+  .landing-reputation-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .landing-cases-grid {
     grid-template-columns: 1fr;
   }
 

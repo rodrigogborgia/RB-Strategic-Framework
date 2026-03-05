@@ -118,6 +118,106 @@ type ExperienceMode = "sesion_en_vivo" | "sparring";
 type AdminViewMode = "profesor" | "alumno";
 type TeacherSectionKey = "admin" | "users" | "cohorts" | "members" | "ritual";
 
+type ReputationSignal = {
+  institution: string;
+  role: string;
+  period: string;
+  context: string;
+  detail: string;
+  proof: string;
+  logoPath: string;
+  logoFallback: string;
+};
+
+type CaseNarrative = {
+  title: string;
+  source: string;
+  situation: string;
+  risk: string;
+  intervention: string;
+  result: string;
+};
+
+const socialProfiles = {
+  linkedin: "https://www.linkedin.com/in/rodrigoborgia/",
+  instagram: "https://www.instagram.com/rodrigoborgia/",
+};
+
+const reputationSignals: ReputationSignal[] = [
+  {
+    institution: "UCES - Facultad de Ciencias Empresariales",
+    role: "Profesor",
+    period: "Oct 2025 - Actualidad",
+    context: "Argentina · Remoto",
+    detail:
+      "Docencia en NegocIAcion y Persuasion Avanzada, Diplomatura en Excelencia al Cliente basada en Datos, Diplomatura en Gerenciamiento Comercial y Ventas, y Diplomatura en Management y Direccion Empresarial.",
+    proof: "Formacion ejecutiva en negociacion, IA aplicada y direccion de equipos.",
+    logoPath: "/logos/UCES.jpeg",
+    logoFallback: "UCES",
+  },
+  {
+    institution: "WOW! Customer Experience",
+    role: "Consultor",
+    period: "Abr 2024 - Actualidad",
+    context: "Modalidad hibrida",
+    detail:
+      "Diseno e implementacion de programas de alto impacto en Negociacion, IA y Ventas Consultivas: arquitectura pedagogica, materiales y facilitacion experta.",
+    proof: "Intervenciones aplicadas sobre desafios reales de clientes empresariales.",
+    logoPath: "/logos/WOW.jpeg",
+    logoFallback: "WOW!",
+  },
+  {
+    institution: "UCEMAX - Educacion Ejecutiva",
+    role: "Profesor",
+    period: "Mar 2024 - Actualidad",
+    context: "Argentina · Remoto",
+    detail:
+      "Profesor en el Posgrado en Agilidad y Transformacion Organizacional (modulo Agile Tech).",
+    proof: "Experiencia docente en programas de transformacion y liderazgo.",
+    logoPath: "/logos/UCEMA.jpeg",
+    logoFallback: "UCEMA",
+  },
+  {
+    institution: "Harvard Business Review Advisory Council",
+    role: "Member of the research community",
+    period: "Feb 2024 - Actualidad",
+    context: "Estados Unidos · Remoto",
+    detail:
+      "Participacion en comunidad de investigacion para aportar perspectiva en contenidos de management y liderazgo.",
+    proof:
+      "Participacion como miembro de Advisory Council; no implica rol editorial ni representacion institucional de HBR.",
+    logoPath: "/logos/HBR.jpeg",
+    logoFallback: "HBR",
+  },
+];
+
+const testimonialBasedCases: CaseNarrative[] = [
+  {
+    title: "Caso 01 - Conflicto inter-areas por prioridades",
+    source: "Basado en testimonio de direccion general industrial",
+    situation: "Equipo ejecutivo con visiones contrapuestas y conversaciones de alta friccion en decisiones estrategicas.",
+    risk: "Escalada del conflicto interno, perdida de foco y deterioro en negociaciones internas y externas.",
+    intervention: "Entrenamiento aplicado para sostener limites, conectar intereses y convertir conflicto en claridad operativa.",
+    result: "Mejor calidad de decision y negociaciones mas efectivas entre areas y con contrapartes externas.",
+  },
+  {
+    title: "Caso 02 - Presupuesto y alianzas sin criterio comun",
+    source: "Basado en testimonio de liderazgo de marca",
+    situation: "Conversaciones complejas de presupuesto y coordinacion inter-areas sin una estructura de negociacion compartida.",
+    risk: "Concesiones prematuras, decisiones desalineadas y aumento de vulnerabilidad en conversaciones criticas.",
+    intervention: "Mapeo de poder, entrenamiento para preguntar antes de ceder y definicion de alertas de riesgo en tiempo real.",
+    result: "Mayor criterio para negociar, mejor lectura del terreno y decisiones mas solidas frente a objeciones.",
+  },
+  {
+    title: "Caso 03 - Alta presion y autoridad en juego",
+    source: "Basado en testimonio de direccion en real estate",
+    situation: "Escenarios de alta presion donde se necesitaba bajar conflicto sin perder autoridad directiva.",
+    risk: "Respuesta reactiva, perdida de control de la conversacion y desgaste del liderazgo.",
+    intervention: "Auditoria de decisiones reales, simulacion de aperturas y trabajo tactico de limites y cierre.",
+    result: "Diferencia visible antes/despues en manejo de conversaciones dificiles y calidad de decisiones del equipo.",
+  },
+];
+
 function currentPeriodLabel(): string {
   const now = new Date();
   const yyyy = now.getFullYear();
@@ -1214,6 +1314,100 @@ function App() {
                 <h3>C) Debrief + Aprendizaje</h3>
                 <p>Después de ejecutar, compare plan vs realidad. Extraiga principios transferibles. La próxima negociación es más clara porque aprendió de esta.</p>
               </article>
+            </div>
+          </section>
+
+          <section className="landing-reputation">
+            <div className="landing-reputation-header">
+              <p className="landing-reputation-kicker">Senales De Reputacion</p>
+              <h2>Experiencia Institucional y Aplicada</h2>
+              <p>
+                Credenciales activas en educacion ejecutiva, consultoria y comunidad de investigacion.
+                El foco esta en decisiones reales: poder, riesgo, concesiones y cierres sostenibles.
+              </p>
+              <div className="landing-social-links">
+                <a
+                  href={socialProfiles.linkedin}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={() => trackEvent("profile_link_clicked", { platform: "linkedin", section: "landing_reputation" })}
+                >
+                  Ver LinkedIn
+                </a>
+                <a
+                  href={socialProfiles.instagram}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={() => trackEvent("profile_link_clicked", { platform: "instagram", section: "landing_reputation" })}
+                >
+                  Ver Instagram
+                </a>
+              </div>
+            </div>
+            <div className="landing-reputation-grid">
+              {reputationSignals.map((signal) => (
+                <article key={`${signal.institution}-${signal.role}`} className="landing-reputation-card">
+                  <div className="landing-reputation-card-top">
+                    <div className="landing-reputation-logo-wrap" aria-hidden="true">
+                      <span className="landing-reputation-logo-fallback">{signal.logoFallback}</span>
+                      <img
+                        src={signal.logoPath}
+                        alt={`Logo ${signal.institution}`}
+                        className="landing-reputation-logo"
+                        loading="lazy"
+                        onError={(event) => {
+                          event.currentTarget.style.display = "none";
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <p className="landing-reputation-institution">{signal.institution}</p>
+                      <h3>{signal.role}</h3>
+                    </div>
+                  </div>
+                  <p className="landing-reputation-meta">{signal.period} · {signal.context}</p>
+                  <p>{signal.detail}</p>
+                  <p className="landing-reputation-proof">{signal.proof}</p>
+                </article>
+              ))}
+            </div>
+            <div className="landing-reputation-actions">
+              <button
+                className="secondary"
+                onClick={() => {
+                  trackEvent("reputation_signals_viewed", { section: "landing_reputation" });
+                  setShowContactModal(true);
+                }}
+              >
+                Conversar un caso critico
+              </button>
+            </div>
+            <p className="landing-reputation-note">
+              Para mostrar los logos oficiales, sube los archivos a: frontend/public/logos/hbr.png, frontend/public/logos/ucema.png,
+              frontend/public/logos/wow.png y frontend/public/logos/uces.png.
+            </p>
+          </section>
+
+          <section className="landing-cases">
+            <div className="landing-cases-header">
+              <p className="landing-reputation-kicker">Casos Reales En Construccion</p>
+              <h2>Casos Base Derivados de Testimonios</h2>
+              <p>
+                Estos casos traducen testimonios existentes al formato ejecutivo Situacion-Riesgo-Intervencion-Resultado.
+                Son borradores iniciales para validar con cada cliente y agregar metricas verificables.
+              </p>
+            </div>
+            <div className="landing-cases-grid">
+              {testimonialBasedCases.map((caseItem) => (
+                <article key={caseItem.title} className="landing-case-card">
+                  <h3>{caseItem.title}</h3>
+                  <p className="landing-case-source">{caseItem.source}</p>
+                  <p><strong>Situacion:</strong> {caseItem.situation}</p>
+                  <p><strong>Riesgo:</strong> {caseItem.risk}</p>
+                  <p><strong>Intervencion:</strong> {caseItem.intervention}</p>
+                  <p><strong>Resultado:</strong> {caseItem.result}</p>
+                </article>
+              ))}
             </div>
           </section>
 
