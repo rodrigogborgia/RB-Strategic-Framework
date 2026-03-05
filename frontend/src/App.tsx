@@ -194,7 +194,7 @@ const reputationSignals: ReputationSignal[] = [
 const testimonialBasedCases: CaseNarrative[] = [
   {
     title: "Caso 01 - Conflicto inter-areas por prioridades",
-    source: "Basado en testimonio de direccion general industrial",
+    source: "Dirección General, sector industrial",
     situation: "Equipo ejecutivo con visiones contrapuestas y conversaciones de alta friccion en decisiones estrategicas. Ataques personales emergentes.",
     risk: "Escalada del conflicto interno, perdida de foco y deterioro en negociaciones internas y externas. Riesgo de desintegración del equipo.",
     intervention: "Entrenamiento aplicado para sostener limites emotivos, conectar intereses y convertir conflicto en claridad operativa. Simulación de escenarios críticos.",
@@ -202,7 +202,7 @@ const testimonialBasedCases: CaseNarrative[] = [
   },
   {
     title: "Caso 02 - Presupuesto y alianzas bajo emoción",
-    source: "Basado en testimonio de liderazgo de marca",
+    source: "Chief Branding Officer, sector comercial",
     situation: "Conversaciones de presupuesto donde el resentimiento acumulado generaba concesiones impulsivas. Sin estructura de negociación compartida.",
     risk: "Concesiones prematuras por frustración, decisiones desalineadas, vulnerabilidad en conversaciones futuras. Resentimientos foguados.",
     intervention: "Mapeo de poder emocional y estructural, preparación para reconocer cuándo la emoción invade la decisión, definición de criterios previos.",
@@ -210,7 +210,7 @@ const testimonialBasedCases: CaseNarrative[] = [
   },
   {
     title: "Caso 03 - Alta presión, autoridad y perspectiva a largo plazo",
-    source: "Basado en testimonio de dirección en real estate",
+    source: "Dirección ejecutiva, real estate",
     situation: "Escenarios de negociación de alto impacto donde la presión activaba respuestas emocionales que erosionaban autoridad a largo plazo.",
     risk: "Respuesta reactiva bajo rabia, pérdida de control de la conversación, deterioro de relaciones estratégicas futuras. Autoridad comprometida.",
     intervention: "Auditoría de decisiones reales, simulación de escenarios de alta presión, trabajo táctico para sostener límites sin ataques personales.",
@@ -1277,10 +1277,10 @@ function App() {
               <img src={brandLogo} alt="RB logo" className="brand-logo" />
               <span className="landing-brand-name">RB Strategic Framework</span>
             </div>
-            <h1 className="landing-title">El Estado Emocional, No la Estrategia, Define Negociaciones</h1>
+            <h1 className="landing-title">El estado emocional define negociaciones, no la estrategia</h1>
             <p className="landing-subtitle">
-              La mayoría de negociaciones críticas no fracasan por falta de estrategia.<br/>Fracasan porque las emociones nublan la visión: ataques personales, resentimientos foguados, pérdida de perspectiva.
-              Te enseñamos a preparar y simular para que mantengas claridad bajo presión.
+              La mayoría de negociaciones críticas no fracasan por falta de estrategia. Fracasan porque <strong>las emociones nublan la visión</strong>: <strong>ataques personales, resentimientos foguados, pérdida de perspectiva</strong>.
+              Te enseñamos a <strong>preparar y simular</strong> para que mantengas <strong>claridad bajo presión</strong>.
             </p>
             <div className="landing-cta-row">
               <button 
@@ -1306,20 +1306,20 @@ function App() {
             </div>
             <div className="landing-applied-list">
               <article className="landing-applied-item">
-                <h3>Negociaciones de inversión bajo presión</h3>
-                <p>Decisiones de millones en contextos adversariales donde un error emocional cuesta dinero real.</p>
+                <h3>Liderazgo en tiempos de crisis y alta presión</h3>
+                <p>Decisiones críticas donde la reacción emocional puede costar millones. Aprendí a sostener autoridad sin escalar conflicto, incluso cuando todo está en juego.</p>
               </article>
               <article className="landing-applied-item">
-                <h3>Resolución de conflictos inter-áreas con P&L en juego</h3>
-                <p>Equipos enfrentados, resentimientos acumulados, objetivos cruzados. Aprendí a despersonalizar sin perder autoridad.</p>
+                <h3>Negociaciones complejas con gremios y proveedores</h3>
+                <p>Relaciones donde el resentimiento acumulado y los intereses enfrentados corren profundos. Sé cómo desescalar sin ceder autoridad ni estrategia.</p>
               </article>
               <article className="landing-applied-item">
-                <h3>Alianzas estratégicas bajo presión de tiempo</h3>
-                <p>Cuando el plazo aprieta, los ataques personales emergen. Preparación y simulación son los únicos frenos.</p>
+                <h3>Manejo de clientes difíciles y diferencias culturales</h3>
+                <p>Contextos donde los códigos no escritos y los estilos culturales complican la conversación. Preparación y lectura real del otro son los únicos frenos.</p>
               </article>
               <article className="landing-applied-item">
-                <h3>Diseño de estrategia de concesiones con proveedores globales</h3>
-                <p>Donde una concesión prematura (por emoción, no por estrategia) suma millones en el tiempo.</p>
+                <h3>Preparación emocional antes de conversaciones decisivas</h3>
+                <p>El trabajo real está en lo que ocurre antes de negociar. Cómo entro, qué dejo afuera, qué señales debo leer para mantener claridad y control.</p>
               </article>
             </div>
           </section>
@@ -1344,11 +1344,10 @@ function App() {
 
           <section className="landing-reputation">
             <div className="landing-reputation-header">
-              <p className="landing-reputation-kicker">Senales De Reputacion</p>
-              <h2>Experiencia Institucional y Aplicada</h2>
+              <p className="landing-reputation-kicker">Instituciones que confian en este metodo</p>
+              <h2>Donde enseño y trabajo</h2>
               <p>
-                Credenciales activas en educacion ejecutiva, consultoria y comunidad de investigacion.
-                El foco esta en decisiones reales: poder, riesgo, concesiones y cierres sostenibles.
+                Universidades, empresas y comunidades de investigación que apuestan por preparación real para negociaciones críticas.
               </p>
               <div className="landing-social-links">
                 <a
@@ -1415,11 +1414,11 @@ function App() {
 
           <section className="landing-cases">
             <div className="landing-cases-header">
-              <p className="landing-reputation-kicker">Casos Reales En Construccion</p>
-              <h2>Casos Base Derivados de Testimonios</h2>
+              <p className="landing-reputation-kicker">Casos que trabajamos</p>
+              <h2>Negociaciones reales, estructuras reales</h2>
               <p>
-                Estos casos traducen testimonios existentes al formato ejecutivo Situacion-Riesgo-Intervencion-Resultado.
-                Son borradores iniciales para validar con cada cliente y agregar metricas verificables.
+                Estas narrativas vienen de equipos ejecutivos que enfrentaron decisiones críticas.
+                Te muestran cómo la preparación emocional cambia el resultado.
               </p>
             </div>
             <div className="landing-cases-grid">

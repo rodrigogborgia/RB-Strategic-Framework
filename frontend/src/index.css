@@ -124,6 +124,11 @@ body {
   font-weight: 400;
 }
 
+.landing-subtitle strong {
+  color: #60a5fa;
+  font-weight: 700;
+}
+
 .landing-cta-row {
   margin-top: 28px;
   display: flex;
@@ -1078,6 +1083,29 @@ button.danger:hover {
   border-color: #3b82f6;
   background: #0f1419;
   box-shadow: 0 0 16px rgba(59, 130, 246, 0.15);
+}
+
+.testimonial-card:nth-child(1) {
+  border: 1px solid #f97316;
+  background: linear-gradient(135deg, #1f2a1a 0%, #111111 100%);
+  box-shadow: 0 0 24px rgba(249, 115, 22, 0.1);
+}
+
+.testimonial-card:nth-child(1):hover {
+  border-color: #f97316;
+  box-shadow: 0 0 30px rgba(249, 115, 22, 0.2);
+}
+
+.testimonial-card:nth-child(1) .testimonial-quote {
+  color: #fde2a0;
+}
+
+.testimonial-card:nth-child(1) .testimonial-author {
+  border-top-color: #4a3f1f;
+}
+
+.testimonial-card:nth-child(1) .testimonial-author-name {
+  color: #f97316;
 }
 
 .testimonial-highlighted {
