@@ -200,28 +200,28 @@ const reputationSignals: ReputationSignal[] = [
 
 const testimonialBasedCases: CaseNarrative[] = [
   {
-    title: "Caso 01 - Conflicto inter-areas por prioridades",
-    source: "Asesoría a equipo directivo",
-    situation: "Equipo ejecutivo con visiones contrapuestas y conversaciones de alta friccion en decisiones estrategicas. Ataques personales emergentes.",
-    risk: "Escalada del conflicto interno, perdida de foco y deterioro en negociaciones internas y externas. Riesgo de desintegración del equipo.",
-    intervention: "Entrenamiento aplicado para sostener limites emotivos, conectar intereses y convertir conflicto en claridad operativa. Simulación de escenarios críticos.",
-    result: "Reducción visible de fricción en 3 semanas. Equipo pasó de ataques personales a discusiones estratégicas estructuradas.",
+    title: "Caso 01 - Cliente dominante en negociación de alto valor",
+    source: "Director comercial, venta consultiva B2B",
+    situation: "Cliente presiona con urgencia artificial y ataques personales. Equipo comercial reacciona emocionalmente, pierde perspectiva de valor real.",
+    risk: "Concesiones impulsivas por presión de cierre. Margen erosionado. Cliente aprende a escalar emocionalmente para extraer más.",
+    intervention: "Mapeo de poder comercial real (MAAN del cliente, límites de descuento, intereses ocultos). Simulación de presión. Script de reconducción sin ceder autoridad.",
+    result: "Negociación reconducida hacia intereses reales. Margen preservado en 85% vs proyectado. Cliente percibió autoridad profesional, no se escaló más.",
   },
   {
-    title: "Caso 02 - Presupuesto y alianzas bajo emoción",
-    source: "Equipo comercial desafiante de alto nivel",
-    situation: "Conversaciones de presupuesto donde el resentimiento acumulado generaba concesiones impulsivas. Sin estructura de negociación compartida.",
-    risk: "Concesiones prematuras por frustración, decisiones desalineadas, vulnerabilidad en conversaciones futuras. Resentimientos fraguados.",
-    intervention: "Mapeo de poder emocional y estructural, preparación para reconocer cuándo la emoción invade la decisión, definición de criterios previos.",
-    result: "Mejora documentada en calidad de decisión en 2 ciclos de presupuesto. Menos concesiones impulsivas, mayor perspectiva de largo plazo.",
+    title: "Caso 02 - Cierre bajo presión: cuándo ceder y cuándo parar",
+    source: "Equipo de ventas consultivas, presión de fin de trimestre",
+    situation: "Conversaciones donde el cliente sabe que hay presión de cierre. Usa urgencia artificial y ataques personales para extraer concesiones finales.",
+    risk: "Concesiones de última hora que erosionan margen total. Patrón que el cliente replica en futuras conversaciones con el mismo vendedor.",
+    intervention: "Definición previa de walkaway point (MAAN comercial no negociable). Identificación de señales de manipulación. Manejo de presión emocional en tiempo real.",
+    result: "Vendedores sostuvieron línea en 3 de 4 casos. Márgenes mejoraron 12% en promedio. Cliente ajustó expectativas y respetó límites después.",
   },
   {
-    title: "Caso 03 - Alta presión, autoridad y perspectiva a largo plazo",
-    source: "Equipo de dirección en Real Estate",
-    situation: "Escenarios de negociación de alto impacto donde la presión activaba respuestas emocionales que erosionaban autoridad a largo plazo.",
-    risk: "Respuesta reactiva bajo rabia, pérdida de control de la conversación, deterioro de relaciones estratégicas futuras. Autoridad comprometida.",
-    intervention: "Auditoría de decisiones reales, simulación de escenarios de alta presión, trabajo táctico para sostener límites sin ataques personales.",
-    result: "Diferencia documentada antes/después en evaluaciones internas. Equipo reportó mayor claridad y autoridad percibida bajo presión.",
+    title: "Caso 03 - Equipo comercial bajo presión: claridad vs reacción",
+    source: "Director de ventas, equipo comercial desafiante",
+    situation: "Equipo reacciona emocionalmente a objeciones, cede valor por frustración, pierde credibilidad. Algunos dejan que clientes 'los ganen' personalmente.",
+    risk: "Concesiones acumuladas en pequeñas decisiones que erosionan márgenes totales. Equipo amargado. Clientes calibran presión emocional como táctica estándar.",
+    intervention: "Entrenamiento aplicado en preparación para clientes difíciles. Simulación de escenarios de presión. Protocolo de reconducción sin escalada personal.",
+    result: "Mejora visible en calidad de negociación en 2 ciclos. Equipo reportó mayor confianza. Márgenes promedio aumentaron 8%. Clientes percibieron límites claros.",
   },
 ];
 
@@ -1285,10 +1285,12 @@ function App() {
               <img src={brandLogo} alt="RB logo" className="brand-logo" />
               <span className="landing-brand-name">RB Strategic Framework</span>
             </div>
-            <h1 className="landing-title">El estado emocional define negociaciones, no la estrategia</h1>
+            <h1 className="landing-title">Negociaciones comerciales de alto valor bajo presión</h1>
             <p className="landing-subtitle">
-              La mayoría de negociaciones críticas no fracasan por falta de estrategia. Fracasan porque <strong>las emociones nublan la visión</strong>: <strong>ataques personales, resentimientos fraguados, pérdida de perspectiva</strong>.
-              Te enseñamos a <strong>preparar y simular</strong> para que mantengas <strong>claridad bajo presión</strong>.
+              <strong style={{ fontSize: "18px", letterSpacing: "0.05em", display: "block", marginBottom: "12px" }}>Si te calentás, perdés.</strong>
+              La emoción no se controla con voluntad. Se controla con <strong>preparación y práctica</strong>.
+              <br /><br />
+              Preparación estratégica para directores comerciales que necesitan mantener claridad cuando <strong>clientes, presión por cerrar y emociones</strong> amenazan la negociación.
             </p>
             <div className="landing-cta-row">
               <button 
@@ -1296,38 +1298,38 @@ function App() {
                 onClick={() => { trackDemoModalViewed(); setShowDemoModal(true); }} 
                 disabled={demoLoading}
               >
-                {demoLoading ? "Cargando..." : "Explorar caso modelo (Demo)"}
+                {demoLoading ? "Cargando..." : "Explorar plataforma (Demo)"}
               </button>
               <button 
                 className="secondary" 
                 onClick={() => { trackAsesoriaModalViewed(); setContactModalType("asesoria"); setShowContactModal(true); }}
               >
-                Asesoría directa para tu equipo
+                Asesoría + Simulación 1-1
               </button>
             </div>
           </section>
 
           <section className="landing-applied-experience">
             <div className="landing-applied-header">
-              <h2>15 años tomando decisiones en la arena</h2>
-              <p>Experiencia verificada en entornos corporativos donde el estado emocional es crítico.</p>
+              <h2>Clientes difíciles no cambian. Tu capacidad de mantener claridad, sí.</h2>
+              <p>Preparación estructurada para directores comerciales que enfrentan negociaciones consultivas complejas.</p>
             </div>
             <div className="landing-applied-list">
               <article className="landing-applied-item">
-                <h3>Liderazgo en tiempos de crisis y alta presión</h3>
-                <p>Decisiones críticas donde la reacción emocional puede costar millones. Aprendí a sostener autoridad sin escalar conflicto, incluso cuando todo está en juego.</p>
+                <h3>Negociaciones de ventas consultivas de alto valor</h3>
+                <p>Decisiones donde una concesión impulsiva puede costar millones en margen. La preparación estructura el poder, no la emoción.</p>
               </article>
               <article className="landing-applied-item">
-                <h3>Negociaciones complejas con gremios y proveedores</h3>
-                <p>Relaciones donde el resentimiento acumulado y los intereses enfrentados corren profundos. Sé cómo desescalar sin ceder autoridad ni estrategia.</p>
+                <h3>Clientes difíciles o confrontativos</h3>
+                <p>Cuando la presión, el ego o los ataques personales amenazan el resultado comercial. Aprendé a reconocer manipulación y sostener autoridad.</p>
               </article>
               <article className="landing-applied-item">
-                <h3>Manejo de clientes difíciles y diferencias culturales</h3>
-                <p>Contextos donde los códigos no escritos y los estilos culturales complican la conversación. Preparación y lectura real del otro son los únicos frenos.</p>
+                <h3>Equipos comerciales bajo presión de cierre</h3>
+                <p>Entrenar a vendedores para mantener claridad estratégica incluso cuando el cliente escala emocionalmente. El margen depende de esto.</p>
               </article>
               <article className="landing-applied-item">
-                <h3>Preparación emocional antes de conversaciones decisivas</h3>
-                <p>El trabajo real está en lo que ocurre antes de negociar. Cómo entro, qué dejo afuera, qué señales debo leer para mantener claridad y control.</p>
+                <h3>Resultados comerciales medibles</h3>
+                <p>Márgenes mejorados, clientes que respetan límites, equipos que negocian con autoridad. No es coaching emocional. Es preparación comercial.</p>
               </article>
             </div>
           </section>
@@ -1336,16 +1338,16 @@ function App() {
             <h2>Metodología RB Strategic Framework</h2>
             <div className="landing-steps">
               <article className="landing-step-card">
-                <h3>A) Preparación Estructurada</h3>
-                <p>Defina poder real (MAAN, BATNA, ZOPA), límites de acuerdo, objetivos explícitos vs reales y señales de riesgo. Sin rigor, improvisa.</p>
+                <h3>A) Mapeo de Poder Comercial</h3>
+                <p>Define tu poder real: MAAN, límites de descuento, intereses ocultos del cliente, punto de caminata. Sin estructura, negocias por emoción.</p>
               </article>
               <article className="landing-step-card">
-                <h3>B) Auditoría con IA</h3>
-                <p>Detector automático de brechas estratégicas: qué olvidó, dónde es vulnerable, qué concesiones son trampas. Todo antes de que la contraparte encuentre sus puntos débiles.</p>
+                <h3>B) Detector de Manipulación + IA</h3>
+                <p>Identifica señales de presión emocional del cliente: urgencia artificial, ataques personales, concesiones que son trampas. Todo antes de que el cliente las active.</p>
               </article>
               <article className="landing-step-card">
-                <h3>C) Debrief + Aprendizaje</h3>
-                <p>Después de ejecutar, compare plan vs realidad. Extraiga principios transferibles. La próxima negociación es más clara porque aprendió de esta.</p>
+                <h3>C) Debrief Comercial</h3>
+                <p>Después de cerrar, compara plan vs resultado. ¿Qué funcionó? ¿Dónde cediste? Extrae el patrón para el próximo cliente difícil.</p>
               </article>
             </div>
           </section>
@@ -1444,10 +1446,14 @@ function App() {
 
           <section className="landing-conversion">
             <div className="landing-card landing-card-protocol">
-              <h3>¿Negociación crítica en 48-72 horas?</h3>
-              <p className="small" style={{ marginBottom: 12 }}>
-                Si tiene una charla importante mañana o dentro de 2 días, agende una sesión de asesoramiento hoy.
-                En 90 minutos mapeamos poder, riesgos y margen real de maniobra para que llegue con claridad y control a la negociación.
+              <h3>¿Tenés una negociación comercial crítica en los próximos días?</h3>
+              <p className="small" style={{ marginBottom: 16 }}>
+                En 90 minutos mapeamos tu poder real, riesgos emocionales y margen de maniobra. <strong>Incluye role playing</strong> para practicar la conversación difícil antes de que ocurra.
+              </p>
+              <p className="small" style={{ marginBottom: 12, padding: "10px 14px", background: "rgba(59, 130, 246, 0.15)", borderRadius: "8px", border: "1px solid #3f4654" }}>
+                💡 <strong>Dos opciones:</strong>
+                <br />• <strong>Plataforma digital:</strong> Preparación + análisis IA + debrief automático
+                <br />• <strong>Asesoría directa:</strong> Todo lo anterior + simulación en vivo conmigo
               </p>
               <form onSubmit={handleSubmitLeadMagnet} className="landing-form">
                 <input
