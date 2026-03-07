@@ -63,6 +63,10 @@ jobs:
             cd frontend
             npm ci
             VITE_API_URL=https://rodrigoborgia.com npm run build
+            sudo rm -rf /var/www/html/*
+            sudo cp -r dist/* /var/www/html/
+            sudo chown -R www-data:www-data /var/www/html
+            sudo systemctl reload nginx
 
       - name: Release success
         run: echo "Main release flow completed for ${{ github.sha }}"
