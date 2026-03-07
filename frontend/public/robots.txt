@@ -1,4 +1,23 @@
 User-agent: *
 Allow: /
+Disallow: /wp-admin/
+Disallow: /wp-content/
+Disallow: /wp-login.php
+Disallow: /wp-json/
+Disallow: /author/
+Disallow: /feed/
+Disallow: /?s=
+Disallow: /*?s=
+Disallow: /?lang=
+Disallow: /category/uncategorized/
+Disallow: /wp-includes/
+Disallow: /.well-known/acme-challenge/
+Disallow: /comments/feed/
+Disallow: /?p=
+Disallow: /guest.vary.php
+
+Crawl-delay: 1
+User-agent: Googlebot
+Crawl-delay: 0
 
 Sitemap: https://rodrigoborgia.com/sitemap.xml
