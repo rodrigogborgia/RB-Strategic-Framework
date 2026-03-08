@@ -1489,16 +1489,16 @@ function App() {
               ))}
             </div>
             <div className="landing-reputation-actions">
-              <button
+              <a 
+                href="https://api.whatsapp.com/send?phone=5493416087362&text=Hola%20Rodrigo%2C%20tengo%20un%20caso%20cr%C3%ADtico%20y%20me%20gustar%C3%ADa%20conversar."
+                target="_blank"
+                rel="noreferrer"
                 className="secondary"
-                onClick={() => {
-                  trackEvent("caso_critico_modal_viewed", { section: "landing_reputation" });
-                  setContactModalType("caso-critico");
-                  setShowContactModal(true);
-                }}
+                style={{ display: 'inline-block', textDecoration: 'none' }}
+                onClick={() => trackEvent("caso_critico_whatsapp_clicked", { section: "landing_reputation" })}
               >
-                Conversar un caso crítico
-              </button>
+                💬 Conversar un caso crítico
+              </a>
             </div>
           </section>
 
@@ -1538,24 +1538,22 @@ function App() {
                 <br />• <strong>Plataforma digital:</strong> Preparación + análisis IA + debrief automático
                 <br />• <strong>Asesoría directa:</strong> Todo lo anterior + simulación en vivo conmigo
               </p>
-              <form onSubmit={handleSubmitLeadMagnet} className="landing-form">
-                <input
-                  type="email"
-                  placeholder="Tu email"
-                  value={leadEmail}
-                  onChange={(e) => setLeadEmail(e.target.value)}
-                  required
-                />
-                <button type="submit" className="btn-primary">Agendar sesión de asesoramiento</button>
-              </form>
-              {leadSuccess && <p className="success-message" style={{ marginTop: 10 }}>{leadSuccess}</p>}
+              <a 
+                href="https://api.whatsapp.com/send?phone=5493416087362&text=Hola%20Rodrigo%2C%20me%20gustar%C3%ADa%20agendar%20una%20sesi%C3%B3n%20de%20asesoramiento%20para%20una%20negociaci%C3%B3n%20cr%C3%ADtica."
+                target="_blank"
+                rel="noreferrer"
+                className="btn-primary"
+                style={{ display: 'inline-block', textDecoration: 'none', textAlign: 'center' }}
+              >
+                💬 Agendar sesión de asesoramiento
+              </a>
             </div>
           </section>
 
           <footer className="landing-footer">
             <p className="small">Contacto directo: <a href="mailto:hola@rodrigoborgia.com">hola@rodrigoborgia.com</a></p>
             <p className="small">
-              <a href="https://api.whatsapp.com/send?phone=3416087362" target="_blank" rel="noreferrer">
+              <a href="https://api.whatsapp.com/send?phone=5493416087362&text=Hola%20Rodrigo%2C%20tengo%20una%20urgencia%20estrat%C3%A9gica%20y%20me%20gustar%C3%ADa%20conversar." target="_blank" rel="noreferrer">
                 ¿Tiene una urgencia estratégica? Hablemos por WhatsApp
               </a>
             </p>

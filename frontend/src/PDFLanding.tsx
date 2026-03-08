@@ -85,8 +85,8 @@ export default function PDFLanding() {
       });
     }
 
-    // Redirige a la página principal con scroll a contacto
-    window.location.href = "https://rodrigoborgia.com/#contact";
+    // Redirige a WhatsApp
+    window.location.href = "https://api.whatsapp.com/send?phone=5493416087362&text=Hola%20Rodrigo%2C%20acabo%20de%20descargar%20el%20PDF%20y%20me%20gustar%C3%ADa%20conversar%20sobre%20una%20negociaci%C3%B3n%20que%20tengo%20por%20delante.";
   }
 
   return (
