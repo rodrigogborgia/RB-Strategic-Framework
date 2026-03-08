@@ -104,6 +104,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ email }),
     }),
+  pdfDownload: (name: string, email: string, pdfName: string) =>
+    request<PublicLeadCaptureResponse>("/api/public/pdf-download", {
+      method: "POST",
+      body: JSON.stringify({ name, email, pdf_name: pdfName }),
+    }),
   adminUpdateCohortMembership: (cohortId: number, userId: number, payload: { is_active: boolean; expiry_date: string | null }) =>
     request<{ ok: boolean }>(`/api/admin/cohorts/${cohortId}/members/${userId}`, {
       method: "PUT",

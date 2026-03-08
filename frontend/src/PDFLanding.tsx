@@ -1,8 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { trackEvent, trackError } from "./lib/analytics";
+import { api } from "./lib/api";
 import brandLogo from "./assets/rb-logo.svg";
-
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 export default function PDFLanding() {
   const [name, setName] = useState("");
@@ -34,20 +33,11 @@ export default function PDFLanding() {
         user_name: name.trim(),
       });
 
-      const response = await fetch(`${API_BASE}/public/pdf-download`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: name.trim(),
-          email: email.trim().toLowerCase(),
-          pdf_name: "si_te_calentas_perdes",
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ detail: "Error desconocido" }));
-        throw new Error(errorData.detail || "Error al procesar tu solicitud");
-      }
+      await api.pdfDownload(
+        name.trim(),
+        email.trim().toLowerCase(),
+        "si_te_calentas_perdes",
+      );
 
       trackEvent("pdf_download_success", {
         pdf_name: "si_te_calentas_perdes",
