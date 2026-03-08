@@ -274,3 +274,137 @@ def send_case_closure_email(
     except ApiException as exc:
         logger.warning(f"No se pudo enviar email de cierre a {user_email}: {exc}")
 
+
+def send_pdf_email(
+    user_email: str,
+    user_name: str,
+    pdf_name: str,
+    pdf_url: str | None = None,
+) -> None:
+    """Send PDF download email to user via Brevo"""
+    if not settings.brevo_api_key:
+        logger.warning("BREVO_API_KEY no configurada, no se envió email con PDF")
+        return
+
+    try:
+        import sib_api_v3_sdk
+        from sib_api_v3_sdk.rest import ApiException
+    except ImportError as exc:
+        logger.error(f"Dependencia sib_api_v3_sdk no instalada: {exc}")
+        return
+
+    configuration = sib_api_v3_sdk.Configuration()
+    configuration.api_key["api-key"] = settings.brevo_api_key
+
+    api_client = sib_api_v3_sdk.ApiClient(configuration)
+    transactional_api = sib_api_v3_sdk.TransactionalEmailsApi(api_client)
+
+    # PDF metadata
+    pdf_metadata = {
+        "si_te_calentas_perdes": {
+            "title": "Si te calentás, perdés",
+            "description": "Manual breve sobre cómo mantener claridad estratégica cuando una negociación se vuelve emocional.",
+            "cta_text": "Las conversaciones que definen tu carrera no se improvisan.",
+        }
+    }
+
+    metadata = pdf_metadata.get(pdf_name, {
+        "title": pdf_name,
+        "description": "Tu documento estratégico",
+        "cta_text": "Preparación estratégica bajo presión.",
+    })
+
+    # Build HTML email body
+    html_body = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; background: #0f1419; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Open Sans', sans-serif;">
+    <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+        
+        <!-- Header -->
+        <div style="text-align: center; margin-bottom: 32px;">
+            <h1 style="color: #ffffff; font-size: 28px; margin: 0 0 8px 0; font-weight: 900;">
+                {metadata["title"]}
+            </h1>
+            <p style="color: #94a3b8; font-size: 14px; margin: 0;">
+                Tu documento está listo
+            </p>
+        </div>
+
+        <!-- Main Container -->
+        <div style="background: #111111; border: 1px solid #262626; border-radius: 14px; padding: 32px; margin-bottom: 24px;">
+            
+            <p style="color: #e5e7eb; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                Hola {user_name},
+            </p>
+
+            <p style="color: #cbd5e1; font-size: 15px; line-height: 1.65; margin: 0 0 20px 0;">
+                {metadata["description"]}
+            </p>
+
+            <!-- Download Button -->
+            <div style="text-align: center; margin: 32px 0;">
+                <a href="{pdf_url or '#'}" 
+                   style="display: inline-block; background: #3b82f6; color: #ffffff; font-size: 16px; font-weight: 700; padding: 16px 32px; border-radius: 14px; text-decoration: none;">
+                    📄 Descargar PDF
+                </a>
+            </div>
+
+            <div style="background: rgba(96, 165, 250, 0.05); border-left: 3px solid #60a5fa; padding: 16px; border-radius: 8px; margin: 24px 0 0 0;">
+                <p style="color: #bfdbfe; font-size: 14px; line-height: 1.6; margin: 0; font-style: italic;">
+                    {metadata["cta_text"]}
+                </p>
+            </div>
+        </div>
+
+        <!-- CTA Section -->
+        <div style="background: linear-gradient(135deg, #1e293b 0%, #0f1419 100%); border: 1px solid #475569; border-radius: 14px; padding: 28px; margin-bottom: 24px; text-align: center;">
+            <h2 style="color: #ffffff; font-size: 20px; margin: 0 0 12px 0; font-weight: 700;">
+                ¿Tenés una negociación importante por delante?
+            </h2>
+            <p style="color: #cbd5e1; font-size: 15px; line-height: 1.6; margin: 0 0 20px 0;">
+                Si estás frente a una negociación compleja o querés preparar una conversación estratégica con tu equipo, podemos trabajarla juntos.
+            </p>
+            <a href="https://rodrigoborgia.com" 
+               style="display: inline-block; background: transparent; color: #60a5fa; border: 2px solid #60a5fa; font-size: 15px; font-weight: 700; padding: 12px 24px; border-radius: 14px; text-decoration: none;">
+                Agendar una conversación
+            </a>
+        </div>
+
+        <!-- Footer -->
+        <div style="text-align: center; padding-top: 20px; border-top: 1px solid #262626;">
+            <p style="color: #64748b; font-size: 13px; line-height: 1.6; margin: 0;">
+                RB Strategic Framework<br />
+                <a href="https://rodrigoborgia.com" style="color: #60a5fa; text-decoration: none;">rodrigoborgia.com</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>
+"""
+
+    sender = {
+        "name": settings.brevo_sender_name,
+        "email": settings.brevo_sender_email,
+    }
+    
+    to = [{"email": user_email}]
+
+    send_smtp_email = sib_api_v3_sdk.SendSmtpEmail(
+        to=to,
+        html_content=html_body,
+        sender=sender,
+        subject=f"📄 {metadata['title']} - Tu documento está listo",
+    )
+
+    try:
+        response = transactional_api.send_transac_email(send_smtp_email)
+        logger.info(f"PDF email enviado exitosamente a {user_email} para '{pdf_name}'")
+    except ApiException as exc:
+        logger.warning(f"No se pudo enviar PDF a {user_email}: {exc}")
+
+

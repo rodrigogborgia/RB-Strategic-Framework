@@ -49,6 +49,7 @@ from .schemas import (
     LoginInput,
     DemoStartInput,
     DemoStartResponse,
+    PDFDownloadInput,
     Protocolo48hInput,
     PreparationInput,
     PublicLeadCaptureInput,
@@ -579,6 +580,72 @@ def protocolo_48h(
         ok=True,
         message="Solicitud recibida. En breve nos comunicaremos para agendar su sesión de asesoramiento.",
     )
+
+
+@app.post("/api/public/pdf-download", response_model=PublicLeadCaptureResponse)
+def pdf_download(
+    payload: PDFDownloadInput,
+    session: Session = Depends(get_session)
+) -> PublicLeadCaptureResponse:
+    """PDF download and lead capture - sends PDF via email"""
+    email = payload.email.strip().lower()
+    name = payload.name.strip()
+    pdf_name = payload.pdf_name.strip()
+
+    # Map PDF names to actual files/URLs
+    pdf_urls = {
+        "si_te_calentas_perdes": "https://rodrigoborgia.com/pdfs/si-te-calentas-perdes.pdf",
+        # Add more PDFs as needed
+    }
+
+    pdf_url = pdf_urls.get(pdf_name)
+    if not pdf_url:
+        raise HTTPException(status_code=404, detail="PDF no encontrado")
+
+    # Log to database
+    _log_lead_capture(
+        session,
+        email,
+        "pdf_download",
+        nombre=name,
+        preocupacion=f"Descarga de PDF: {pdf_name}"
+    )
+
+    # Notify admin
+    _notify_admin_of_lead(
+        email,
+        "pdf_download",
+        nombre=name,
+        preocupacion=f"Descargó PDF: {pdf_name}"
+    )
+
+    # Send PDF via email
+    try:
+        from .brevo_engine import send_pdf_email, upsert_contact_in_brevo
+
+        # Send the PDF email
+        send_pdf_email(
+            user_email=email,
+            user_name=name,
+            pdf_name=pdf_name,
+            pdf_url=pdf_url
+        )
+
+        # Add to Brevo contact list
+        upsert_contact_in_brevo(
+            email,
+            f"Lead Magnet: {pdf_name}",
+            "pdf_download"
+        )
+    except RuntimeError as exc:
+        # Log but don't fail - graceful degradation
+        print(f"⚠️ No se pudo enviar PDF por email ({email}): {exc}")
+
+    return PublicLeadCaptureResponse(
+        ok=True,
+        message="PDF enviado a tu email. Revisá tu bandeja de entrada.",
+    )
+
 
 @app.get("/api/diagnostics/db")
 def diagnose_database(session: Session = Depends(get_session)) -> dict:

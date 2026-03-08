@@ -54,6 +54,12 @@ class Protocolo48hInput(BaseModel):
     email: str = Field(min_length=5, max_length=190)
 
 
+class PDFDownloadInput(BaseModel):
+    name: str = Field(min_length=2, max_length=120)
+    email: str = Field(min_length=5, max_length=190)
+    pdf_name: str = Field(min_length=3, max_length=100)
+
+
 class PublicLeadCaptureResponse(BaseModel):
     ok: bool = True
     message: str

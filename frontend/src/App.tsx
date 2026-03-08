@@ -1298,31 +1298,37 @@ function App() {
             </p>
 
             {!showPathSelector && !selectedPath && (
-              <div className="landing-cta-row">
-                <button 
-                  className="cta-demo" 
-                  onClick={() => { 
-                    trackEvent("path_selector_opened", { source: "hero" }); 
-                    setShowPathSelector(true); 
-                  }}
-                  style={{ fontSize: "18px", padding: "18px 36px" }}
-                >
-                  La presión es alta, el margen está en juego. ¿Es una mala idea mostrarte los 3 caminos que puedo ofrecerte?
-                </button>
-                <button 
-                  className="secondary" 
-                  onClick={() => { trackDemoModalViewed(); setShowDemoModal(true); }} 
-                  disabled={demoLoading}
-                >
-                  {demoLoading ? "Cargando..." : "Explorar plataforma (Demo)"}
-                </button>
-                <button 
-                  className="secondary" 
-                  onClick={() => { trackAsesoriaModalViewed(); setContactModalType("asesoria"); setShowContactModal(true); }}
-                >
-                  Asesoría + Simulación 1-1
-                </button>
-              </div>
+              <>
+                <div className="landing-cta-row" style={{ justifyContent: "center", marginBottom: "16px" }}>
+                  <button 
+                    className="cta-demo" 
+                    onClick={() => { 
+                      trackEvent("path_selector_opened", { source: "hero" }); 
+                      setShowPathSelector(true); 
+                    }}
+                    style={{ fontSize: "18px", padding: "18px 36px" }}
+                  >
+                    La presión es alta, el margen está en juego. ¿Es una mala idea mostrarte los 3 caminos que puedo ofrecerte?
+                  </button>
+                </div>
+                <div className="landing-cta-row" style={{ justifyContent: "center", gap: "12px" }}>
+                  <button 
+                    className="secondary" 
+                    onClick={() => { trackDemoModalViewed(); setShowDemoModal(true); }} 
+                    disabled={demoLoading}
+                    style={{ minWidth: "auto", flex: "0 1 auto" }}
+                  >
+                    {demoLoading ? "Cargando..." : "Explorar plataforma (Demo)"}
+                  </button>
+                  <button 
+                    className="secondary" 
+                    onClick={() => { trackAsesoriaModalViewed(); setContactModalType("asesoria"); setShowContactModal(true); }}
+                    style={{ minWidth: "auto", flex: "0 1 auto" }}
+                  >
+                    Asesoría + Simulación 1-1
+                  </button>
+                </div>
+              </>
             )}
 
             {showPathSelector && (

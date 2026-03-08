@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { trackEvent } from "../lib/analytics";
 import {
   PowerDashboardView,
@@ -7,8 +6,6 @@ import {
   PreNegotiationSummaryView,
   DebriefComparativeView,
 } from "./StrategicDashboards";
-
-type DemoSection = "context" | "preparation" | "analysis" | "dashboards" | "debrief";
 
 interface CaseDemoReadOnlyProps {
   onContactClick: () => void;
@@ -158,15 +155,8 @@ const demoCaseData = {
 };
 
 export default function CaseDemoReadOnly({ onContactClick }: CaseDemoReadOnlyProps) {
-  const [activeSection, setActiveSection] = useState<DemoSection>("context");
-
-  const handleSectionChange = (section: DemoSection) => {
-    trackEvent("case_demo_section_viewed", { section });
-    setActiveSection(section);
-  };
-
   const handleContactClick = () => {
-    trackEvent("case_demo_contact_clicked", { section: activeSection });
+    trackEvent("case_demo_contact_clicked", { section: "full_view" });
     onContactClick();
   };
 
@@ -180,216 +170,155 @@ export default function CaseDemoReadOnly({ onContactClick }: CaseDemoReadOnlyPro
         </p>
       </div>
 
-      {/* Navigation Tabs */}
-      <div className="case-demo-tabs">
-        <button
-          className={`case-demo-tab ${activeSection === "context" ? "active" : ""}`}
-          onClick={() => handleSectionChange("context")}
-        >
-          1. Contexto
-        </button>
-        <button
-          className={`case-demo-tab ${activeSection === "preparation" ? "active" : ""}`}
-          onClick={() => handleSectionChange("preparation")}
-        >
-          2. Preparación
-        </button>
-        <button
-          className={`case-demo-tab ${activeSection === "analysis" ? "active" : ""}`}
-          onClick={() => handleSectionChange("analysis")}
-        >
-          3. Análisis IA
-        </button>
-        <button
-          className={`case-demo-tab ${activeSection === "dashboards" ? "active" : ""}`}
-          onClick={() => handleSectionChange("dashboards")}
-        >
-          4. Dashboards
-        </button>
-        <button
-          className={`case-demo-tab ${activeSection === "debrief" ? "active" : ""}`}
-          onClick={() => handleSectionChange("debrief")}
-        >
-          5. Debrief
-        </button>
-      </div>
-
-      {/* Content Sections */}
+      {/* Content Sections - Mostrado todo directamente sin tabs */}
       <div className="case-demo-content">
-        {activeSection === "context" && (
-          <div className="case-demo-section">
-            <h3>Contexto del Caso</h3>
+        {/* Contexto */}
+        <div className="case-demo-section">
+          <h3>Contexto del Caso</h3>
+          <div className="case-demo-field">
+            <label>Rol</label>
+            <p>{demoCaseData.context.role}</p>
+          </div>
+          <div className="case-demo-field">
+            <label>Situación</label>
+            <p>{demoCaseData.context.situation}</p>
+          </div>
+          <div className="case-demo-field">
+            <label>Desafío</label>
+            <p>{demoCaseData.context.challenge}</p>
+          </div>
+        </div>
+
+        {/* Preparación */}
+        <div className="case-demo-section">
+          <h3>Preparación Estratégica</h3>
+          <div className="case-demo-field">
+            <label>Objetivo Explícito</label>
+            <p>{demoCaseData.preparation.objective_explicit}</p>
+          </div>
+          <div className="case-demo-field">
+            <label>Objetivo Real</label>
+            <p>{demoCaseData.preparation.objective_real}</p>
+          </div>
+          <div className="case-demo-field">
+            <label>Tu MAAN (Mejor Alternativa)</label>
+            <p>{demoCaseData.preparation.maan}</p>
+          </div>
+          <div className="case-demo-field">
+            <label>Fortaleza de la Contraparte</label>
+            <p>{demoCaseData.preparation.counterpart_strength}</p>
+          </div>
+          <div className="case-demo-field">
+            <label>Punto de Ruptura</label>
+            <p>{demoCaseData.preparation.breakpoint}</p>
+          </div>
+          <div className="case-demo-field">
+            <label>Variable Emocional Crítica</label>
+            <p>{demoCaseData.preparation.emotional_variable}</p>
+          </div>
+          <div className="case-demo-field">
+            <label>Riesgo Principal</label>
+            <p>{demoCaseData.preparation.main_risk}</p>
+          </div>
+          <div className="case-demo-field">
+            <label>Señal Clave a Observar</label>
+            <p>{demoCaseData.preparation.key_signal}</p>
+          </div>
+        </div>
+
+        {/* Análisis IA */}
+        <div className="case-demo-section">
+          <h3>Análisis Automático (IA)</h3>
+          
+          <div className="case-demo-analysis-block">
+            <h4>❓ Preguntas de Clarificación</h4>
+            <ul>
+              {demoCaseData.analysis.clarification_questions.map((q, i) => (
+                <li key={i}>{q}</li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="case-demo-analysis-block">
+            <h4>👁️ Observaciones</h4>
+            <ul>
+              {demoCaseData.analysis.observations.map((o, i) => (
+                <li key={i}>{o}</li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="case-demo-analysis-block">
+            <h4>💡 Sugerencias Concretas</h4>
+            <ul>
+              {demoCaseData.analysis.suggestions.map((s, i) => (
+                <li key={i}>{s}</li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="case-demo-analysis-block warning">
+            <h4>⚠️ Inconsistencias Detectadas</h4>
+            <ul>
+              {demoCaseData.analysis.inconsistencies.map((inc, i) => (
+                <li key={i}>{inc}</li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="case-demo-analysis-level">
+            <strong>Nivel de Preparación:</strong> {demoCaseData.analysis.preparation_level}
+          </div>
+        </div>
+
+        {/* Dashboards */}
+        <div className="case-demo-section">
+          <h3>Dashboards Estratégicos Visuales</h3>
+          <p className="case-demo-intro">
+            En 90 minutos, estos dashboards te dan claridad sobre tu posición de poder, 
+            riesgos prioritarios y margen de maniobra.
+          </p>
+          
+          <PowerDashboardView dashboard={demoCaseData.dashboards.power} />
+          <RiskMatrixView matrix={demoCaseData.dashboards.risks} />
+          <ConcessionMapView map={demoCaseData.dashboards.concessions} />
+          <PreNegotiationSummaryView summary={demoCaseData.dashboards.summary} />
+        </div>
+
+        {/* Debrief */}
+        <div className="case-demo-section">
+          <h3>Debrief: Preparación vs. Realidad</h3>
+          <p className="case-demo-intro">
+            Después de ejecutar, comparamos lo planeado con lo que realmente sucedió 
+            para extraer lecciones transferibles.
+          </p>
+
+          <DebriefComparativeView comparative={demoCaseData.debrief_comparative} />
+
+          <div className="case-demo-learnings">
+            <h4>📊 Resultado Final</h4>
             <div className="case-demo-field">
-              <label>Rol</label>
-              <p>{demoCaseData.context.role}</p>
+              <label>¿Lograste el objetivo explícito?</label>
+              <p>{demoCaseData.execution.explicit_objective_achieved}</p>
             </div>
             <div className="case-demo-field">
-              <label>Situación</label>
-              <p>{demoCaseData.context.situation}</p>
+              <label>¿Y el objetivo real?</label>
+              <p>{demoCaseData.execution.real_objective_achieved}</p>
             </div>
             <div className="case-demo-field">
-              <label>Desafío</label>
-              <p>{demoCaseData.context.challenge}</p>
+              <label>Error estratégico principal</label>
+              <p>{demoCaseData.execution.main_strategic_error}</p>
             </div>
-            <div className="case-demo-next">
-              <button className="btn-next" onClick={() => handleSectionChange("preparation")}>
-                Ver Preparación →
-              </button>
+            <div className="case-demo-field">
+              <label>Acierto estratégico principal</label>
+              <p>{demoCaseData.execution.main_strategic_success}</p>
+            </div>
+            <div className="case-demo-field">
+              <label>Decisión a cambiar en la próxima</label>
+              <p>{demoCaseData.execution.decision_to_change}</p>
             </div>
           </div>
-        )}
-
-        {activeSection === "preparation" && (
-          <div className="case-demo-section">
-            <h3>Preparación Estratégica</h3>
-            <div className="case-demo-field">
-              <label>Objetivo Explícito</label>
-              <p>{demoCaseData.preparation.objective_explicit}</p>
-            </div>
-            <div className="case-demo-field">
-              <label>Objetivo Real</label>
-              <p>{demoCaseData.preparation.objective_real}</p>
-            </div>
-            <div className="case-demo-field">
-              <label>Tu MAAN (Mejor Alternativa)</label>
-              <p>{demoCaseData.preparation.maan}</p>
-            </div>
-            <div className="case-demo-field">
-              <label>Fortaleza de la Contraparte</label>
-              <p>{demoCaseData.preparation.counterpart_strength}</p>
-            </div>
-            <div className="case-demo-field">
-              <label>Punto de Ruptura</label>
-              <p>{demoCaseData.preparation.breakpoint}</p>
-            </div>
-            <div className="case-demo-field">
-              <label>Variable Emocional Crítica</label>
-              <p>{demoCaseData.preparation.emotional_variable}</p>
-            </div>
-            <div className="case-demo-field">
-              <label>Riesgo Principal</label>
-              <p>{demoCaseData.preparation.main_risk}</p>
-            </div>
-            <div className="case-demo-field">
-              <label>Señal Clave a Observar</label>
-              <p>{demoCaseData.preparation.key_signal}</p>
-            </div>
-            <div className="case-demo-next">
-              <button className="btn-next" onClick={() => handleSectionChange("analysis")}>
-                Ver Análisis IA →
-              </button>
-            </div>
-          </div>
-        )}
-
-        {activeSection === "analysis" && (
-          <div className="case-demo-section">
-            <h3>Análisis Automático (IA)</h3>
-            
-            <div className="case-demo-analysis-block">
-              <h4>❓ Preguntas de Clarificación</h4>
-              <ul>
-                {demoCaseData.analysis.clarification_questions.map((q, i) => (
-                  <li key={i}>{q}</li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="case-demo-analysis-block">
-              <h4>👁️ Observaciones</h4>
-              <ul>
-                {demoCaseData.analysis.observations.map((o, i) => (
-                  <li key={i}>{o}</li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="case-demo-analysis-block">
-              <h4>💡 Sugerencias Concretas</h4>
-              <ul>
-                {demoCaseData.analysis.suggestions.map((s, i) => (
-                  <li key={i}>{s}</li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="case-demo-analysis-block warning">
-              <h4>⚠️ Inconsistencias Detectadas</h4>
-              <ul>
-                {demoCaseData.analysis.inconsistencies.map((inc, i) => (
-                  <li key={i}>{inc}</li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="case-demo-analysis-level">
-              <strong>Nivel de Preparación:</strong> {demoCaseData.analysis.preparation_level}
-            </div>
-
-            <div className="case-demo-next">
-              <button className="btn-next" onClick={() => handleSectionChange("dashboards")}>
-                Ver Dashboards Visuales →
-              </button>
-            </div>
-          </div>
-        )}
-
-        {activeSection === "dashboards" && (
-          <div className="case-demo-section">
-            <h3>Dashboards Estratégicos Visuales</h3>
-            <p className="case-demo-intro">
-              En 90 minutos, estos dashboards te dan claridad sobre tu posición de poder, 
-              riesgos prioritarios y margen de maniobra.
-            </p>
-            
-            <PowerDashboardView dashboard={demoCaseData.dashboards.power} />
-            <RiskMatrixView matrix={demoCaseData.dashboards.risks} />
-            <ConcessionMapView map={demoCaseData.dashboards.concessions} />
-            <PreNegotiationSummaryView summary={demoCaseData.dashboards.summary} />
-
-            <div className="case-demo-next">
-              <button className="btn-next" onClick={() => handleSectionChange("debrief")}>
-                Ver Debrief Comparativo →
-              </button>
-            </div>
-          </div>
-        )}
-
-        {activeSection === "debrief" && (
-          <div className="case-demo-section">
-            <h3>Debrief: Preparación vs. Realidad</h3>
-            <p className="case-demo-intro">
-              Después de ejecutar, comparamos lo planeado con lo que realmente sucedió 
-              para extraer lecciones transferibles.
-            </p>
-
-            <DebriefComparativeView comparative={demoCaseData.debrief_comparative} />
-
-            <div className="case-demo-learnings">
-              <h4>📊 Resultado Final</h4>
-              <div className="case-demo-field">
-                <label>¿Lograste el objetivo explícito?</label>
-                <p>{demoCaseData.execution.explicit_objective_achieved}</p>
-              </div>
-              <div className="case-demo-field">
-                <label>¿Y el objetivo real?</label>
-                <p>{demoCaseData.execution.real_objective_achieved}</p>
-              </div>
-              <div className="case-demo-field">
-                <label>Error estratégico principal</label>
-                <p>{demoCaseData.execution.main_strategic_error}</p>
-              </div>
-              <div className="case-demo-field">
-                <label>Acierto estratégico principal</label>
-                <p>{demoCaseData.execution.main_strategic_success}</p>
-              </div>
-              <div className="case-demo-field">
-                <label>Decisión a cambiar en la próxima</label>
-                <p>{demoCaseData.execution.decision_to_change}</p>
-              </div>
-            </div>
-          </div>
-        )}
+        </div>
       </div>
 
       {/* CTA Section */}

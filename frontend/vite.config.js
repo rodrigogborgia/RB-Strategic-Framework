@@ -1,5 +1,6 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { resolve } from "path";
 export default defineConfig({
     plugins: [react()],
     define: {
@@ -7,5 +8,13 @@ export default defineConfig({
     },
     server: {
         port: 5173,
+    },
+    build: {
+        rollupOptions: {
+            input: {
+                main: resolve(__dirname, "index.html"),
+                "negociar-bajo-presion": resolve(__dirname, "negociar-bajo-presion.html"),
+            },
+        },
     },
 });
