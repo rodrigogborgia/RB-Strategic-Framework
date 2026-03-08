@@ -369,9 +369,9 @@ def send_pdf_email(
             <p style="color: #cbd5e1; font-size: 15px; line-height: 1.6; margin: 0 0 20px 0;">
                 Si estás frente a una negociación compleja o querés preparar una conversación estratégica con tu equipo, podemos trabajarla juntos.
             </p>
-            <a href="https://rodrigoborgia.com" 
+            <a href="https://api.whatsapp.com/send?phone=5493416087362&text=Hola%20Rodrigo%2C%20acabo%20de%20descargar%20el%20PDF%20y%20me%20gustar%C3%ADa%20conversar%20sobre%20una%20negociaci%C3%B3n%20que%20tengo%20por%20delante." 
                style="display: inline-block; background: transparent; color: #60a5fa; border: 2px solid #60a5fa; font-size: 15px; font-weight: 700; padding: 12px 24px; border-radius: 14px; text-decoration: none;">
-                Agendar una conversación
+                💬 Agendar una conversación
             </a>
         </div>
 
