@@ -1545,6 +1545,9 @@ function App() {
                 ¿Tiene una urgencia estratégica? Hablemos por WhatsApp
               </a>
             </p>
+            <p className="small">
+              <a href="/negociar-bajo-presion">Descargar manual: Si te calentás, perdés</a>
+            </p>
           </footer>
         </main>
 

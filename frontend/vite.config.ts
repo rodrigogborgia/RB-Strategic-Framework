@@ -15,6 +15,7 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, "index.html"),
         "negociar-bajo-presion": resolve(__dirname, "negociar-bajo-presion.html"),
+        "negociacion-bajo-presion-guia": resolve(__dirname, "negociacion-bajo-presion-guia.html"),
       },
     },
   },
