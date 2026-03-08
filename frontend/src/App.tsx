@@ -4,6 +4,8 @@ import { api, getAuthToken, setAuthToken } from "./lib/api";
 import { trackEvent, trackDemoModalViewed, trackDemoStarted, trackAsesoriaModalViewed, trackAsesoriaSubmitted, trackProtocolo48hSubmitted, trackError } from "./lib/analytics";
 import brandLogo from "./assets/rb-logo.svg";
 import Testimonials from "./components/Testimonials";
+import PathSelector from "./components/PathSelector";
+import CaseDemoReadOnly from "./components/CaseDemoReadOnly";
 import { 
   PowerDashboardView, 
   RiskMatrixView, 
@@ -349,6 +351,8 @@ function App() {
   const [showFullAnalysis, setShowFullAnalysis] = useState(false);
   const [experienceMode, setExperienceMode] = useState<ExperienceMode>("sesion_en_vivo");
   const [highlightStep, setHighlightStep] = useState<CaseStatus | "cerrado" | null>(null);
+  const [showPathSelector, setShowPathSelector] = useState(false);
+  const [selectedPath, setSelectedPath] = useState<"protocolo-48h" | "asesoria-equipos" | "plataforma-demo" | null>(null);
 
   const canAccessLiveSession = authUser?.can_access_live_session ?? false;
   const canAccessSparring = authUser?.can_access_sparring ?? true;
@@ -1292,43 +1296,92 @@ function App() {
               <br /><br />
               Preparación estratégica para directores comerciales que necesitan mantener claridad cuando <strong>clientes, presión por cerrar y emociones</strong> amenazan la negociación.
             </p>
-            <div className="landing-cta-row">
-              <button 
-                className="cta-demo" 
-                onClick={() => { trackDemoModalViewed(); setShowDemoModal(true); }} 
-                disabled={demoLoading}
-              >
-                {demoLoading ? "Cargando..." : "Explorar plataforma (Demo)"}
-              </button>
-              <button 
-                className="secondary" 
-                onClick={() => { trackAsesoriaModalViewed(); setContactModalType("asesoria"); setShowContactModal(true); }}
-              >
-                Asesoría + Simulación 1-1
-              </button>
-            </div>
+
+            {!showPathSelector && !selectedPath && (
+              <div className="landing-cta-row">
+                <button 
+                  className="cta-demo" 
+                  onClick={() => { 
+                    trackEvent("path_selector_opened", { source: "hero" }); 
+                    setShowPathSelector(true); 
+                  }}
+                  style={{ fontSize: "18px", padding: "18px 36px" }}
+                >
+                  La presión es alta, el margen está en juego. ¿Es una mala idea mostrarte los 3 caminos que puedo ofrecerte?
+                </button>
+                <button 
+                  className="secondary" 
+                  onClick={() => { trackDemoModalViewed(); setShowDemoModal(true); }} 
+                  disabled={demoLoading}
+                >
+                  {demoLoading ? "Cargando..." : "Explorar plataforma (Demo)"}
+                </button>
+                <button 
+                  className="secondary" 
+                  onClick={() => { trackAsesoriaModalViewed(); setContactModalType("asesoria"); setShowContactModal(true); }}
+                >
+                  Asesoría + Simulación 1-1
+                </button>
+              </div>
+            )}
+
+            {showPathSelector && (
+              <PathSelector 
+                onSelectPath={(path) => {
+                  setSelectedPath(path);
+                  setShowPathSelector(false);
+                  
+                  if (path === "protocolo-48h") {
+                    trackProtocolo48hSubmitted();
+                    setContactModalType("caso-critico");
+                    setShowContactModal(true);
+                  } else if (path === "asesoria-equipos") {
+                    trackAsesoriaModalViewed();
+                    setContactModalType("asesoria");
+                    setShowContactModal(true);
+                  } else if (path === "plataforma-demo") {
+                    trackDemoModalViewed();
+                    setShowDemoModal(true);
+                  }
+                }}
+              />
+            )}
+
+            {selectedPath && !showPathSelector && (
+              <div className="landing-cta-row">
+                <button 
+                  className="secondary" 
+                  onClick={() => { 
+                    setSelectedPath(null); 
+                    setShowPathSelector(true); 
+                  }}
+                >
+                  Cambiar opción
+                </button>
+              </div>
+            )}
           </section>
 
           <section className="landing-applied-experience">
             <div className="landing-applied-header">
-              <h2>Clientes difíciles no cambian. Tu capacidad de mantener claridad, sí.</h2>
+              <h2>Los clientes difíciles no cambian. Tu capacidad de mantener claridad, sí.</h2>
               <p>Preparación estructurada para directores comerciales que enfrentan negociaciones consultivas complejas.</p>
             </div>
             <div className="landing-applied-list">
               <article className="landing-applied-item">
-                <h3>Negociaciones de ventas consultivas de alto valor</h3>
+                <h3>En negociaciones de ventas consultivas de alto valor</h3>
                 <p>Decisiones donde una concesión impulsiva puede costar millones en margen. La preparación estructura el poder, no la emoción.</p>
               </article>
               <article className="landing-applied-item">
-                <h3>Clientes difíciles o confrontativos</h3>
+                <h3>Con clientes difíciles o confrontativos</h3>
                 <p>Cuando la presión, el ego o los ataques personales amenazan el resultado comercial. Aprendé a reconocer manipulación y sostener autoridad.</p>
               </article>
               <article className="landing-applied-item">
-                <h3>Equipos comerciales bajo presión de cierre</h3>
+                <h3>Para equipos comerciales bajo presión de cierre</h3>
                 <p>Entrenar a vendedores para mantener claridad estratégica incluso cuando el cliente escala emocionalmente. El margen depende de esto.</p>
               </article>
               <article className="landing-applied-item">
-                <h3>Resultados comerciales medibles</h3>
+                <h3>Los resultados comerciales medibles</h3>
                 <p>Márgenes mejorados, clientes que respetan límites, equipos que negocian con autoridad. No es coaching emocional. Es preparación comercial.</p>
               </article>
             </div>
@@ -1350,6 +1403,16 @@ function App() {
                 <p>Después de cerrar, compara plan vs resultado. ¿Qué funcionó? ¿Dónde cediste? Extrae el patrón para el próximo cliente difícil.</p>
               </article>
             </div>
+          </section>
+
+          <section className="landing-case-demo">
+            <CaseDemoReadOnly 
+              onContactClick={() => {
+                trackProtocolo48hSubmitted();
+                setContactModalType("caso-critico");
+                setShowContactModal(true);
+              }}
+            />
           </section>
 
           <section className="landing-reputation">
