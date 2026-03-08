@@ -1421,6 +1421,20 @@ function App() {
             />
           </section>
 
+          <section className="landing-trust-signals">
+            <div className="trust-signals-container">
+              <div className="trust-signal-item">
+                <div className="trust-signal-number">15+</div>
+                <div className="trust-signal-label">Años de experiencia</div>
+              </div>
+              <div className="trust-signal-divider"></div>
+              <div className="trust-signal-item">
+                <div className="trust-signal-number">300+</div>
+                <div className="trust-signal-label">Empresas y ejecutivos asesorados</div>
+              </div>
+            </div>
+          </section>
+
           <section className="landing-reputation">
             <div className="landing-reputation-header">
               <p className="landing-reputation-kicker">Instituciones que confian en este metodo</p>

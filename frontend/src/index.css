@@ -278,6 +278,55 @@ body {
   line-height: 1.6;
 }
 
+.landing-trust-signals {
+  padding: 24px 0;
+  margin: 32px 0;
+}
+
+.trust-signals-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+  flex-wrap: wrap;
+}
+
+.trust-signal-item {
+  text-align: center;
+}
+
+.trust-signal-number {
+  font-size: clamp(36px, 5vw, 52px);
+  font-weight: 900;
+  color: #60a5fa;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.trust-signal-label {
+  font-size: 14px;
+  color: #94a3b8;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.trust-signal-divider {
+  width: 1px;
+  height: 50px;
+  background: linear-gradient(to bottom, transparent, #334155, transparent);
+}
+
+@media (max-width: 640px) {
+  .trust-signal-divider {
+    display: none;
+  }
+
+  .trust-signals-container {
+    gap: 24px;
+  }
+}
+
 .landing-reputation {
   border: 1px solid #262626;
   border-radius: 14px;

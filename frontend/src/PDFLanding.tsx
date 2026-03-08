@@ -44,12 +44,26 @@ export default function PDFLanding() {
         user_name: name.trim(),
       });
 
+      // Meta Pixel - Lead conversion
+      if (typeof window !== 'undefined' && (window as any).fbq) {
+        (window as any).fbq('track', 'Lead', {
+          content_name: 'si_te_calentas_perdes',
+          content_category: 'pdf_download',
+          value: 0,
+          currency: 'USD'
+        });
+      }
+
       setSuccess(true);
       setName("");
       setEmail("");
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Error al procesar tu solicitud. Por favor intentá de nuevo.";
       setError(errorMessage);
+      trackEvent("pdf_download_error", {
+        pdf_name: "si_te_calentas_perdes",
+        error_message: errorMessage,
+      });
       trackError("pdf_download_error", errorMessage);
       console.error("Error al enviar formulario PDF:", err);
     } finally {
@@ -62,6 +76,15 @@ export default function PDFLanding() {
       source: "pdf_landing",
       pdf_name: "si_te_calentas_perdes",
     });
+
+    // Meta Pixel - Contact conversion
+    if (typeof window !== 'undefined' && (window as any).fbq) {
+      (window as any).fbq('track', 'Contact', {
+        content_name: 'consultation_request',
+        content_category: 'pdf_landing'
+      });
+    }
+
     // Redirige a la página principal con scroll a contacto
     window.location.href = "https://rodrigoborgia.com/#contact";
   }
@@ -89,7 +112,16 @@ export default function PDFLanding() {
           </p>
 
           <div className="pdf-cta-primary">
-            <a href="#download-form" className="pdf-btn-primary">
+            <a
+              href="#download-form"
+              className="pdf-btn-primary"
+              onClick={() =>
+                trackEvent("pdf_download_cta_clicked", {
+                  source: "hero",
+                  pdf_name: "si_te_calentas_perdes",
+                })
+              }
+            >
               Descargar el documento
             </a>
             <span className="pdf-meta">PDF breve · lectura de 10 minutos</span>
