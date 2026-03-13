@@ -164,12 +164,14 @@ La capa de suscripción/abono está prevista en el roadmap técnico, pero hoy el
 
 Para empezar rápido o inspirarte:
 - Compraventa de inmueble urbano
-- Negociación salarial por cambio de rol
-- Oferta laboral "no negociable"
-- Términos de contrato B2B
-- Licitación competitiva (negotiauction)
-- Relación en tensión con contraparte difícil
-- Cierre e implementación del acuerdo
+- Negociación laboral
+- Negociación y Venta B2B
+- Cerrar bajo presión
+
+Notas:
+- Los escenarios de "oferta laboral no negociable" se trabajan dentro de "Negociación laboral".
+- Los escenarios de "licitación competitiva" se integran en "Negociación y Venta B2B".
+- Los escenarios de "relación en tensión con contraparte difícil" se integran en "Cerrar bajo presión".
 
 ---
 

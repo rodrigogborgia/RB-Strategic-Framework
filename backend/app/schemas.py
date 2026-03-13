@@ -227,6 +227,20 @@ class PreNegotiationSummary(BaseModel):
     if_stalled: str  # Plan B si se traba
 
 
+class ObjectionResponse(BaseModel):
+    objection: str
+    response: str
+
+
+class PracticalSparring(BaseModel):
+    pre_meeting_actions: list[str]
+    empathy_openers: list[str]
+    no_oriented_questions: list[str]
+    objection_responses: list[ObjectionResponse]
+    micro_practice: list[str]
+    closing_next_step: str
+
+
 class DebriefComparativeItem(BaseModel):
     """Comparación preparación vs realidad"""
     dimension: str  # "MAAN" | "Riesgo" | "Objetivo" | "Poder"
@@ -252,6 +266,7 @@ class AnalysisOutput(BaseModel):
     risk_matrix: RiskMatrix | None = None
     concession_map: ConcessionMap | None = None
     pre_negotiation_summary: PreNegotiationSummary | None = None
+    practical_sparring: PracticalSparring | None = None
 
 
 class RealResultBlock(BaseModel):

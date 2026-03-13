@@ -142,6 +142,20 @@ export interface PreNegotiationSummary {
   if_stalled: string;
 }
 
+export interface ObjectionResponse {
+  objection: string;
+  response: string;
+}
+
+export interface PracticalSparring {
+  pre_meeting_actions: string[];
+  empathy_openers: string[];
+  no_oriented_questions: string[];
+  objection_responses: ObjectionResponse[];
+  micro_practice: string[];
+  closing_next_step: string;
+}
+
 export interface DebriefComparativeItem {
   dimension: string;
   prepared: string;
@@ -165,6 +179,7 @@ export interface AnalysisOutput {
   risk_matrix?: RiskMatrix;
   concession_map?: ConcessionMap;
   pre_negotiation_summary?: PreNegotiationSummary;
+  practical_sparring?: PracticalSparring;
 }
 
 export interface DebriefAnalysis {

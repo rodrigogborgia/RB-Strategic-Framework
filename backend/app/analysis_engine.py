@@ -8,9 +8,11 @@ from .schemas import (
     DebriefComparative,
     DebriefComparativeItem,
     DebriefInput,
+    ObjectionResponse,
     PowerDashboard,
     PreNegotiationSummary,
     PreparationInput,
+    PracticalSparring,
     RiskMatrix,
     RiskMatrixItem,
 )
@@ -243,6 +245,78 @@ def _build_pre_negotiation_summary(
         critical_signal=critical_signal,
         red_line=red_line,
         if_stalled=if_stalled,
+    )
+
+
+def _build_practical_sparring(data: PreparationInput, mode: FeedbackMode) -> PracticalSparring:
+    """Genera bloque de entrenamiento práctico previo a la conversación."""
+    explicit_objective = data.objective.explicit_objective.strip() or "propuesta de valor"
+    primary_risk = data.risk.main_risk.strip() or "quedar difuso en el diagnóstico"
+    counterpart = data.context.counterpart_relationship.strip().lower()
+    negotiation_type = data.context.negotiation_type.strip().lower()
+
+    relation_hint = "primera conversación" if "nueva" in counterpart else "conversación de continuidad"
+    pilot_hint = "piloto corto" if _contains_any(negotiation_type, ["b2b", "contrato", "empresa", "proveedor"]) else "prueba acotada"
+
+    pre_meeting_actions = [
+        "Definí en una línea el resultado de negocio que querés habilitar (no solo la solución que ofrecés).",
+        "Prepará 2 espejos de empatía táctica (nombrar presión + validar contexto) antes de presentar propuesta.",
+        f"Ensayá una versión de 45 segundos para explicar '{explicit_objective}' conectándolo con impacto comercial y cuidado de margen.",
+    ]
+
+    empathy_openers = [
+        f"Parece que hoy están sosteniendo mucha presión comercial en esta {relation_hint}, ¿es así?",
+        "Suena a que ya probaron capacitaciones y no siempre vieron cambios reales en conversación y cierre.",
+        "Tiene sentido que prioricen proteger margen sin frenar al equipo en la operación diaria.",
+    ]
+
+    no_oriented_questions = [
+        "¿Sería una mala idea explorar esto 10 minutos y después decidís si seguimos o no?",
+        "¿Te complicaría si empezamos por el problema más costoso antes de hablar de programa?",
+        f"¿Sería una locura testear un {pilot_hint} en vez de mover a toda la fuerza de venta de una?",
+    ]
+
+    objection_responses = [
+        ObjectionResponse(
+            objection="No tenemos tiempo para capacitar al equipo ahora.",
+            response=(
+                f"Lo entiendo. Por eso propongo {pilot_hint} con un solo frente crítico, para medir impacto sin frenar operación. "
+                "Si no mueve conversaciones reales, no escalamos."
+            ),
+        ),
+        ObjectionResponse(
+            objection="Ya hicimos capacitaciones y no cambiaron resultados.",
+            response=(
+                "Tiene sentido esa objeción. La diferencia acá es práctica sobre casos reales del equipo, "
+                "con foco en objeciones complejas y seguimiento de implementación."
+            ),
+        ),
+    ]
+
+    micro_practice = [
+        "Práctica 1 (60s): espejo de empatía + silencio breve + validación ('¿voy bien hasta acá?').",
+        "Práctica 2 (60s): pregunta orientada al no para bajar defensividad y recuperar control conversacional.",
+        f"Práctica 3 (90s): responder la objeción principal sin justificarte ni sobreexplicar el riesgo '{primary_risk}'.",
+        "Práctica 4 (45s): cerrar con siguiente paso concreto (fecha, responsable y criterio de éxito).",
+    ]
+
+    micro_practice = micro_practice[:4]
+
+    closing_next_step = (
+        "Si hay interés, proponé cierre con compromiso mínimo: reunión de diseño con decisor + definición de objetivo del piloto en 7 días."
+    )
+    if mode == FeedbackMode.CURSO:
+        closing_next_step = (
+            "Cerrá pidiendo una micro-validación observable: qué señal concreta confirmarías en la próxima reunión para saber si avanzás bien."
+        )
+
+    return PracticalSparring(
+        pre_meeting_actions=pre_meeting_actions,
+        empathy_openers=empathy_openers,
+        no_oriented_questions=no_oriented_questions,
+        objection_responses=objection_responses,
+        micro_practice=micro_practice,
+        closing_next_step=closing_next_step,
     )
 
 
@@ -618,23 +692,23 @@ def analyze_preparation(data: PreparationInput, mode: FeedbackMode) -> AnalysisO
         observations.append("La preparación cubre variables clave y mantiene un encuadre estratégico consistente.")
 
     if inconsistencies:
-        suggestions.append("Ajusta los bloques en tensión antes de ejecutar para evitar concesiones incoherentes.")
+        suggestions.append("Ajustá los bloques en tensión antes de ejecutar para evitar concesiones incoherentes.")
     else:
-        suggestions.append("Mantén la estructura actual y refina la precisión de términos operativos por bloque.")
+        suggestions.append("Mantené la estructura actual y refiná la precisión de términos operativos por bloque.")
 
     if mode == FeedbackMode.CURSO:
         suggestions.append(
-            "Conecta cada hipótesis de contraparte con evidencia observable para fortalecer criterio aplicado en clase."
+            "Conectá cada hipótesis de contraparte con evidencia observable para fortalecer criterio aplicado en clase."
         )
         suggestions.append(
             "Elegí foco pedagógico por ronda (ética, poder o conducta) y evaluá con evidencia observable, no solo con impresiones."
         )
-        next_steps.append("Ensaya una apertura de 2 minutos centrada en objetivo real y punto de ruptura.")
+        next_steps.append("Ensayá una apertura de 2 minutos centrada en objetivo real y punto de ruptura.")
     else:
-        suggestions.append("Define una línea roja explícita y el orden exacto de tus concesiones críticas.")
-        next_steps.append("Valida MAAN y breakpoint con datos verificables antes de entrar a la reunión.")
+        suggestions.append("Definí una línea roja explícita y el orden exacto de tus concesiones críticas.")
+        next_steps.append("Validá MAAN y breakpoint con datos verificables antes de entrar a la reunión.")
 
-    next_steps.append("Documenta la primera señal de cambio de poder esperada durante la conversación.")
+    next_steps.append("Documentá la primera señal de cambio de poder esperada durante la conversación.")
     next_steps.append("Prepará una formulación de 'no positivo': interés propio, límite explícito y alternativa de avance.")
     next_steps.append("Antes de cerrar, validá intención de obligarse y un plan de implementación con responsables y hitos.")
     next_steps.append("Definí una respuesta ensayada para ultimátum/pregunta de mínimo aceptable antes de entrar a la reunión.")
@@ -661,6 +735,7 @@ def analyze_preparation(data: PreparationInput, mode: FeedbackMode) -> AnalysisO
     risk_matrix = _build_risk_matrix(data)
     concession_map = _build_concession_map(data)
     pre_negotiation_summary = _build_pre_negotiation_summary(data, power_dashboard, inconsistencies)
+    practical_sparring = _build_practical_sparring(data, mode)
 
     return AnalysisOutput(
         clarification_questions=clarification_questions,
@@ -673,6 +748,7 @@ def analyze_preparation(data: PreparationInput, mode: FeedbackMode) -> AnalysisO
         risk_matrix=risk_matrix,
         concession_map=concession_map,
         pre_negotiation_summary=pre_negotiation_summary,
+        practical_sparring=practical_sparring,
     )
 
 

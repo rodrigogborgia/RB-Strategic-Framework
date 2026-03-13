@@ -28,7 +28,10 @@ def _system_prompt(mode: FeedbackMode) -> str:
         - Respuesta SOLO en JSON válido.
         - Máximo 3 preguntas de aclaración.
         - No redactar mails.
-        - No dar scripts de conversación.
+        - Sí incluir frases breves de práctica (apertura empática y manejo de objeciones), no guiones largos.
+        - Incluir preguntas orientadas al “no” para bajar fricción al inicio.
+        - No citar ni copiar frases textuales de autores/libros/cursos; usar redacción original.
+        - Redactar en español rioplatense profesional (voseo natural, directo, sin exceso de jerga).
         - No prometer resultados.
         - Señalar incoherencias entre bloques cuando existan.
         - Entregar tono ejecutivo, directo y estructurado.
@@ -40,7 +43,17 @@ def _system_prompt(mode: FeedbackMode) -> str:
           "suggestions": ["..."],
           "next_steps": ["..."],
           "inconsistencies": ["..."],
-          "preparation_level": "Inicial|Estructurado|Avanzado"
+                    "preparation_level": "Inicial|Estructurado|Avanzado",
+                    "practical_sparring": {
+                        "pre_meeting_actions": ["..."],
+                        "empathy_openers": ["..."],
+                        "no_oriented_questions": ["..."],
+                        "objection_responses": [
+                            {"objection": "...", "response": "..."}
+                        ],
+                        "micro_practice": ["..."],
+                        "closing_next_step": "..."
+                    }
         }}
         """
     ).strip()

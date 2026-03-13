@@ -96,6 +96,30 @@ function normalizeAnalysis(raw: unknown): AnalysisOutput | null {
     ? (value.preparation_level as AnalysisOutput["preparation_level"])
     : "Inicial";
 
+  const normalizedPracticalSparring = value.practical_sparring
+    ? {
+        pre_meeting_actions: Array.isArray(value.practical_sparring.pre_meeting_actions)
+          ? value.practical_sparring.pre_meeting_actions
+          : [],
+        empathy_openers: Array.isArray(value.practical_sparring.empathy_openers)
+          ? value.practical_sparring.empathy_openers
+          : [],
+        no_oriented_questions: Array.isArray(value.practical_sparring.no_oriented_questions)
+          ? value.practical_sparring.no_oriented_questions
+          : [],
+        objection_responses: Array.isArray(value.practical_sparring.objection_responses)
+          ? value.practical_sparring.objection_responses
+          : [],
+        micro_practice: Array.isArray(value.practical_sparring.micro_practice)
+          ? value.practical_sparring.micro_practice
+          : [],
+        closing_next_step:
+          typeof value.practical_sparring.closing_next_step === "string"
+            ? value.practical_sparring.closing_next_step
+            : "",
+      }
+    : undefined;
+
   return {
     clarification_questions: Array.isArray(value.clarification_questions) ? value.clarification_questions : [],
     observations: Array.isArray(value.observations) ? value.observations : [],
@@ -103,6 +127,11 @@ function normalizeAnalysis(raw: unknown): AnalysisOutput | null {
     next_steps: Array.isArray(value.next_steps) ? value.next_steps : [],
     inconsistencies: Array.isArray(value.inconsistencies) ? value.inconsistencies : [],
     preparation_level: preparationLevel,
+    power_dashboard: value.power_dashboard,
+    risk_matrix: value.risk_matrix,
+    concession_map: value.concession_map,
+    pre_negotiation_summary: value.pre_negotiation_summary,
+    practical_sparring: normalizedPracticalSparring,
   };
 }
 
@@ -417,7 +446,7 @@ function App() {
     return {
       en_preparacion: "En preparación",
       preparado: "Listo para ejecutar",
-      ejecutado_pendiente_debrief: "Falta debrief",
+      ejecutado_pendiente_debrief: "Falta registrar resultado",
       cerrado: "Cerrado",
     }[status];
   }
@@ -1692,7 +1721,7 @@ function App() {
                 className={adminViewMode === "alumno" ? "" : "secondary"}
                 onClick={() => setAdminViewMode("alumno")}
               >
-                Ver Alumno
+                Vista Alumno
               </button>
             </div>
           )}
@@ -1700,7 +1729,7 @@ function App() {
             <>
               <div style={{ height: 10 }} />
               <input
-                placeholder="Título del caso (solo para desde cero)"
+                placeholder="Título del caso (si arrancás en blanco)"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
               />
@@ -1712,7 +1741,7 @@ function App() {
                 value={selectedTemplateId}
                 onChange={(e) => setSelectedTemplateId(e.target.value)}
               >
-                  <option value="__blank__">Nuevo caso (en blanco)</option>
+                  <option value="__blank__">Nuevo caso desde cero</option>
                 {templates.map((template) => (
                   <option key={template.id} value={template.id}>
                     {template.title}
@@ -1721,7 +1750,7 @@ function App() {
               </select>
               {selectedTemplate?.ideal_for && (
                 <p className="small" style={{ marginTop: 8 }}>
-                  Ideal para: {selectedTemplate.ideal_for}
+                  Ideal si querés: {selectedTemplate.ideal_for}
                 </p>
               )}
               <div style={{ height: 8 }} />
@@ -1778,11 +1807,11 @@ function App() {
           <div className="teacher-grid">
             <div className="card teacher-summary">
               <h2>Panel Profesor</h2>
-              <p className="small">Administración y seguimiento de cohortes.</p>
+              <p className="small">Gestioná cohortes y seguí la evolución del equipo.</p>
               <div className="actions">
                 <span className="status-pill active">Alumnos: {totalStudents}</span>
                 <span className="status-pill">Cohortes activas: {activeCohorts}</span>
-                <span className="status-pill">Resultados pendientes: {pendingDebriefCases}</span>
+                <span className="status-pill">Debriefs pendientes: {pendingDebriefCases}</span>
               </div>
               {adminAnonMetrics && (
                 <div style={{ marginTop: 12 }}>
@@ -1805,14 +1834,14 @@ function App() {
 
             <div className="card">
               <div className="section-header" onClick={() => toggleTeacherSection("admin")}>
-                <h2>Panel Admin</h2>
+                <h2>Administración</h2>
                 <button className="secondary" type="button">
                   {teacherSections.admin ? "Contraer" : "Expandir"}
                 </button>
               </div>
               {teacherSections.admin && (
                 <>
-                  <p className="small">Gestión de usuarios, cohortes y asignaciones.</p>
+                  <p className="small">Gestioná usuarios, cohortes y asignaciones.</p>
 
                   <p><strong>Crear usuario</strong></p>
                   <div className="row">
@@ -1837,7 +1866,7 @@ function App() {
 
                   <p style={{ marginTop: 16 }}><strong>Crear cohorte</strong></p>
                   <div className="row">
-                    <input placeholder="Nombre cohorte" value={newCohortName} onChange={(e) => setNewCohortName(e.target.value)} />
+                    <input placeholder="Nombre de la cohorte" value={newCohortName} onChange={(e) => setNewCohortName(e.target.value)} />
                     <select value={newCohortStatus} onChange={(e) => setNewCohortStatus(e.target.value as CohortStatus)}>
                       <option value="draft">Borrador</option>
                       <option value="active">Activa</option>
@@ -1977,7 +2006,7 @@ function App() {
 
             <div className="card">
               <div className="section-header" onClick={() => toggleTeacherSection("ritual")}>
-                <h2>Seguimiento mensual</h2>
+                <h2>Seguimiento mensual del equipo</h2>
                 <button className="secondary" type="button">
                   {teacherSections.ritual ? "Contraer" : "Expandir"}
                 </button>
@@ -2029,7 +2058,7 @@ function App() {
                   </p>
                   <div className="actions" style={{ marginTop: 8 }}>
                     <button className="secondary" onClick={() => handleCreateLeaderEvaluation().catch(() => undefined)} disabled={adminLoading}>
-                      Guardar evaluación líder
+                      Guardar evaluación del líder
                     </button>
                   </div>
                   {leaderEvaluations.length > 0 && (
@@ -2158,7 +2187,7 @@ function App() {
               </div>
               <div style={{ marginTop: 12, display: "flex", justifyContent: "flex-end" }}>
                 <button className="danger" onClick={handleDeleteCase} disabled={loading} style={{ padding: "6px 12px", fontSize: "12px" }}>
-                  Borrar caso
+                  Eliminar caso
                 </button>
               </div>
 
@@ -2167,7 +2196,7 @@ function App() {
             <div className="card">
               <h2>Preparación</h2>
               {isCaseClosed && <span className="readonly-badge">Solo lectura</span>}
-              <p className="small">Carga rápida: completá 4 campos críticos. El resto es opcional.</p>
+              <p className="small">Cargá rápido: completá 4 campos críticos. El resto es opcional.</p>
               {isPreparationLocked && (
                 <p className="small" style={{ marginBottom: 12 }}>
                   Preparación cerrada para este caso.
@@ -2320,7 +2349,7 @@ function App() {
               )}
               {loading && !analysis ? (
                 <div style={{ padding: "16px 0", textAlign: "center" }}>
-                  <p className="small" style={{ marginBottom: 8 }}>IA analizando preparación y generando dashboards estratégicos...</p>
+                  <p className="small" style={{ marginBottom: 8 }}>IA analizando tu preparación y generando dashboards estratégicos...</p>
                   <p className="small" style={{ marginBottom: 8, color: "#94a3b8", fontSize: "12px" }}>
                     Dashboard de poder • Matriz de riesgos • Mapa de concesiones • Síntesis ejecutiva
                   </p>
@@ -2334,7 +2363,7 @@ function App() {
                   </div>
                 </div>
               ) : !analysis ? (
-                <p className="small">Análisis pendiente.</p>
+                <p className="small">Todavía no generaste el análisis.</p>
               ) : (
                 <>
                   <p>
@@ -2391,6 +2420,74 @@ function App() {
                       ))}
                     </ul>
                   )}
+
+                  {analysis.practical_sparring && (
+                    <>
+                      <p>
+                        <strong>Sparring práctico (antes de sentarte a negociar)</strong>
+                      </p>
+
+                      <p>
+                        <strong>3 acciones previas de 5 minutos</strong>
+                      </p>
+                      <ul>
+                        {analysis.practical_sparring.pre_meeting_actions.map((item) => (
+                          <li key={item}>{item}</li>
+                        ))}
+                      </ul>
+
+                      <p>
+                        <strong>Frases de empatía y apertura</strong>
+                      </p>
+                      <ul>
+                        {analysis.practical_sparring.empathy_openers.map((item) => (
+                          <li key={item}>{item}</li>
+                        ))}
+                      </ul>
+
+                      <p>
+                        <strong>Preguntas orientadas al “no”</strong>
+                      </p>
+                      <ul>
+                        {analysis.practical_sparring.no_oriented_questions.map((item) => (
+                          <li key={item}>{item}</li>
+                        ))}
+                      </ul>
+
+                      <p>
+                        <strong>Objeciones probables y respuesta sugerida</strong>
+                      </p>
+                      <ul>
+                        {analysis.practical_sparring.objection_responses.map((item) => (
+                          <li key={`${item.objection}-${item.response.slice(0, 24)}`}>
+                            <div>
+                              <strong>Objeción:</strong> {item.objection}
+                            </div>
+                            <div className="small" style={{ marginTop: 4 }}>
+                              <strong>Respuesta:</strong> {item.response}
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+
+                      <p>
+                        <strong>Micro-práctica previa</strong>
+                      </p>
+                      <ul>
+                        {analysis.practical_sparring.micro_practice.map((item) => (
+                          <li key={item}>{item}</li>
+                        ))}
+                      </ul>
+
+                      <p>
+                        <strong>Cierre sugerido</strong>
+                      </p>
+                      <p className="small" style={{ marginTop: 0 }}>
+                        {analysis.practical_sparring.closing_next_step}
+                      </p>
+                    </>
+                  )}
+
                   {!isLiveSession && (
                     <button className="secondary" onClick={() => setShowFullAnalysis((v) => !v)}>
                       {showFullAnalysis ? "Ocultar análisis completo" : "Ver análisis completo"}
@@ -2407,7 +2504,7 @@ function App() {
                         ))}
                       </ul>
                       <p>
-                        <strong>Falta de alineamiento</strong>
+                        <strong>Puntos de desalineación</strong>
                       </p>
                       <ul>
                         {analysis.inconsistencies.map((item) => (
@@ -2432,7 +2529,7 @@ function App() {
                     Preparación completa. Ejecutá la negociación y luego registrá el resultado para comparar plan vs ejecución.
                   </p>
                   <button onClick={handleExecute} disabled={loading}>
-                    Registrar negociación realizada
+                    Confirmar negociación realizada
                   </button>
                 </div>
               )}
@@ -2442,7 +2539,7 @@ function App() {
               <div className="card">
                 <h2>Resultado de la ejecución</h2>
                 {isCaseClosed && <span className="readonly-badge">Solo lectura</span>}
-                <p className="small">Carga rápida: estado y resultado obtenido.</p>
+                <p className="small">Cargá rápido: estado y resultado obtenido.</p>
                 {selectedCase.status === "cerrado" && (
                   <p className="small" style={{ marginBottom: 12 }}>
                     Caso cerrado: revisá resultado y memo final. Para continuar, creá un nuevo caso.
@@ -2479,7 +2576,7 @@ function App() {
                       onClick={() => setShowAdvancedDebrief((v) => !v)}
                       disabled={loading}
                     >
-                      {showAdvancedDebrief ? "Ocultar detalle" : "Ver detalle"}
+                      {showAdvancedDebrief ? "Ocultar detalle" : "Mostrar detalle"}
                     </button>
                   </div>
                 )}
@@ -2535,7 +2632,7 @@ function App() {
                     onChange={(e) => updateDebrief("self_diagnosis.decision_to_change", e.target.value)}
                   />
                   <textarea
-                    placeholder="Descargo libre"
+                    placeholder="Notas libres"
                     value={debrief.free_disclaimer}
                     onChange={(e) => updateDebrief("free_disclaimer", e.target.value)}
                   />
