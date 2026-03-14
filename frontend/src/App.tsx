@@ -1,11 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 
 import { api, getAuthToken, setAuthToken } from "./lib/api";
-import { trackEvent, trackDemoModalViewed, trackDemoStarted, trackAsesoriaModalViewed, trackAsesoriaSubmitted, trackProtocolo48hSubmitted, trackError } from "./lib/analytics";
+import { trackEvent, trackDemoModalViewed, trackDemoStarted, trackAsesoriaModalViewed, trackAsesoriaSubmitted, trackProtocolo48hSubmitted, trackWhatsappLead, trackError } from "./lib/analytics";
 import brandLogo from "./assets/rb-logo.svg";
-import Testimonials from "./components/Testimonials";
 import PathSelector from "./components/PathSelector";
-import CaseDemoReadOnly from "./components/CaseDemoReadOnly";
 import { 
   PowerDashboardView, 
   RiskMatrixView, 
@@ -167,19 +165,13 @@ type ReputationSignal = {
   logoFallback: string;
 };
 
-type CaseNarrative = {
-  title: string;
-  source: string;
-  situation: string;
-  risk: string;
-  intervention: string;
-  result: string;
-};
-
 const socialProfiles = {
   linkedin: "https://www.linkedin.com/in/rodrigoborgia/",
   instagram: "https://www.instagram.com/rodrigoborgia/",
 };
+
+const WHATSAPP_CASE_URL =
+  "https://api.whatsapp.com/send?phone=5493416087362&text=Hola%20Rodrigo%2C%20hablemos%20de%20mi%20caso.%20Quiero%20evaluar%20si%20tu%20m%C3%A9todo%20aplica%20a%20mi%20equipo.";
 
 const reputationSignals: ReputationSignal[] = [
   {
@@ -226,33 +218,6 @@ const reputationSignals: ReputationSignal[] = [
       "Participacion como miembro de Advisory Council; no implica rol editorial ni representacion institucional de HBR.",
     logoPath: "/logos/HBR.jpeg",
     logoFallback: "HBR",
-  },
-];
-
-const testimonialBasedCases: CaseNarrative[] = [
-  {
-    title: "Caso 01 - Cliente dominante en negociación de alto valor",
-    source: "Director comercial, venta consultiva B2B",
-    situation: "Cliente presiona con urgencia artificial y ataques personales. Equipo comercial reacciona emocionalmente, pierde perspectiva de valor real.",
-    risk: "Concesiones impulsivas por presión de cierre. Margen erosionado. Cliente aprende a escalar emocionalmente para extraer más.",
-    intervention: "Mapeo de poder comercial real (MAAN del cliente, límites de descuento, intereses ocultos). Simulación de presión. Script de reconducción sin ceder autoridad.",
-    result: "Negociación reconducida hacia intereses reales. Margen preservado en 85% vs proyectado. Cliente percibió autoridad profesional, no se escaló más.",
-  },
-  {
-    title: "Caso 02 - Cierre bajo presión: cuándo ceder y cuándo parar",
-    source: "Equipo de ventas consultivas, presión de fin de trimestre",
-    situation: "Conversaciones donde el cliente sabe que hay presión de cierre. Usa urgencia artificial y ataques personales para extraer concesiones finales.",
-    risk: "Concesiones de última hora que erosionan margen total. Patrón que el cliente replica en futuras conversaciones con el mismo vendedor.",
-    intervention: "Definición previa de walkaway point (MAAN comercial no negociable). Identificación de señales de manipulación. Manejo de presión emocional en tiempo real.",
-    result: "Vendedores sostuvieron línea en 3 de 4 casos. Márgenes mejoraron 12% en promedio. Cliente ajustó expectativas y respetó límites después.",
-  },
-  {
-    title: "Caso 03 - Equipo comercial bajo presión: claridad vs reacción",
-    source: "Director de ventas, equipo comercial desafiante",
-    situation: "Equipo reacciona emocionalmente a objeciones, cede valor por frustración, pierde credibilidad. Algunos dejan que clientes 'los ganen' personalmente.",
-    risk: "Concesiones acumuladas en pequeñas decisiones que erosionan márgenes totales. Equipo amargado. Clientes calibran presión emocional como táctica estándar.",
-    intervention: "Entrenamiento aplicado en preparación para clientes difíciles. Simulación de escenarios de presión. Protocolo de reconducción sin escalada personal.",
-    result: "Mejora visible en calidad de negociación en 2 ciclos. Equipo reportó mayor confianza. Márgenes promedio aumentaron 8%. Clientes percibieron límites claros.",
   },
 ];
 
@@ -1337,24 +1302,7 @@ function App() {
                     }}
                     style={{ fontSize: "18px", padding: "18px 36px" }}
                   >
-                    La presión es alta, el margen está en juego. ¿Es una mala idea mostrarte los 3 caminos que puedo ofrecerte?
-                  </button>
-                </div>
-                <div className="landing-cta-row" style={{ justifyContent: "center", gap: "12px" }}>
-                  <button 
-                    className="secondary" 
-                    onClick={() => { trackDemoModalViewed(); setShowDemoModal(true); }} 
-                    disabled={demoLoading}
-                    style={{ minWidth: "auto", flex: "0 1 auto" }}
-                  >
-                    {demoLoading ? "Cargando..." : "Explorar plataforma (Demo)"}
-                  </button>
-                  <button 
-                    className="secondary" 
-                    onClick={() => { trackAsesoriaModalViewed(); setContactModalType("asesoria"); setShowContactModal(true); }}
-                    style={{ minWidth: "auto", flex: "0 1 auto" }}
-                  >
-                    Asesoría + Simulación 1-1
+                      La presión sube y el margen está en juego. ¿Es una mala idea mostrarte 2 formas concretas de avanzar hoy?
                   </button>
                 </div>
               </>
@@ -1422,6 +1370,34 @@ function App() {
             </div>
           </section>
 
+          <section className="landing-conversion" style={{ marginTop: 0 }}>
+            <div className="landing-card" style={{ paddingTop: 18, paddingBottom: 18 }}>
+              <p className="small" style={{ marginBottom: 12 }}>
+                Si te hace sentido, avanzá por el camino más simple.
+              </p>
+              <div className="landing-cta-cards">
+                <a
+                  href={WHATSAPP_CASE_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="landing-step-card landing-cta-card"
+                  onClick={() => trackWhatsappLead("high_ticket_primary_cta", "pre_methodology")}
+                >
+                  <h3>Hablemos de tu caso</h3>
+                  <p>Conversación ejecutiva breve por WhatsApp para evaluar tu negociación.</p>
+                </a>
+                <a
+                  href="/negociar-bajo-presion"
+                  className="landing-step-card landing-cta-card"
+                  onClick={() => trackEvent("landing_pdf_clicked", { section: "pre_methodology" })}
+                >
+                  <h3>Prefiero empezar por el PDF</h3>
+                  <p>Descargá la guía y avanzá con una base práctica antes de conversar.</p>
+                </a>
+              </div>
+            </div>
+          </section>
+
           <section className="landing-methodology">
             <h2>Metodología RB Strategic Framework</h2>
             <div className="landing-steps">
@@ -1441,13 +1417,24 @@ function App() {
           </section>
 
           <section className="landing-case-demo">
-            <CaseDemoReadOnly 
-              onContactClick={() => {
-                trackProtocolo48hSubmitted();
-                setContactModalType("caso-critico");
-                setShowContactModal(true);
-              }}
-            />
+            <div className="landing-cases-header">
+              <h2>Caso real: de reacción emocional a acuerdo con margen protegido</h2>
+              <p>
+                En contextos exigentes, no se pierde por falta de esfuerzo: se pierde por falta de estructura.
+                Este ejemplo resume cómo se transforma una negociación difícil cuando el equipo llega preparado.
+              </p>
+            </div>
+
+            <div className="landing-card" style={{ marginTop: 20 }}>
+              <h3>Caso real en 3 líneas</h3>
+              <p className="small"><strong>Antes:</strong> cliente presiona con urgencia artificial y el equipo está por ceder margen.</p>
+              <p className="small"><strong>Intervención:</strong> mapa de poder, límites de concesión, preguntas de diagnóstico y simulación previa.</p>
+              <p className="small"><strong>Resultado:</strong> negociación reconducida, margen protegido y mejor autoridad comercial.</p>
+              <p className="small" style={{ marginTop: 10 }}>
+                Idea central del método: <strong>el problema no suele ser el precio; es lo que la otra parte no quiere perder.</strong>
+              </p>
+            </div>
+
           </section>
 
           <section className="landing-trust-signals">
@@ -1464,19 +1451,43 @@ function App() {
             </div>
           </section>
 
+          <section className="landing-conversion" style={{ marginTop: 0 }}>
+            <div className="landing-card" style={{ paddingTop: 18, paddingBottom: 18 }}>
+              <p className="small" style={{ marginBottom: 12 }}>
+                Antes de seguir, ¿es una mala idea evaluar tu caso en 20 minutos?
+              </p>
+              <div className="landing-cta-cards">
+                <a
+                  href={WHATSAPP_CASE_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="landing-step-card landing-cta-card"
+                  onClick={() => trackWhatsappLead("high_ticket_primary_cta", "pre_authority")}
+                >
+                  <h3>Hablemos de tu caso</h3>
+                  <p>Revisamos prioridades, margen en riesgo y próxima jugada comercial.</p>
+                </a>
+                <a
+                  href="/negociar-bajo-presion"
+                  className="landing-step-card landing-cta-card"
+                  onClick={() => trackEvent("landing_pdf_clicked", { section: "pre_authority" })}
+                >
+                  <h3>Prefiero empezar por el PDF</h3>
+                  <p>Si hoy no querés reunión, empezá por una lectura breve y accionable.</p>
+                </a>
+              </div>
+            </div>
+          </section>
+
           <section className="landing-reputation">
             <div className="landing-reputation-header">
-              <p className="landing-reputation-kicker">Instituciones que confian en este metodo</p>
-              <h2>Donde enseño y trabajo</h2>
-              <p>
-                Universidades, empresas y comunidades de investigación que apuestan por preparación real para negociaciones críticas.
-              </p>
+              <h2>Prueba de autoridad, sin vueltas</h2>
               <div className="landing-social-links">
                 <a
                   href={socialProfiles.linkedin}
                   target="_blank"
                   rel="noreferrer"
-                  onClick={() => trackEvent("profile_link_clicked", { platform: "linkedin", section: "landing_reputation" })}
+                  onClick={() => trackEvent("profile_validation_clicked", { platform: "linkedin", section: "landing_reputation" })}
                 >
                   Ver LinkedIn
                 </a>
@@ -1484,105 +1495,90 @@ function App() {
                   href={socialProfiles.instagram}
                   target="_blank"
                   rel="noreferrer"
-                  onClick={() => trackEvent("profile_link_clicked", { platform: "instagram", section: "landing_reputation" })}
+                  onClick={() => trackEvent("profile_validation_clicked", { platform: "instagram", section: "landing_reputation" })}
                 >
                   Ver Instagram
                 </a>
               </div>
             </div>
-            <div className="landing-reputation-grid">
-              {reputationSignals.map((signal) => (
-                <article key={`${signal.institution}-${signal.role}`} className="landing-reputation-card">
-                  <div className="landing-reputation-card-top">
-                    <div className="landing-reputation-logo-wrap" aria-hidden="true">
-                      <span className="landing-reputation-logo-fallback">{signal.logoFallback}</span>
-                      <img
-                        src={signal.logoPath}
-                        alt={`Logo ${signal.institution}`}
-                        className="landing-reputation-logo"
-                        loading="lazy"
-                        onError={(event) => {
-                          event.currentTarget.style.display = "none";
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <p className="landing-reputation-institution">{signal.institution}</p>
-                      <h3>{signal.role}</h3>
-                    </div>
-                  </div>
-                  <p className="landing-reputation-meta">{signal.period} · {signal.context}</p>
-                  <p>{signal.detail}</p>
-                  <p className="landing-reputation-proof">{signal.proof}</p>
-                </article>
-              ))}
-            </div>
-            <div className="landing-reputation-actions">
-              <a 
-                href="https://api.whatsapp.com/send?phone=5493416087362&text=Hola%20Rodrigo%2C%20tengo%20un%20caso%20cr%C3%ADtico%20y%20me%20gustar%C3%ADa%20conversar."
-                target="_blank"
-                rel="noreferrer"
-                className="secondary"
-                style={{ display: 'inline-block', textDecoration: 'none' }}
-                onClick={() => trackEvent("caso_critico_whatsapp_clicked", { section: "landing_reputation" })}
-              >
-                💬 Conversar un caso crítico
-              </a>
-            </div>
-          </section>
-
-          <section className="landing-cases">
-            <div className="landing-cases-header">
-              <p className="landing-reputation-kicker">Casos que trabajamos</p>
-              <h2>Negociaciones reales, estructuras reales</h2>
-              <p>
-                Estas narrativas vienen de equipos ejecutivos que enfrentaron decisiones críticas.
-                Te muestran cómo la preparación emocional cambia el resultado.
+            <div className="landing-card" style={{ marginTop: 18 }}>
+              <p className="small" style={{ marginBottom: 8 }}>
+                <strong>15+ años</strong> acompañando negociaciones y ventas consultivas de alta exigencia.
+              </p>
+              <p className="small" style={{ marginBottom: 8 }}>
+                <strong>300+ empresas y ejecutivos</strong> asesorados en preparación comercial bajo presión.
+              </p>
+              <p className="small" style={{ marginBottom: 8 }}>
+                <strong>Instituciones y organizaciones:</strong>{" "}
+                {reputationSignals.map((signal) => signal.logoFallback).join(" · ")}
+              </p>
+              <p className="small">
+                ¿Es una mala idea evaluar en 20 minutos si este enfoque aplica a tu equipo?
               </p>
             </div>
-            <div className="landing-cases-grid">
-              {testimonialBasedCases.map((caseItem) => (
-                <article key={caseItem.title} className="landing-case-card">
-                  <h3>{caseItem.title}</h3>
-                  <p className="landing-case-source">{caseItem.source}</p>
-                  <p><strong>Situacion:</strong> {caseItem.situation}</p>
-                  <p><strong>Riesgo:</strong> {caseItem.risk}</p>
-                  <p><strong>Intervencion:</strong> {caseItem.intervention}</p>
-                  <p><strong>Resultado:</strong> {caseItem.result}</p>
-                </article>
-              ))}
+            <div className="landing-reputation-actions">
+              <div className="landing-cta-cards">
+                <a
+                  href={WHATSAPP_CASE_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="landing-step-card landing-cta-card"
+                  onClick={() => trackWhatsappLead("high_ticket_primary_cta", "landing_reputation")}
+                >
+                  <h3>Hablemos de tu caso</h3>
+                  <p>Si te cierra lo que viste, lo aterrizamos a tu realidad comercial.</p>
+                </a>
+                <a
+                  href="/negociar-bajo-presion"
+                  className="landing-step-card landing-cta-card"
+                  onClick={() => trackEvent("landing_pdf_clicked", { section: "landing_reputation" })}
+                >
+                  <h3>Prefiero empezar por el PDF</h3>
+                  <p>Descargá la guía y aplicá conceptos en tu próxima conversación difícil.</p>
+                </a>
+              </div>
             </div>
           </section>
-
-          <Testimonials />
 
           <section className="landing-conversion">
             <div className="landing-card landing-card-protocol">
-              <h3>¿Tenés una negociación comercial crítica en los próximos días?</h3>
+              <h3>Si hoy el margen está en juego, ¿es una mala idea que conversemos tu caso?</h3>
               <p className="small" style={{ marginBottom: 16 }}>
-                En 90 minutos mapeamos tu poder real, riesgos emocionales y margen de maniobra. <strong>Incluye role playing</strong> para practicar la conversación difícil antes de que ocurra.
+                Conversación ejecutiva, breve y directa para definir prioridades,
+                riesgos y próximos pasos sin sumar complejidad a tu operación comercial.
               </p>
-              <p className="small" style={{ marginBottom: 12, padding: "10px 14px", background: "rgba(59, 130, 246, 0.15)", borderRadius: "8px", border: "1px solid #3f4654" }}>
-                💡 <strong>Dos opciones:</strong>
-                <br />• <strong>Plataforma digital:</strong> Preparación + análisis IA + debrief automático
-                <br />• <strong>Asesoría directa:</strong> Todo lo anterior + simulación en vivo conmigo
-              </p>
-              <a 
-                href="https://api.whatsapp.com/send?phone=5493416087362&text=Hola%20Rodrigo%2C%20me%20gustar%C3%ADa%20agendar%20una%20sesi%C3%B3n%20de%20asesoramiento%20para%20una%20negociaci%C3%B3n%20cr%C3%ADtica."
-                target="_blank"
-                rel="noreferrer"
-                className="btn-primary"
-                style={{ display: 'inline-block', textDecoration: 'none', textAlign: 'center' }}
-              >
-                💬 Agendar sesión de asesoramiento
-              </a>
+              <div className="landing-cta-cards" style={{ marginTop: 12 }}>
+                <a
+                  href={WHATSAPP_CASE_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="landing-step-card landing-cta-card"
+                  onClick={() => trackWhatsappLead("high_ticket_primary_cta", "landing_conversion")}
+                >
+                  <h3>Hablemos de tu caso</h3>
+                  <p>Definimos foco comercial, riesgos de concesión y próximos pasos concretos.</p>
+                </a>
+                <a
+                  href="/negociar-bajo-presion"
+                  className="landing-step-card landing-cta-card"
+                  onClick={() => trackEvent("landing_pdf_clicked", { section: "landing_conversion" })}
+                >
+                  <h3>Prefiero empezar por el PDF</h3>
+                  <p>Primero lectura breve. Después, si te hace sentido, coordinamos conversación.</p>
+                </a>
+              </div>
             </div>
           </section>
 
           <footer className="landing-footer">
             <p className="small">Contacto directo: <a href="mailto:hola@rodrigoborgia.com">hola@rodrigoborgia.com</a></p>
             <p className="small">
-              <a href="https://api.whatsapp.com/send?phone=5493416087362&text=Hola%20Rodrigo%2C%20tengo%20una%20urgencia%20estrat%C3%A9gica%20y%20me%20gustar%C3%ADa%20conversar." target="_blank" rel="noreferrer">
+              <a
+                href="https://api.whatsapp.com/send?phone=5493416087362&text=Hola%20Rodrigo%2C%20tengo%20una%20urgencia%20estrat%C3%A9gica%20y%20me%20gustar%C3%ADa%20conversar."
+                target="_blank"
+                rel="noreferrer"
+                onClick={() => trackWhatsappLead("urgencia_estrategica_footer", "landing_footer")}
+              >
                 ¿Tiene una urgencia estratégica? Hablemos por WhatsApp
               </a>
             </p>

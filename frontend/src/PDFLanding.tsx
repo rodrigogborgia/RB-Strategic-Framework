@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { trackEvent, trackError } from "./lib/analytics";
+import { trackEvent, trackError, trackWhatsappLead } from "./lib/analytics";
 import { api } from "./lib/api";
 import brandLogo from "./assets/rb-logo.svg";
 
@@ -72,10 +72,7 @@ export default function PDFLanding() {
   }
 
   function handleScheduleConsultation() {
-    trackEvent("consultation_button_clicked", {
-      source: "pdf_landing",
-      pdf_name: "si_te_calentas_perdes",
-    });
+    trackWhatsappLead("pdf_landing_consultation", "pdf_cta");
 
     // Meta Pixel - Contact conversion
     if (typeof window !== 'undefined' && (window as any).fbq) {

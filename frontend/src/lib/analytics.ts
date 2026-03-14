@@ -7,6 +7,7 @@
  * - demo_started: User submits demo email
  * - lead_captured_demo: Backend confirms demo lead
  * - lead_captured_asesoria: Backend confirms asesoría request
+ * - lead_captured_whatsapp: User opens WhatsApp to start a conversation
  * - lead_captured_protocolo: Backend confirms protocolo 48h lead
  * - session_booked: User books session (future)
  */
@@ -22,6 +23,7 @@ export const GA4_EVENTS = {
   DEMO_STARTED: 'demo_started',
   LEAD_CAPTURED_DEMO: 'lead_captured_demo',
   LEAD_CAPTURED_ASESORIA: 'lead_captured_asesoria',
+  LEAD_CAPTURED_WHATSAPP: 'lead_captured_whatsapp',
   LEAD_CAPTURED_PROTOCOLO: 'lead_captured_protocolo',
   SESSION_BOOKED: 'session_booked',
   ASESORIA_MODAL_VIEWED: 'asesoria_modal_viewed',
@@ -91,6 +93,17 @@ export function trackAsesoriaSubmitted(nombre: string) {
     'nombre_hash': btoa(nombre).substring(0, 16),
     'source': 'modal_asesoria',
     'source_label': 'Solicitud: Asesoría Directa',
+  });
+}
+
+/**
+ * Track WhatsApp lead click/open
+ */
+export function trackWhatsappLead(source: string, section?: string) {
+  trackEvent(GA4_EVENTS.LEAD_CAPTURED_WHATSAPP, {
+    source,
+    section,
+    channel: 'whatsapp',
   });
 }
 

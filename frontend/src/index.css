@@ -223,6 +223,25 @@ body {
   line-height: 1.6;
 }
 
+.landing-cta-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.landing-cta-card {
+  display: block;
+  text-decoration: none;
+}
+
+.landing-cta-card h3 {
+  color: #60a5fa;
+}
+
+.landing-cta-card:hover h3 {
+  color: #93c5fd;
+}
+
 .landing-applied-experience {
   border: 1px solid #262626;
   background: #0a0e14;
@@ -985,6 +1004,10 @@ button.danger:hover {
   }
 
   .landing-steps {
+    grid-template-columns: 1fr;
+  }
+
+  .landing-cta-cards {
     grid-template-columns: 1fr;
   }
 
