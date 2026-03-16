@@ -1,4 +1,24 @@
+# Robots.txt para https://rodrigoborgia.com
+# Última actualización: 2026-03-16
+
+# Permitir acceso general
 User-agent: *
 Allow: /
 
+# Desalentar rastreo de rutas internas/administrativas
+Disallow: /admin/
+Disallow: /api/
+Disallow: /test/
+Disallow: /staging/
+Disallow: /debug/
+Disallow: /.well-known/acme-challenge/
+
+# Prevenir rastreo de rutas duplicadas
+Disallow: /*?*accept-language=
+Disallow: /*?*utm_
+
+# Indicar ubicación del sitemap
 Sitemap: https://rodrigoborgia.com/sitemap.xml
+
+# Tiempo entre peticiones crawl
+Crawl-delay: 1

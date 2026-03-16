@@ -60,7 +60,7 @@ from .schemas import (
 )
 from .settings import settings
 from .templates import CASE_TEMPLATES
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.requests import Request
 from fastapi.exception_handlers import RequestValidationError
 from fastapi.exceptions import HTTPException
@@ -95,6 +95,57 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(title="RB Strategic Framework API", lifespan=lifespan)
+
+# ===== MIDDLEWARE: Redirecciones HTTPS y sin WWW =====
+@app.middleware("http")
+async def redirect_https_and_www(request: Request, call_next):
+    """
+    Middleware para redirigir:
+    - http:// → https://
+    - www.rodrigoborgia.com → rodrigoborgia.com
+    Usa código 301 (Moved Permanently) para SEO
+    
+    Excluye: localhost, 127.0.0.1, testserver (testing)
+    """
+    scheme = request.url.scheme
+    host = request.url.netloc
+    hostname = (request.url.hostname or "").lower()
+    path = request.url.path
+    query = request.url.query
+
+    # Aplicar redirecciones solo para dominios productivos
+    production_hosts = {"rodrigoborgia.com", "www.rodrigoborgia.com"}
+    if hostname not in production_hosts:
+        return await call_next(request)
+
+    # Construir URL destino normalizada
+    target_host = host.lower()
+    
+    # Remover www
+    if target_host.startswith("www."):
+        target_host = target_host.replace("www.", "", 1)
+    
+    # Construir URL final (siempre HTTPS)
+    should_redirect = False
+    target_url = None
+
+    # Si es http, redirigir a https (solo en producción)
+    if scheme == "http":
+        should_redirect = True
+    
+    # Si contiene www, redirigir sin www
+    if host.lower().startswith("www."):
+        should_redirect = True
+
+    if should_redirect:
+        target_url = f"https://{target_host}{path}"
+        if query:
+            target_url += f"?{query}"
+        return RedirectResponse(url=target_url, status_code=301)
+
+    # Continuar con el siguiente middleware/handler
+    return await call_next(request)
+# ===== FIN MIDDLEWARE =====
 
 app.add_middleware(
     CORSMiddleware,

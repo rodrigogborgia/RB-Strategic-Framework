@@ -4,11 +4,13 @@ __pycache__/
 .venv/
 .env
 backend/.env
+.pytest_cache/
 
 # Node
 node_modules/
 dist/
 *.tsbuildinfo
+frontend/coverage/
 
 # Local DB
 *.db

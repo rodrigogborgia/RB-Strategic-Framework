@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { Helmet } from "react-helmet-async";
 
 import { api, getAuthToken, setAuthToken } from "./lib/api";
 import { trackEvent, trackDemoModalViewed, trackDemoStarted, trackAsesoriaModalViewed, trackAsesoriaSubmitted, trackProtocolo48hSubmitted, trackWhatsappLead, trackError } from "./lib/analytics";
@@ -1668,7 +1669,14 @@ function App() {
   }
 
   return (
-    <div className="page">
+    <>
+      <Helmet>
+        <title>Negociación B2B bajo presión para Directores Comerciales | RB Strategic Framework</title>
+        <meta name="description" content="Asesoría en negociación B2B para directores comerciales, dueños PyME y líderes de equipo. Definimos poder real, riesgos y próximos pasos en 90 minutos." />
+        <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+        <link rel="canonical" href={`https://rodrigoborgia.com${window.location.pathname}`} />
+      </Helmet>
+      <div className="page">
       <aside className="sidebar">
         <div className="card">
           <div className="brand-block">
@@ -2843,6 +2851,7 @@ function App() {
         )}
       </main>
     </div>
+    </>
   );
 }
 

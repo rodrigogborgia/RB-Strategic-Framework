@@ -21,11 +21,31 @@ import type {
   UserProfile,
 } from "./types";
 
-const API_BASE =
-  (typeof __VITE_API_URL__ !== "undefined" && __VITE_API_URL__) ||
-  (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
-    ? "http://localhost:8000"
-    : "");
+
+const getAPIBase = () => {
+  // Determine API base URL based on environment
+  // If we're in a Node environment (tests), use HTTP
+  if (typeof window === "undefined") {
+    return "http://localhost:8000";
+  }
+  
+  // Check if we're in jsdom (test environment)
+  if (typeof navigator !== "undefined" && navigator.userAgent?.includes("jsdom")) {
+    return "http://localhost:8000";
+  }
+  
+  // In browser environment: check hostname
+  const hostname = window.location?.hostname || "";
+  
+  // Production domain uses HTTPS
+  if (hostname === "rodrigoborgia.com" || hostname === "www.rodrigoborgia.com") {
+    return "https://rodrigoborgia.com";
+  }
+  
+  // Everything else (localhost, 127.0.0.1, etc) uses HTTP
+  return "http://localhost:8000";
+};
+
 const AUTH_TOKEN_KEY = "rb_auth_token";
 
 let authToken = localStorage.getItem(AUTH_TOKEN_KEY);
@@ -44,6 +64,7 @@ export function getAuthToken(): string | null {
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const API_BASE = getAPIBase();
   const response = await fetch(`${API_BASE}${path}`, {
     headers: {
       "Content-Type": "application/json",
