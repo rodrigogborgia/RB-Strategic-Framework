@@ -9,7 +9,7 @@ from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import Session, select
 
-from .analysis_engine import analyze_preparation, analyze_debrief, build_final_memo
+from .analysis_engine import analyze_preparation, analyze_debrief, build_final_memo, _calculate_gamification_progress
 from .auth import create_access_token, get_current_user, hash_password, verify_password
 from .db import engine, get_session, init_db, seed_demo_case_for_user
 from .models import (
@@ -22,6 +22,7 @@ from .models import (
     CohortStatus,
     LeaderEvaluation,
     PublicLeadCapture,
+    ExperienceFeedback,
     User,
     UserRole,
 )
@@ -41,15 +42,21 @@ from .schemas import (
     CohortRead,
     CohortUpdate,
     DebriefInput,
+    FinalCertificationReport,
     FinalMemo,
     MetricsTrendPoint,
     StudentMetricsSummary,
+    StudentGamificationProgress,
     LeaderEvaluationCreate,
     LeaderEvaluationRead,
     LoginInput,
     DemoStartInput,
     DemoStartResponse,
+    ExperienceFeedbackInput,
+    ExperienceFeedbackRead,
+    CaseProgressItem,
     PDFDownloadInput,
+    PilotProgressReport,
     Protocolo48hInput,
     PreparationInput,
     PublicLeadCaptureInput,
@@ -358,6 +365,147 @@ def _build_metrics_summary(cases: list[Case], cohort_id: int | None = None) -> d
         "confidence_delta_avg": _round_or_none(sum(confidence_delta_values) / len(confidence_delta_values), 2) if confidence_delta_values else None,
         "confidence_delta_trend": trend,
     }
+
+
+def _build_final_certification_report(user: User, cases: list[Case]) -> FinalCertificationReport:
+    closed_cases = [item for item in cases if item.status == CaseStatus.CERRADO]
+
+    case_results: list[dict] = []
+    advanced_scores: list[float] = []
+    emotional_scores: list[float] = []
+    listening_scores: list[float] = []
+    roleplay_scores: list[float] = []
+    passed_cases = 0
+    failed_cases = 0
+
+    completed_exercises_total = 0
+    required_exercises_total = 0
+    covered_segments: set[str] = set()
+    discovery_questions: set[str] = set()
+
+    for case in closed_cases:
+        debrief_analysis = case.debrief_analysis or {}
+        certification = (debrief_analysis.get("certification") or {}) if isinstance(debrief_analysis, dict) else {}
+        if not certification:
+            continue
+
+        passed = bool(certification.get("certified", False))
+        if passed:
+            passed_cases += 1
+        else:
+            failed_cases += 1
+
+        pass_reasons = certification.get("pass_reasons") if isinstance(certification.get("pass_reasons"), list) else []
+        fail_reasons = certification.get("fail_reasons") if isinstance(certification.get("fail_reasons"), list) else []
+
+        case_results.append(
+            {
+                "case_id": case.id,
+                "case_title": case.title,
+                "case_closed_at": case.closed_at,
+                "passed": passed,
+                "score_advanced": int(certification.get("advanced_score", 0) or 0),
+                "pass_reasons": pass_reasons,
+                "fail_reasons": fail_reasons,
+            }
+        )
+
+        advanced_scores.append(float(certification.get("advanced_score", 0) or 0))
+        emotional_scores.append(float(debrief_analysis.get("emotional_regulation_score", 0) or 0))
+        listening_scores.append(float(debrief_analysis.get("listening_balance_score", 0) or 0))
+        roleplay_scores.append(float(debrief_analysis.get("role_play_score", 0) or 0))
+
+        completed_exercises_total += int(certification.get("completed_exercises", 0) or 0)
+        required_exercises_total += int(certification.get("required_exercises", 0) or 0)
+
+        debrief = case.debrief if isinstance(case.debrief, dict) else {}
+        role_play = debrief.get("role_play") if isinstance(debrief.get("role_play"), dict) else {}
+        exercise_results = role_play.get("exercise_results") if isinstance(role_play.get("exercise_results"), list) else []
+        for item in exercise_results:
+            if isinstance(item, dict) and item.get("completed"):
+                segment = str(item.get("segment", "")).strip().lower()
+                if segment:
+                    covered_segments.add(segment)
+
+        practiced = role_play.get("practiced_discovery_questions") if isinstance(role_play.get("practiced_discovery_questions"), list) else []
+        for question in practiced:
+            if isinstance(question, str) and question.strip():
+                discovery_questions.add(question.strip())
+
+    cases_with_certification = len(case_results)
+    avg_advanced = round(sum(advanced_scores) / len(advanced_scores), 2) if advanced_scores else 0.0
+    avg_emotional = round(sum(emotional_scores) / len(emotional_scores), 2) if emotional_scores else 0.0
+    avg_listening = round(sum(listening_scores) / len(listening_scores), 2) if listening_scores else 0.0
+    avg_roleplay = round(sum(roleplay_scores) / len(roleplay_scores), 2) if roleplay_scores else 0.0
+
+    final_pass_reasons: list[str] = []
+    final_fail_reasons: list[str] = []
+
+    if len(closed_cases) >= 4:
+        final_pass_reasons.append("Completó al menos 4 casos cerrados en el proceso completo.")
+    else:
+        final_fail_reasons.append("Necesita al menos 4 casos cerrados para graduación formal.")
+
+    if cases_with_certification >= 4:
+        final_pass_reasons.append("Tiene evidencia de certificación en múltiples casos.")
+    else:
+        final_fail_reasons.append("Falta evidencia consistente de certificación en múltiples casos.")
+
+    if avg_advanced >= 75:
+        final_pass_reasons.append("Promedio avanzado acumulado igual o mayor a 75.")
+    else:
+        final_fail_reasons.append("Promedio avanzado acumulado por debajo de 75.")
+
+    if avg_emotional >= 70:
+        final_pass_reasons.append("Mantiene regulación emocional sostenida bajo presión.")
+    else:
+        final_fail_reasons.append("Regulación emocional aún inestable; reforzar resets y recuperación.")
+
+    if {"smb", "mid_market", "enterprise"}.issubset(covered_segments):
+        final_pass_reasons.append("Cobertura completa de escenarios SMB, mid-market y enterprise.")
+    else:
+        final_fail_reasons.append("Falta cubrir escenarios de uno o más segmentos (SMB/mid-market/enterprise).")
+
+    if len(discovery_questions) >= 8:
+        final_pass_reasons.append("Practica repertorio sólido de preguntas para problemas subyacentes.")
+    else:
+        final_fail_reasons.append("Necesita ampliar repertorio de preguntas de descubrimiento (mínimo 8).")
+
+    if required_exercises_total > 0 and completed_exercises_total >= int(required_exercises_total * 0.7):
+        final_pass_reasons.append("Cumple volumen mínimo de ejercicios de la serie de certificación.")
+    else:
+        final_fail_reasons.append("Volumen de ejercicios insuficiente para graduación formal.")
+
+    final_passed = len(final_fail_reasons) == 0
+
+    evidence_note = (
+        "Evaluación acumulada basada en casos cerrados reales del participante, scores de debrief y resultados de ejercicios B2B por segmento."
+    )
+    ai_usage_note = (
+        "La IA se usa para análisis y feedback estratégico del caso cuando el proveedor OpenAI está activo; las plantillas base actuales son curadas por reglas/metodología interna."
+    )
+
+    return FinalCertificationReport(
+        user_id=user.id or 0,
+        cases_considered=len(closed_cases),
+        cases_with_certification=cases_with_certification,
+        passed_cases=passed_cases,
+        failed_cases=failed_cases,
+        final_passed=final_passed,
+        average_advanced_score=avg_advanced,
+        average_emotional_regulation_score=avg_emotional,
+        average_listening_balance_score=avg_listening,
+        average_role_play_score=avg_roleplay,
+        completed_exercises_total=completed_exercises_total,
+        required_exercises_total=required_exercises_total,
+        covered_segments=sorted(list(covered_segments)),
+        practiced_discovery_questions_count=len(discovery_questions),
+        final_pass_reasons=final_pass_reasons,
+        final_fail_reasons=final_fail_reasons,
+        evidence_note=evidence_note,
+        ai_usage_note=ai_usage_note,
+        case_results=case_results,
+    )
 
 
 @app.get("/api/health")
@@ -1393,6 +1541,194 @@ def get_admin_anonymous_metrics(
     summary = _build_metrics_summary(cases, cohort_id=cohort_id)
     summary["active_students_with_cases"] = len({item.owner_user_id for item in cases if item.owner_user_id is not None})
     return AdminAnonymousMetricsSummary(**summary)
+
+
+@app.get("/api/certification/final", response_model=FinalCertificationReport)
+def get_final_certification_report(
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> FinalCertificationReport:
+    statement = select(Case)
+    if current_user.role != UserRole.ADMIN:
+        statement = statement.where(Case.owner_user_id == current_user.id)
+    cases = list(session.exec(statement.order_by(Case.closed_at.desc())).all())
+    return _build_final_certification_report(current_user, cases)
+
+
+@app.get("/api/admin/certification/final/{user_id}", response_model=FinalCertificationReport)
+def get_admin_final_certification_report(
+    user_id: int,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> FinalCertificationReport:
+    _require_admin(current_user)
+    target_user = session.get(User, user_id)
+    if not target_user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    statement = (
+        select(Case)
+        .where(Case.owner_user_id == user_id)
+        .order_by(Case.closed_at.desc())
+    )
+    cases = list(session.exec(statement).all())
+    return _build_final_certification_report(target_user, cases)
+
+
+@app.get("/api/gamification/progress", response_model=StudentGamificationProgress)
+def get_gamification_progress(
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> StudentGamificationProgress:
+    """Obtiene el progreso de gamificación del estudiante actual."""
+    statement = select(Case).where(Case.owner_user_id == current_user.id).order_by(Case.created_at)
+    cases_db = list(session.exec(statement).all())
+    
+    # Convertir casos a dict para la función de cálculo
+    cases = [case.model_dump() for case in cases_db]
+    
+    gamification_data = _calculate_gamification_progress(cases)
+    gamification_data["user_id"] = current_user.id
+    
+    return StudentGamificationProgress(**gamification_data)
+
+
+@app.get("/api/progress/report", response_model=PilotProgressReport)
+def get_progress_report(
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> PilotProgressReport:
+    """Genera el reporte exportable de progreso del participante (piloto)."""
+    statement = select(Case).where(Case.owner_user_id == current_user.id).order_by(Case.created_at)
+    all_cases = list(session.exec(statement).all())
+
+    def _safe_int(val: object, default: int = 0) -> int:
+        try:
+            return int(val or default)
+        except (TypeError, ValueError):
+            return default
+
+    def _avg(lst: list[float]) -> float:
+        return round(sum(lst) / len(lst), 1) if lst else 0.0
+
+    case_items: list[CaseProgressItem] = []
+    emotional_scores: list[float] = []
+    listening_scores: list[float] = []
+    roleplay_scores: list[float] = []
+    advanced_scores: list[float] = []
+    zone_verde = 0
+    zone_amarilla = 0
+    zone_roja = 0
+    certified_count = 0
+
+    for case in all_cases:
+        da = case.debrief_analysis if isinstance(case.debrief_analysis, dict) else {}
+        cert = da.get("certification") or {}
+        if not isinstance(cert, dict):
+            cert = {}
+        debrief = case.debrief if isinstance(case.debrief, dict) else {}
+        live = debrief.get("live_support") or {}
+        if not isinstance(live, dict):
+            live = {}
+
+        emotional = _safe_int(da.get("emotional_regulation_score"))
+        listening = _safe_int(da.get("listening_balance_score"))
+        roleplay = _safe_int(da.get("role_play_score"))
+        rapport = _safe_int(da.get("rapport_activation_score"))
+        trap = _safe_int(da.get("trap_detection_score"))
+        boundary = _safe_int(da.get("boundary_control_score"))
+        advanced = _safe_int(cert.get("advanced_score"))
+        is_certified = bool(cert.get("certified", False))
+        zone = str(live.get("current_zone") or "verde")
+        transitions = _safe_int(live.get("semaphore_transitions"))
+        red_alerts = _safe_int(live.get("red_alert_count"))
+        resets = _safe_int(live.get("resets_used"))
+
+        confidence_delta: int | None = None
+        if case.confidence_start is not None and case.confidence_end is not None:
+            confidence_delta = case.confidence_end - case.confidence_start
+
+        if case.status == CaseStatus.CERRADO:
+            if emotional > 0:
+                emotional_scores.append(float(emotional))
+            if listening > 0:
+                listening_scores.append(float(listening))
+            if roleplay > 0:
+                roleplay_scores.append(float(roleplay))
+            if advanced > 0:
+                advanced_scores.append(float(advanced))
+            if is_certified:
+                certified_count += 1
+            if zone == "verde":
+                zone_verde += 1
+            elif zone == "amarilla":
+                zone_amarilla += 1
+            elif zone == "roja":
+                zone_roja += 1
+
+        case_items.append(CaseProgressItem(
+            case_id=case.id or 0,
+            title=case.title,
+            status=case.status.value,
+            created_at=case.created_at,
+            closed_at=case.closed_at,
+            confidence_start=case.confidence_start,
+            confidence_end=case.confidence_end,
+            confidence_delta=confidence_delta,
+            emotional_regulation_score=emotional,
+            listening_balance_score=listening,
+            role_play_score=roleplay,
+            rapport_activation_score=rapport,
+            trap_detection_score=trap,
+            boundary_control_score=boundary,
+            advanced_score=advanced,
+            certified=is_certified,
+            current_zone=zone,
+            semaphore_transitions=transitions,
+            red_alerts=red_alerts,
+            resets_used=resets,
+        ))
+
+    closed_cases = [c for c in all_cases if c.status == CaseStatus.CERRADO]
+    return PilotProgressReport(
+        user_id=current_user.id or 0,
+        user_email=current_user.email,
+        user_full_name=current_user.full_name,
+        generated_at=_utc_now(),
+        total_cases=len(all_cases),
+        closed_cases=len(closed_cases),
+        certified_cases=certified_count,
+        avg_emotional_regulation=_avg(emotional_scores),
+        avg_listening_balance=_avg(listening_scores),
+        avg_role_play=_avg(roleplay_scores),
+        avg_advanced_score=_avg(advanced_scores),
+        zone_verde_count=zone_verde,
+        zone_amarilla_count=zone_amarilla,
+        zone_roja_count=zone_roja,
+        cases=case_items,
+    )
+
+
+@app.post("/api/experience-feedback", response_model=ExperienceFeedbackRead)
+def submit_experience_feedback(
+    payload: ExperienceFeedbackInput,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> ExperienceFeedbackRead:
+    feedback = ExperienceFeedback(
+        user_id=current_user.id,
+        case_id=payload.case_id,
+        experience_level=payload.experience_level,
+        ux_mode=payload.ux_mode,
+        ease_of_use_score=payload.ease_of_use_score,
+        usefulness_score=payload.usefulness_score,
+        emotional_relevance_score=payload.emotional_relevance_score,
+        comment=payload.comment,
+    )
+    session.add(feedback)
+    session.commit()
+    session.refresh(feedback)
+    return ExperienceFeedbackRead.model_validate(feedback.model_dump())
 
 
 @app.exception_handler(Exception)

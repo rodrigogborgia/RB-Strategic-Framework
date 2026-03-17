@@ -13,9 +13,32 @@ from .schemas import (
     PreNegotiationSummary,
     PreparationInput,
     PracticalSparring,
+    RolePlayExerciseResult,
     RiskMatrix,
     RiskMatrixItem,
 )
+
+
+CERTIFICATION_EXERCISE_SERIES: list[dict[str, str]] = [
+    {"id": "smb_discount_pressure", "label": "SMB - Descuento agresivo de cierre", "segment": "smb"},
+    {"id": "smb_payment_terms", "label": "SMB - Términos de pago bajo presión", "segment": "smb"},
+    {"id": "mid_procurement_attack", "label": "Mid-market - Ataque de compras al precio", "segment": "mid_market"},
+    {"id": "mid_stakeholder_split", "label": "Mid-market - Intereses cruzados de stakeholders", "segment": "mid_market"},
+    {"id": "ent_legal_delay", "label": "Enterprise - Dilación legal y compliance", "segment": "enterprise"},
+    {"id": "ent_global_framework", "label": "Enterprise - Acuerdo marco multinacional", "segment": "enterprise"},
+    {"id": "cold_client_unlock", "label": "Cliente frío - activar rapport real", "segment": "mid_market"},
+    {"id": "false_urgency_trap", "label": "Treta sucia - urgencia falsa", "segment": "enterprise"},
+    {"id": "closing_nibble_trap", "label": "Treta sucia - pedido extra al cierre", "segment": "smb"},
+]
+
+
+RECOMMENDED_DISCOVERY_QUESTIONS: list[str] = [
+    "¿Qué problema de negocio intentan evitar aunque no esté explicitado en el RFP?",
+    "¿Qué riesgo personal o político tendría para vos elegir esta alternativa?",
+    "Si este acuerdo falla en 6 meses, ¿qué habría pasado internamente?",
+    "¿Qué condición tendría que cumplirse para que esto sea un sí sin concesiones forzadas?",
+    "¿Qué restricciones no visibles hoy están condicionando esta negociación?",
+]
 
 
 def _contains_any(text: str, tokens: list[str]) -> bool:
@@ -892,6 +915,156 @@ def analyze_debrief(
     # Construir comparativa visual
     debrief_comparative = _build_debrief_comparative(preparation, debrief)
 
+    emotional_regulation_score = 60
+    listening_balance_score = 60
+    role_play_score = 0
+    rapport_activation_score = 0
+    trap_detection_score = 0
+    boundary_control_score = 0
+
+    if debrief.incident_log:
+        recoveries = sum(1 for item in debrief.incident_log if item.recovery_action.strip())
+        recovery_ratio = recoveries / max(1, len(debrief.incident_log))
+        emotional_regulation_score = min(100, 45 + int(recovery_ratio * 45))
+
+    if debrief.live_support:
+        total_minutes = debrief.live_support.listening_minutes + debrief.live_support.talking_minutes
+        if total_minutes > 0:
+            listening_ratio = debrief.live_support.listening_minutes / total_minutes
+            listening_balance_score = max(0, 100 - int(abs(0.6 - listening_ratio) * 200))
+        else:
+            listening_balance_score = 50
+
+        if debrief.live_support.red_alert_count > 0:
+            reset_effectiveness = debrief.live_support.resets_used / debrief.live_support.red_alert_count
+            emotional_regulation_score = min(
+                100,
+                max(emotional_regulation_score, 50 + int(min(1, reset_effectiveness) * 40)),
+            )
+
+        if debrief.live_support.current_zone == "amarilla":
+            emotional_regulation_score = max(0, emotional_regulation_score - 8)
+        elif debrief.live_support.current_zone == "roja":
+            emotional_regulation_score = max(0, emotional_regulation_score - 18)
+
+        if debrief.live_support.semaphore_transitions > 3:
+            emotional_regulation_score = max(0, emotional_regulation_score - min(12, (debrief.live_support.semaphore_transitions - 3) * 2))
+            improvement_opportunities.append(
+                "El semáforo mostró cambios frecuentes de zona: entrená pausas tácticas para sostener claridad estratégica."
+            )
+
+    if debrief.role_play and debrief.role_play.completed:
+        role_play_score = int(
+            (debrief.role_play.self_score * 0.2)
+            + (debrief.role_play.response_quality_score * 0.4)
+            + (debrief.role_play.emotional_control_score * 0.4)
+        )
+
+        cold_actions = [item for item in debrief.role_play.cold_rapport_actions if item.strip()]
+        if debrief.role_play.counterpart_temperature == "frio":
+            rapport_activation_score = min(100, 35 + len(cold_actions) * 15 + int(debrief.role_play.response_quality_score * 0.35))
+        else:
+            rapport_activation_score = min(100, 45 + len(cold_actions) * 8 + int(debrief.role_play.response_quality_score * 0.25))
+
+        detected_tricks = [item for item in debrief.role_play.dirty_tricks_detected if item.strip()]
+        trick_note_quality = 20 if debrief.role_play.dirty_tricks_response_notes.strip() else 0
+        trap_detection_score = min(100, 30 + len(detected_tricks) * 20 + trick_note_quality)
+        boundary_control_score = int((debrief.role_play.emotional_control_score * 0.5) + (trap_detection_score * 0.5))
+
+    clarity_level_score = int((emotional_regulation_score * 0.5) + (listening_balance_score * 0.5))
+    advanced_score = int((clarity_level_score * 0.6) + (role_play_score * 0.4))
+
+    anger_cost_amount = 0.0
+    if debrief.emotional_cost:
+        anger_cost_amount = max(
+            0.0,
+            debrief.emotional_cost.estimated_margin_without_anger - debrief.emotional_cost.actual_margin_after_anger,
+        )
+        if anger_cost_amount > 0:
+            improvement_opportunities.append(
+                f"Costo del enojo detectado: {anger_cost_amount:.2f} {debrief.emotional_cost.currency}. Diseña un reset preventivo para proteger margen."
+            )
+
+    exercise_results: list[RolePlayExerciseResult] = []
+    if debrief.role_play and debrief.role_play.exercise_results:
+        exercise_results = debrief.role_play.exercise_results
+
+    completed_exercises = [item for item in exercise_results if item.completed]
+    completed_exercises_count = len(completed_exercises)
+    required_exercises_count = len(CERTIFICATION_EXERCISE_SERIES)
+
+    covered_segments = {item.segment for item in completed_exercises}
+    segment_coverage_ok = {"smb", "mid_market", "enterprise"}.issubset(covered_segments)
+
+    series_scores: list[int] = []
+    for item in completed_exercises:
+        series_scores.append(int((item.calmness_score + item.signal_reading_score + item.discovery_question_score) / 3))
+    exercise_series_score = int(sum(series_scores) / len(series_scores)) if series_scores else 0
+
+    practiced_questions = [q.strip() for q in (debrief.role_play.practiced_discovery_questions if debrief.role_play else []) if q.strip()]
+    question_practice_ok = len(practiced_questions) >= 3
+
+    certified = (
+        advanced_score >= 75
+        and role_play_score >= 60
+        and completed_exercises_count >= 4
+        and segment_coverage_ok
+        and question_practice_ok
+        and exercise_series_score >= 65
+    )
+
+    pass_reasons: list[str] = []
+    fail_reasons: list[str] = []
+
+    if advanced_score >= 75:
+        pass_reasons.append("Sostiene nivel avanzado de claridad bajo presión.")
+    else:
+        fail_reasons.append("Score avanzado insuficiente para certificar (mínimo 75).")
+
+    if role_play_score >= 60:
+        pass_reasons.append("Role-play con desempeño base aprobado (mínimo 60).")
+    else:
+        fail_reasons.append("Role-play por debajo del umbral mínimo (60).")
+
+    if completed_exercises_count >= 4:
+        pass_reasons.append(f"Completó {completed_exercises_count} ejercicios de la serie B2B.")
+    else:
+        fail_reasons.append("Debe completar al menos 4 ejercicios de certificación B2B.")
+
+    if segment_coverage_ok:
+        pass_reasons.append("Cubre contextos SMB, mid-market y enterprise.")
+    else:
+        fail_reasons.append("Falta cobertura de escenarios por tamaño de empresa (SMB/mid-market/enterprise).")
+
+    if question_practice_ok:
+        pass_reasons.append("Practicó preguntas de descubrimiento para destrabar problemas subyacentes.")
+    else:
+        fail_reasons.append("Debe practicar al menos 3 preguntas de descubrimiento orientadas a confianza mutua.")
+
+    if exercise_series_score < 65:
+        fail_reasons.append("Promedio de la serie de ejercicios por debajo de 65/100.")
+    else:
+        pass_reasons.append(f"Promedio de serie B2B: {exercise_series_score}/100.")
+
+    if debrief.role_play and debrief.role_play.counterpart_temperature == "frio":
+        if rapport_activation_score >= 65:
+            pass_reasons.append("Logró activar rapport en escenario de cliente frío.")
+        else:
+            fail_reasons.append("Debe mejorar activación de rapport frente a cliente frío (mínimo 65).")
+
+    if trap_detection_score >= 60:
+        pass_reasons.append("Detecta y nombra tretas sucias sin perder foco.")
+    else:
+        fail_reasons.append("Necesita mayor detección y manejo de tretas sucias (mínimo 60).")
+
+    certification_basis = (
+        "Certificación basada en evidencia de entrenamiento: control emocional, lectura de señales, calidad de preguntas y cobertura de casos B2B reales."
+    )
+    if not certified:
+        certification_basis = (
+            "No certifica aún: faltan umbrales de desempeño o cobertura mínima de la serie de ejercicios B2B."
+        )
+
     return {
         "strategic_gaps": strategic_gaps,
         "identified_errors": identified_errors,
@@ -899,6 +1072,23 @@ def analyze_debrief(
         "improvement_opportunities": improvement_opportunities,
         "personal_patterns": personal_patterns,
         "debrief_comparative": debrief_comparative.model_dump() if debrief_comparative else None,
+        "emotional_regulation_score": emotional_regulation_score,
+        "listening_balance_score": listening_balance_score,
+        "role_play_score": role_play_score,
+        "rapport_activation_score": rapport_activation_score,
+        "trap_detection_score": trap_detection_score,
+        "boundary_control_score": boundary_control_score,
+        "certification": {
+            "clarity_level_score": clarity_level_score,
+            "advanced_score": advanced_score,
+            "certified": certified,
+            "certification_basis": certification_basis,
+            "completed_exercises": completed_exercises_count,
+            "required_exercises": required_exercises_count,
+            "pass_reasons": pass_reasons,
+            "fail_reasons": fail_reasons,
+            "recommended_questions": RECOMMENDED_DISCOVERY_QUESTIONS,
+        },
     }
 
 
@@ -996,4 +1186,335 @@ def build_final_memo(
         "open_inconsistencies": analysis.inconsistencies,
         "observed_thinking_pattern": thinking_pattern,
         "consolidated_transferable_principle": debrief.transferable_lesson or "El aprendizaje principal de este caso es observar la brecha entre lo preparado y lo ejecutado para mejorar la calibración estratégica en futuras negociaciones.",
+    }
+
+
+# GAMIFICATION ENGINE
+
+ACHIEVEMENT_DEFINITIONS = [
+    {"id": "first_case", "name": "🎯 Primer Paso", "description": "Completaste tu primer caso", "xp": 50},
+    {"id": "five_cases", "name": "🚀 En Camino", "description": "5 casos completados", "xp": 150},
+    {"id": "ten_cases", "name": "⚡ Velocidad", "description": "10 casos cerrados", "xp": 300},
+    {"id": "all_segments", "name": "🗺️ Explorador", "description": "Practicaste los 3 segmentos (SMB, Mid-Market, Enterprise)", "xp": 200},
+    {"id": "certified_case", "name": "✅ Certificado", "description": "Primer caso con certificación aprobada", "xp": 250},
+    {"id": "three_certified", "name": "✅✅✅ Validado", "description": "3 casos certificados", "xp": 500},
+    {"id": "perfect_streak", "name": "🔥 Racha Perfecta", "description": "5 casos cerrados consecutivamente", "xp": 150},
+    {"id": "emotional_master", "name": "🧠 Control Emocional", "description": "Score emocional ≥90 en un caso", "xp": 100},
+    {"id": "listener", "name": "👂 Buen Oyente", "description": "Score de escucha ≥85 en un caso", "xp": 80},
+    {"id": "role_play_pro", "name": "🎭 Actuación Experta", "description": "Role-play score ≥85 en un caso", "xp": 100},
+    {"id": "discovery_master", "name": "🔍 Preguntas Profundas", "description": "10+ preguntas de descubrimiento practicadas", "xp": 120},
+    {"id": "cold_rapport", "name": "🧊➡️🤝 Rompehielo", "description": "Activó rapport en cliente frío", "xp": 180},
+    {"id": "trick_detector", "name": "🛡️ Detector de Tretas", "description": "Manejó jugadas sucias sin escalar", "xp": 180},
+    {"id": "final_certification", "name": "🎓 Graduado", "description": "Certificación final aprobada (multi-caso)", "xp": 1000},
+]
+
+LEVEL_THRESHOLDS = [
+    {"level": 1, "xp_required": 0, "label": "Novicio"},
+    {"level": 2, "xp_required": 500, "label": "Practicante"},
+    {"level": 3, "xp_required": 1200, "label": "Competente"},
+    {"level": 4, "xp_required": 2200, "label": "Experto"},
+    {"level": 5, "xp_required": 3500, "label": "Maestro"},
+]
+
+
+def _calculate_gamification_progress(cases: list[dict]) -> dict:
+    """Calcula el progreso de gamificación basado en los casos del usuario.
+    
+    Returns:
+        Dict con total_xp, level, achievements, phase_progress, etc.
+    """
+    from datetime import datetime
+    
+    closed_cases = [c for c in cases if c.get("status") == "cerrado"]
+    
+    # Inicializar acumuladores
+    total_xp = 0
+    unlocked_achievements: list[dict] = []
+    cases_closed_count = len(closed_cases)
+    cases_certified_count = 0
+    current_streak = 0
+    highest_streak = 0
+    
+    # Contador por fase completada (preparación, ejecución, debrief, etc)
+    prep_completed = sum(1 for c in closed_cases if c.get("preparation") and len(str(c.get("preparation", {}))) > 10)
+    exec_completed = sum(1 for c in closed_cases if c.get("analysis") and len(str(c.get("analysis", {}))) > 10)
+    debrief_completed = sum(1 for c in closed_cases if c.get("debrief") and len(str(c.get("debrief", {}))) > 10)
+    
+    # Procesar logros basados en milestones
+    achievement_map = {a["id"]: a for a in ACHIEVEMENT_DEFINITIONS}
+    
+    # Logro: Primer caso
+    if cases_closed_count >= 1 and "first_case" not in [a["id"] for a in unlocked_achievements]:
+        unlocked_achievements.append({
+            **achievement_map["first_case"],
+            "unlocked_at": datetime.now().isoformat()
+        })
+        total_xp += achievement_map["first_case"]["xp"]
+    
+    # Logro: 5 casos
+    if cases_closed_count >= 5 and "five_cases" not in [a["id"] for a in unlocked_achievements]:
+        unlocked_achievements.append({
+            **achievement_map["five_cases"],
+            "unlocked_at": datetime.now().isoformat()
+        })
+        total_xp += achievement_map["five_cases"]["xp"]
+    
+    # Logro: 10 casos
+    if cases_closed_count >= 10 and "ten_cases" not in [a["id"] for a in unlocked_achievements]:
+        unlocked_achievements.append({
+            **achievement_map["ten_cases"],
+            "unlocked_at": datetime.now().isoformat()
+        })
+        total_xp += achievement_map["ten_cases"]["xp"]
+    
+    # Logro: Todos los segmentos (smart check)
+    covered_segments = set()
+    for case in closed_cases:
+        debrief_data = case.get("debrief", {})
+        if debrief_data and isinstance(debrief_data, dict):
+            role_play = debrief_data.get("role_play", {})
+            if isinstance(role_play, dict):
+                exercise_results = role_play.get("exercise_results", [])
+                for ex in exercise_results:
+                    if isinstance(ex, dict) and ex.get("completed"):
+                        covered_segments.add(ex.get("segment", ""))
+    
+    if {"smb", "mid_market", "enterprise"}.issubset(covered_segments) and "all_segments" not in [a["id"] for a in unlocked_achievements]:
+        unlocked_achievements.append({
+            **achievement_map["all_segments"],
+            "unlocked_at": datetime.now().isoformat()
+        })
+        total_xp += achievement_map["all_segments"]["xp"]
+    
+    # Logro: Primer caso certificado
+    for case in closed_cases:
+        debrief_analysis = case.get("debrief_analysis", {})
+        if isinstance(debrief_analysis, dict):
+            certification = debrief_analysis.get("certification", {})
+            if isinstance(certification, dict) and certification.get("certified"):
+                cases_certified_count += 1
+    
+    if cases_certified_count >= 1 and "certified_case" not in [a["id"] for a in unlocked_achievements]:
+        unlocked_achievements.append({
+            **achievement_map["certified_case"],
+            "unlocked_at": datetime.now().isoformat()
+        })
+        total_xp += achievement_map["certified_case"]["xp"]
+    
+    # Logro: 3 casos certificados
+    if cases_certified_count >= 3 and "three_certified" not in [a["id"] for a in unlocked_achievements]:
+        unlocked_achievements.append({
+            **achievement_map["three_certified"],
+            "unlocked_at": datetime.now().isoformat()
+        })
+        total_xp += achievement_map["three_certified"]["xp"]
+    
+    # Logro: Racha de 5 casos sin fallar (todos cerrados)
+    if cases_closed_count >= 5:
+        last_5_cases = closed_cases[-5:]
+        if all(c.get("status") == "cerrado" for c in last_5_cases):
+            current_streak = 5
+            highest_streak = max(highest_streak, 5)
+            if "perfect_streak" not in [a["id"] for a in unlocked_achievements]:
+                unlocked_achievements.append({
+                    **achievement_map["perfect_streak"],
+                    "unlocked_at": datetime.now().isoformat()
+                })
+                total_xp += achievement_map["perfect_streak"]["xp"]
+    else:
+        current_streak = cases_closed_count
+        highest_streak = cases_closed_count
+    
+    # Logro: Emotional master (≥90 emotional_regulation en algún caso)
+    for case in closed_cases:
+        debrief_analysis = case.get("debrief_analysis", {})
+        if isinstance(debrief_analysis, dict):
+            emotional_score = debrief_analysis.get("emotional_regulation_score", 0)
+            if emotional_score >= 90 and "emotional_master" not in [a["id"] for a in unlocked_achievements]:
+                unlocked_achievements.append({
+                    **achievement_map["emotional_master"],
+                    "unlocked_at": datetime.now().isoformat()
+                })
+                total_xp += achievement_map["emotional_master"]["xp"]
+                break
+    
+    # Logro: Listener (≥85 listening_balance en algún caso)
+    for case in closed_cases:
+        debrief_analysis = case.get("debrief_analysis", {})
+        if isinstance(debrief_analysis, dict):
+            listening_score = debrief_analysis.get("listening_balance_score", 0)
+            if listening_score >= 85 and "listener" not in [a["id"] for a in unlocked_achievements]:
+                unlocked_achievements.append({
+                    **achievement_map["listener"],
+                    "unlocked_at": datetime.now().isoformat()
+                })
+                total_xp += achievement_map["listener"]["xp"]
+                break
+    
+    # Logro: Role-play pro (≥85 role_play en algún caso)
+    for case in closed_cases:
+        debrief_analysis = case.get("debrief_analysis", {})
+        if isinstance(debrief_analysis, dict):
+            role_play_score = debrief_analysis.get("role_play_score", 0)
+            if role_play_score >= 85 and "role_play_pro" not in [a["id"] for a in unlocked_achievements]:
+                unlocked_achievements.append({
+                    **achievement_map["role_play_pro"],
+                    "unlocked_at": datetime.now().isoformat()
+                })
+                total_xp += achievement_map["role_play_pro"]["xp"]
+                break
+    
+    # Logro: Discovery master (10+ preguntas practicadas)
+    total_questions = 0
+    for case in closed_cases:
+        debrief = case.get("debrief", {})
+        if debrief and isinstance(debrief, dict):
+            role_play = debrief.get("role_play", {})
+            if isinstance(role_play, dict):
+                questions = role_play.get("practiced_discovery_questions", [])
+                total_questions += len([q for q in questions if isinstance(q, str) and q.strip()])
+    
+    if total_questions >= 10 and "discovery_master" not in [a["id"] for a in unlocked_achievements]:
+        unlocked_achievements.append({
+            **achievement_map["discovery_master"],
+            "unlocked_at": datetime.now().isoformat()
+        })
+        total_xp += achievement_map["discovery_master"]["xp"]
+
+    has_cold_rapport = False
+    has_trick_detection = False
+    for case in closed_cases:
+        debrief_analysis = case.get("debrief_analysis", {})
+        if isinstance(debrief_analysis, dict):
+            if debrief_analysis.get("rapport_activation_score", 0) >= 65:
+                has_cold_rapport = True
+            if debrief_analysis.get("trap_detection_score", 0) >= 60:
+                has_trick_detection = True
+
+    if has_cold_rapport and "cold_rapport" not in [a["id"] for a in unlocked_achievements]:
+        unlocked_achievements.append({
+            **achievement_map["cold_rapport"],
+            "unlocked_at": datetime.now().isoformat()
+        })
+        total_xp += achievement_map["cold_rapport"]["xp"]
+
+    if has_trick_detection and "trick_detector" not in [a["id"] for a in unlocked_achievements]:
+        unlocked_achievements.append({
+            **achievement_map["trick_detector"],
+            "unlocked_at": datetime.now().isoformat()
+        })
+        total_xp += achievement_map["trick_detector"]["xp"]
+    
+    # Logro: Final certification (multi-caso) - esto se validaría en endpoint separado de final_certification
+    # Por ahora lo marcamos como placeholder
+    
+    # XP por casos cerrados (bonus cada 5 casos)
+    xp_base = cases_closed_count * 10  # 10 XP por caso cerrado
+    total_xp += xp_base
+    
+    # XP por casos certificados (bonus)
+    xp_cert = cases_certified_count * 25
+    total_xp += xp_cert
+    
+    # Calcular level
+    current_level = 1
+    next_level_xp = LEVEL_THRESHOLDS[0]["xp_required"]
+    for threshold in LEVEL_THRESHOLDS:
+        if total_xp >= threshold["xp_required"]:
+            current_level = threshold["level"]
+            next_level_xp = threshold["xp_required"]
+    
+    # Encontrar XP para siguiente nivel
+    next_level_threshold = LEVEL_THRESHOLDS[current_level] if current_level < len(LEVEL_THRESHOLDS) else LEVEL_THRESHOLDS[-1]
+    if current_level < len(LEVEL_THRESHOLDS):
+        next_level_xp = LEVEL_THRESHOLDS[current_level]["xp_required"]
+    else:
+        next_level_xp = LEVEL_THRESHOLDS[-1]["xp_required"] + 1000
+    
+    # Progress por fase
+    phase_progress_list = [
+        {
+            "phase_name": "preparacion",
+            "phase_label": "Preparación Pre-Negociación",
+            "completion_percentage": min(100, int((prep_completed / max(1, cases_closed_count)) * 100)) if cases_closed_count > 0 else 0,
+            "cases_completed": prep_completed,
+            "next_milestone": f"Completar {cases_closed_count + 2} casos de Preparación" if prep_completed < cases_closed_count else "✓ Completo",
+            "xp_earned": prep_completed * 5,
+        },
+        {
+            "phase_name": "ejecucion",
+            "phase_label": "Ejecución en Vivo",
+            "completion_percentage": min(100, int((exec_completed / max(1, cases_closed_count)) * 100)) if cases_closed_count > 0 else 0,
+            "cases_completed": exec_completed,
+            "next_milestone": f"Ejecutar {cases_closed_count + 2} casos" if exec_completed < cases_closed_count else "✓ Completo",
+            "xp_earned": exec_completed * 5,
+        },
+        {
+            "phase_name": "debrief",
+            "phase_label": "Debrief y Reflexión",
+            "completion_percentage": min(100, int((debrief_completed / max(1, cases_closed_count)) * 100)) if cases_closed_count > 0 else 0,
+            "cases_completed": debrief_completed,
+            "next_milestone": f"Debriefear {cases_closed_count + 2} casos" if debrief_completed < cases_closed_count else "✓ Completo",
+            "xp_earned": debrief_completed * 5,
+        },
+        {
+            "phase_name": "certificacion",
+            "phase_label": "Certificación de Ejercicios",
+            "completion_percentage": min(100, int((cases_certified_count / max(1, cases_closed_count)) * 100 * 1.5)) if cases_closed_count > 0 else 0,
+            "cases_completed": cases_certified_count,
+            "next_milestone": f"Certificar {min(4, cases_closed_count + 1)} casos" if cases_certified_count < min(4, cases_closed_count) else "✓ Listo para graduación final",
+            "xp_earned": cases_certified_count * 25,
+        },
+    ]
+    
+    # Hint para próximo badge
+    next_badge_hint = None
+    if cases_closed_count == 4 and "five_cases" not in [a["id"] for a in unlocked_achievements]:
+        next_badge_hint = "¡Solo 1 caso más para desbloquear 'En Camino'!"
+    elif cases_certified_count == 2 and "three_certified" not in [a["id"] for a in unlocked_achievements]:
+        next_badge_hint = "¡1 certificación más para 'Validado'!"
+    elif total_questions == 9 and "discovery_master" not in [a["id"] for a in unlocked_achievements]:
+        next_badge_hint = "¡1 pregunta más para desbloquear 'Preguntas Profundas'!"
+    elif cases_closed_count == 9 and "ten_cases" not in [a["id"] for a in unlocked_achievements]:
+        next_badge_hint = "¡1 caso más para desbloquear 'Velocidad'!"
+    else:
+        all_badge_ids = {a["id"] for a in unlocked_achievements}
+        remaining_badges = [a for a in ACHIEVEMENT_DEFINITIONS if a["id"] not in all_badge_ids and a["id"] != "final_certification"]
+        if remaining_badges:
+            next_badge_hint = f"Próximo desafío: {remaining_badges[0]['name']}"
+    
+    return {
+        "total_xp": total_xp,
+        "level": current_level,
+        "next_level_xp": next_level_xp,
+        "current_streak": current_streak,
+        "highest_streak": highest_streak,
+        "cases_closed": cases_closed_count,
+        "cases_certified": cases_certified_count,
+        "achievements": unlocked_achievements,
+        "phase_progress": phase_progress_list,
+        "unlocked_badges_count": len(unlocked_achievements),
+        "next_badge_hint": next_badge_hint,
+        "heat_level": max(0, min(5, int((100 - sum([
+            c.get("debrief_analysis", {}).get("emotional_regulation_score", 60)
+            for c in closed_cases
+            if isinstance(c.get("debrief_analysis", {}), dict)
+        ]) / max(1, len(closed_cases))) / 15))),
+        "thermal_phase": (
+            "cool"
+            if len(closed_cases) == 0
+            else "cool"
+            if (sum([
+                c.get("debrief_analysis", {}).get("emotional_regulation_score", 60)
+                for c in closed_cases
+                if isinstance(c.get("debrief_analysis", {}), dict)
+            ]) / max(1, len(closed_cases))) >= 80
+            else "warm"
+            if (sum([
+                c.get("debrief_analysis", {}).get("emotional_regulation_score", 60)
+                for c in closed_cases
+                if isinstance(c.get("debrief_analysis", {}), dict)
+            ]) / max(1, len(closed_cases))) >= 60
+            else "hot"
+        ),
     }

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -39,6 +40,8 @@ REQUIRED_PREPARATION = {
         "emotional_variable": "Ansiedad",
         "main_risk": "Cerrar sin revisar condiciones",
         "key_signal": "Resistencia a revisar salario fijo",
+        "hot_buttons": ["tu precio es ridículo", "la competencia es mejor"],
+        "clarity_phrase": "Si te calentás, perdés",
     },
 }
 
@@ -128,6 +131,27 @@ def _create_student(client: TestClient, admin_token: str, idx: int = 1) -> dict:
     response = client.post("/api/admin/users", json=payload, headers=_auth_headers(admin_token))
     assert response.status_code == 200, response.text
     return response.json()
+
+
+def _build_debrief_with_live_support(
+    *,
+    current_zone: str,
+    semaphore_transitions: int,
+    red_alert_count: int = 2,
+    resets_used: int = 1,
+    listening_minutes: int = 20,
+    talking_minutes: int = 20,
+) -> dict:
+    payload = deepcopy(VALID_DEBRIEF)
+    payload["live_support"] = {
+        "red_alert_count": red_alert_count,
+        "resets_used": resets_used,
+        "listening_minutes": listening_minutes,
+        "talking_minutes": talking_minutes,
+        "semaphore_transitions": semaphore_transitions,
+        "current_zone": current_zone,
+    }
+    return payload
 
 
 def _create_cohort(client: TestClient, admin_token: str, idx: int = 1) -> dict:
@@ -498,3 +522,120 @@ def test_leader_evaluation_rejects_invalid_period_label(monkeypatch, tmp_path: P
         headers=_auth_headers(admin_token),
     )
     assert response.status_code == 400
+
+
+def test_preparation_persists_hot_buttons_and_clarity_phrase(monkeypatch, tmp_path: Path):
+    client = _build_test_client(tmp_path, monkeypatch)
+    admin_token = _login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
+
+    case_response = client.post(
+        "/api/cases",
+        json={"title": "Caso consistencia teoría", "mode": "curso", "confidence_start": 6},
+        headers=_auth_headers(admin_token),
+    )
+    assert case_response.status_code == 200
+    case_id = case_response.json()["id"]
+
+    prep_response = client.put(
+        f"/api/cases/{case_id}/preparation",
+        json=REQUIRED_PREPARATION,
+        headers=_auth_headers(admin_token),
+    )
+    assert prep_response.status_code == 200
+
+    case_data = prep_response.json()
+    assert case_data["preparation"]["risk"]["clarity_phrase"] == "Si te calentás, perdés"
+    assert case_data["preparation"]["risk"]["hot_buttons"] == [
+        "tu precio es ridículo",
+        "la competencia es mejor",
+    ]
+
+
+def test_debrief_persists_current_zone_and_affects_emotional_score(monkeypatch, tmp_path: Path):
+    client = _build_test_client(tmp_path, monkeypatch)
+    admin_token = _login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
+
+    case_response = client.post(
+        "/api/cases",
+        json={"title": "Caso semáforo", "mode": "curso", "confidence_start": 6},
+        headers=_auth_headers(admin_token),
+    )
+    assert case_response.status_code == 200
+    case_id = case_response.json()["id"]
+
+    prep_response = client.put(
+        f"/api/cases/{case_id}/preparation",
+        json=REQUIRED_PREPARATION,
+        headers=_auth_headers(admin_token),
+    )
+    assert prep_response.status_code == 200
+
+    analyze_response = client.post(f"/api/cases/{case_id}/analyze", headers=_auth_headers(admin_token))
+    assert analyze_response.status_code == 200
+
+    execute_response = client.post(f"/api/cases/{case_id}/execute", headers=_auth_headers(admin_token))
+    assert execute_response.status_code == 200
+
+    debrief_green = _build_debrief_with_live_support(current_zone="verde", semaphore_transitions=1)
+    save_green = client.put(
+        f"/api/cases/{case_id}/debrief",
+        json=debrief_green,
+        headers=_auth_headers(admin_token),
+    )
+    assert save_green.status_code == 200, save_green.text
+
+    case_after_green = client.get(f"/api/cases/{case_id}", headers=_auth_headers(admin_token))
+    assert case_after_green.status_code == 200
+    payload_green = case_after_green.json()
+    assert payload_green["debrief"]["live_support"]["current_zone"] == "verde"
+    score_green = payload_green["debrief_analysis"]["emotional_regulation_score"]
+
+    debrief_red = _build_debrief_with_live_support(current_zone="roja", semaphore_transitions=8)
+    save_red = client.put(
+        f"/api/cases/{case_id}/debrief",
+        json=debrief_red,
+        headers=_auth_headers(admin_token),
+    )
+    assert save_red.status_code == 200, save_red.text
+
+    case_after_red = client.get(f"/api/cases/{case_id}", headers=_auth_headers(admin_token))
+    assert case_after_red.status_code == 200
+    payload_red = case_after_red.json()
+    assert payload_red["debrief"]["live_support"]["current_zone"] == "roja"
+    score_red = payload_red["debrief_analysis"]["emotional_regulation_score"]
+
+    assert score_red < score_green
+
+
+def test_debrief_rejects_invalid_current_zone_value(monkeypatch, tmp_path: Path):
+    client = _build_test_client(tmp_path, monkeypatch)
+    admin_token = _login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
+
+    case_response = client.post(
+        "/api/cases",
+        json={"title": "Caso semáforo inválido", "mode": "curso", "confidence_start": 6},
+        headers=_auth_headers(admin_token),
+    )
+    assert case_response.status_code == 200
+    case_id = case_response.json()["id"]
+
+    prep_response = client.put(
+        f"/api/cases/{case_id}/preparation",
+        json=REQUIRED_PREPARATION,
+        headers=_auth_headers(admin_token),
+    )
+    assert prep_response.status_code == 200
+
+    analyze_response = client.post(f"/api/cases/{case_id}/analyze", headers=_auth_headers(admin_token))
+    assert analyze_response.status_code == 200
+
+    execute_response = client.post(f"/api/cases/{case_id}/execute", headers=_auth_headers(admin_token))
+    assert execute_response.status_code == 200
+
+    invalid_debrief = _build_debrief_with_live_support(current_zone="azul", semaphore_transitions=1)
+    invalid_response = client.put(
+        f"/api/cases/{case_id}/debrief",
+        json=invalid_debrief,
+        headers=_auth_headers(admin_token),
+    )
+    assert invalid_response.status_code == 422

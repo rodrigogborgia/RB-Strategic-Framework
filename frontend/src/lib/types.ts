@@ -76,7 +76,70 @@ export interface PreparationInput {
     emotional_variable: string;
     main_risk: string;
     key_signal: string;
+    hot_buttons: string[];
+    clarity_phrase: string;
   };
+}
+
+export interface IncidentLogItem {
+  moment_label: string;
+  trigger: string;
+  reaction: string;
+  recovery_action: string;
+}
+
+export interface EmotionalCostInput {
+  estimated_margin_without_anger: number;
+  actual_margin_after_anger: number;
+  currency: string;
+  notes: string;
+}
+
+export interface LiveSupportManualInput {
+  red_alert_count: number;
+  resets_used: number;
+  listening_minutes: number;
+  talking_minutes: number;
+  semaphore_transitions: number;
+  current_zone: "verde" | "amarilla" | "roja";
+}
+
+export interface RolePlayPracticeInput {
+  scenario_type: string;
+  difficulty: string;
+  counterpart_temperature: string;
+  completed: boolean;
+  self_score: number;
+  response_quality_score: number;
+  emotional_control_score: number;
+  practiced_discovery_questions: string[];
+  cold_rapport_actions: string[];
+  dirty_tricks_detected: string[];
+  dirty_tricks_response_notes: string;
+  exercise_results: RolePlayExerciseResult[];
+  notes: string;
+}
+
+export interface RolePlayExerciseResult {
+  exercise_id: string;
+  exercise_label: string;
+  segment: string;
+  completed: boolean;
+  calmness_score: number;
+  signal_reading_score: number;
+  discovery_question_score: number;
+}
+
+export interface CertificationSnapshot {
+  clarity_level_score: number;
+  advanced_score: number;
+  certified: boolean;
+  certification_basis: string;
+  completed_exercises: number;
+  required_exercises: number;
+  pass_reasons: string[];
+  fail_reasons: string[];
+  recommended_questions: string[];
 }
 
 export interface DebriefInput {
@@ -97,6 +160,10 @@ export interface DebriefInput {
   };
   transferable_lesson: string;
   free_disclaimer: string;
+  incident_log: IncidentLogItem[];
+  emotional_cost: EmotionalCostInput;
+  live_support: LiveSupportManualInput;
+  role_play: RolePlayPracticeInput;
 }
 
 // Nuevas estructuras para visualización estratégica
@@ -190,6 +257,13 @@ export interface DebriefAnalysis {
   personal_patterns: string[];
   // Nuevo: comparativa visual
   debrief_comparative?: DebriefComparative;
+  emotional_regulation_score?: number;
+  listening_balance_score?: number;
+  role_play_score?: number;
+  rapport_activation_score?: number;
+  trap_detection_score?: number;
+  boundary_control_score?: number;
+  certification?: CertificationSnapshot;
 }
 
 export interface FinalMemo {
@@ -273,6 +347,91 @@ export interface LeaderEvaluationRead extends LeaderEvaluationCreate {
   created_at: string;
 }
 
+export interface FinalCertificationCaseResult {
+  case_id: number;
+  case_title: string;
+  case_closed_at: string | null;
+  passed: boolean;
+  score_advanced: number;
+  pass_reasons: string[];
+  fail_reasons: string[];
+}
+
+export interface FinalCertificationReport {
+  user_id: number;
+  cases_considered: number;
+  cases_with_certification: number;
+  passed_cases: number;
+  failed_cases: number;
+  final_passed: boolean;
+  average_advanced_score: number;
+  average_emotional_regulation_score: number;
+  average_listening_balance_score: number;
+  average_role_play_score: number;
+  completed_exercises_total: number;
+  required_exercises_total: number;
+  covered_segments: string[];
+  practiced_discovery_questions_count: number;
+  final_pass_reasons: string[];
+  final_fail_reasons: string[];
+  evidence_note: string;
+  ai_usage_note: string;
+  case_results: FinalCertificationCaseResult[];
+}
+
+export interface Achievement {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  xp_reward: number;
+  unlocked_at: string;
+}
+
+export interface PhaseProgress {
+  phase_name: string;
+  phase_label: string;
+  completion_percentage: number;
+  cases_completed: number;
+  next_milestone: string | null;
+  xp_earned: number;
+}
+
+export interface StudentGamificationProgress {
+  user_id: number;
+  total_xp: number;
+  level: number;
+  next_level_xp: number;
+  current_streak: number;
+  highest_streak: number;
+  cases_closed: number;
+  cases_certified: number;
+  achievements: Achievement[];
+  phase_progress: PhaseProgress[];
+  unlocked_badges_count: number;
+  next_badge_hint: string | null;
+  heat_level: number;
+  thermal_phase: string;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface ExperienceFeedbackInput {
+  case_id: number | null;
+  experience_level: "new" | "experienced";
+  ux_mode: "simple" | "advanced";
+  ease_of_use_score: number;
+  usefulness_score: number;
+  emotional_relevance_score: number;
+  comment: string;
+}
+
+export interface ExperienceFeedbackRead extends ExperienceFeedbackInput {
+  id: number;
+  user_id: number;
+  created_at: string;
+}
+
 export interface CaseTemplate {
   id: string;
   title: string;
@@ -300,4 +459,45 @@ export interface DemoStartResponse {
   user: UserProfile;
   default_case_id: number | null;
   message: string;
+}
+
+export interface CaseProgressItem {
+  case_id: number;
+  title: string;
+  status: string;
+  created_at: string;
+  closed_at: string | null;
+  confidence_start: number | null;
+  confidence_end: number | null;
+  confidence_delta: number | null;
+  emotional_regulation_score: number;
+  listening_balance_score: number;
+  role_play_score: number;
+  rapport_activation_score: number;
+  trap_detection_score: number;
+  boundary_control_score: number;
+  advanced_score: number;
+  certified: boolean;
+  current_zone: string;
+  semaphore_transitions: number;
+  red_alerts: number;
+  resets_used: number;
+}
+
+export interface PilotProgressReport {
+  user_id: number;
+  user_email: string;
+  user_full_name: string;
+  generated_at: string;
+  total_cases: number;
+  closed_cases: number;
+  certified_cases: number;
+  avg_emotional_regulation: number;
+  avg_listening_balance: number;
+  avg_role_play: number;
+  avg_advanced_score: number;
+  zone_verde_count: number;
+  zone_amarilla_count: number;
+  zone_roja_count: number;
+  cases: CaseProgressItem[];
 }

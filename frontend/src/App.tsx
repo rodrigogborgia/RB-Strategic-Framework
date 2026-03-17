@@ -25,9 +25,13 @@ import type {
   CohortStatus,
   DebriefAnalysis,
   DebriefInput,
+  ExperienceFeedbackInput,
+  FinalCertificationReport,
   LeaderEvaluationCreate,
   LeaderEvaluationRead,
+  PilotProgressReport,
   StudentMetricsSummary,
+  StudentGamificationProgress,
   PreparationInput,
   UserProfile,
 } from "./lib/types";
@@ -57,6 +61,40 @@ const emptyPreparation: PreparationInput = {
     emotional_variable: "",
     main_risk: "",
     key_signal: "",
+    hot_buttons: [],
+    clarity_phrase: "",
+  },
+};
+
+const certificationExerciseSeries = [
+  { id: "smb_discount_pressure", label: "SMB - Descuento agresivo de cierre", segment: "smb" },
+  { id: "smb_payment_terms", label: "SMB - Términos de pago bajo presión", segment: "smb" },
+  { id: "mid_procurement_attack", label: "Mid-market - Ataque de compras al precio", segment: "mid_market" },
+  { id: "mid_stakeholder_split", label: "Mid-market - Intereses cruzados de stakeholders", segment: "mid_market" },
+  { id: "ent_legal_delay", label: "Enterprise - Dilación legal y compliance", segment: "enterprise" },
+  { id: "ent_global_framework", label: "Enterprise - Acuerdo marco multinacional", segment: "enterprise" },
+] as const;
+
+const templateQuickExamples: Record<string, { objective: string; maan: string; risk: string }> = {
+  inmueble_compraventa: {
+    objective: "Cerrar la operación dentro de 30 días.",
+    maan: "Tener dos propiedades alternativas preevaluadas.",
+    risk: "Conceder precio demasiado temprano.",
+  },
+  negociacion_salarial: {
+    objective: "Acordar nueva compensación por rol ampliado.",
+    maan: "Mantener posición actual mientras evalúo ofertas externas.",
+    risk: "Negociar desde molestia y perder foco en variables negociables.",
+  },
+  contrato_b2b_terminos: {
+    objective: "Cerrar contrato anual con SLA y plazos claros.",
+    maan: "Mantener proveedor secundario activo.",
+    risk: "Entrar en espiral de concesiones sin medir impacto total.",
+  },
+  cierre_e_implementacion: {
+    objective: "Cerrar sin concesiones unilaterales de último minuto.",
+    maan: "Postergar cierre y activar alternativa validada.",
+    risk: "Firmar sin gobernanza de implementación.",
   },
 };
 
@@ -78,6 +116,44 @@ const emptyDebrief: DebriefInput = {
   },
   transferable_lesson: "",
   free_disclaimer: "",
+  incident_log: [],
+  emotional_cost: {
+    estimated_margin_without_anger: 0,
+    actual_margin_after_anger: 0,
+    currency: "USD",
+    notes: "",
+  },
+  live_support: {
+    red_alert_count: 0,
+    resets_used: 0,
+    listening_minutes: 0,
+    talking_minutes: 0,
+    semaphore_transitions: 0,
+    current_zone: "verde",
+  },
+  role_play: {
+    scenario_type: "cliente_dificil",
+    difficulty: "media",
+    counterpart_temperature: "neutro",
+    completed: false,
+    self_score: 0,
+    response_quality_score: 0,
+    emotional_control_score: 0,
+    practiced_discovery_questions: [],
+    cold_rapport_actions: [],
+    dirty_tricks_detected: [],
+    dirty_tricks_response_notes: "",
+    exercise_results: certificationExerciseSeries.map((item) => ({
+      exercise_id: item.id,
+      exercise_label: item.label,
+      segment: item.segment,
+      completed: false,
+      calmness_score: 0,
+      signal_reading_score: 0,
+      discovery_question_score: 0,
+    })),
+    notes: "",
+  },
 };
 
 function normalizeAnalysis(raw: unknown): AnalysisOutput | null {
@@ -148,6 +224,11 @@ function normalizeDebriefAnalysis(raw: unknown): DebriefAnalysis | null {
     confirmed_successes: Array.isArray(value.confirmed_successes) ? value.confirmed_successes : [],
     improvement_opportunities: Array.isArray(value.improvement_opportunities) ? value.improvement_opportunities : [],
     personal_patterns: Array.isArray(value.personal_patterns) ? value.personal_patterns : [],
+    debrief_comparative: value.debrief_comparative,
+    emotional_regulation_score: typeof value.emotional_regulation_score === "number" ? value.emotional_regulation_score : 0,
+    listening_balance_score: typeof value.listening_balance_score === "number" ? value.listening_balance_score : 0,
+    role_play_score: typeof value.role_play_score === "number" ? value.role_play_score : 0,
+    certification: value.certification,
   };
 }
 
@@ -254,6 +335,129 @@ function priorityTheory(item: string): string {
   return "Sustento: Coherencia integral entre contexto, poder, estrategia y riesgo.";
 }
 
+function openPilotReport(report: PilotProgressReport): void {
+  const fmt = (n: number) => n.toFixed(1);
+  const zoneBadge = (zone: string) => {
+    if (zone === "verde") return '<span style="color:#22c55e;font-weight:bold">🟢 Verde</span>';
+    if (zone === "amarilla") return '<span style="color:#f59e0b;font-weight:bold">🟡 Amarilla</span>';
+    return '<span style="color:#ef4444;font-weight:bold">🔴 Roja</span>';
+  };
+  const statusLabel: Record<string, string> = {
+    en_preparacion: "En preparación",
+    preparado: "Preparado",
+    ejecutado_pendiente_debrief: "Ejecutado",
+    cerrado: "Cerrado",
+  };
+  const scoreBar = (val: number) => {
+    const color = val >= 75 ? "#22c55e" : val >= 50 ? "#f59e0b" : "#ef4444";
+    return `<div style="display:inline-block;width:120px;height:8px;background:#2d3748;border-radius:4px;vertical-align:middle;margin-left:6px"><div style="width:${val}%;height:100%;background:${color};border-radius:4px"></div></div> ${val}`;
+  };
+  const caseRows = report.cases.map((c) => `
+    <tr style="border-bottom:1px solid #2d3748">
+      <td style="padding:8px 6px">${c.title}</td>
+      <td style="padding:8px 6px;text-align:center">${statusLabel[c.status] ?? c.status}</td>
+      <td style="padding:8px 6px;text-align:center">${new Date(c.created_at).toLocaleDateString("es-AR")}</td>
+      <td style="padding:8px 6px;text-align:center">${c.closed_at ? new Date(c.closed_at).toLocaleDateString("es-AR") : "—"}</td>
+      <td style="padding:8px 6px;text-align:center">${c.emotional_regulation_score || "—"}</td>
+      <td style="padding:8px 6px;text-align:center">${c.listening_balance_score || "—"}</td>
+      <td style="padding:8px 6px;text-align:center">${c.role_play_score || "—"}</td>
+      <td style="padding:8px 6px;text-align:center">${c.advanced_score || "—"}</td>
+      <td style="padding:8px 6px;text-align:center">${zoneBadge(c.current_zone)}</td>
+      <td style="padding:8px 6px;text-align:center">${c.certified ? '<span style="color:#22c55e">✅ Sí</span>' : '<span style="color:#6b7280">—</span>'}</td>
+      <td style="padding:8px 6px;text-align:center">${c.confidence_delta !== null && c.confidence_delta !== undefined ? (c.confidence_delta > 0 ? `+${c.confidence_delta}` : String(c.confidence_delta)) : "—"}</td>
+    </tr>`).join("");
+
+  const totalZone = report.zone_verde_count + report.zone_amarilla_count + report.zone_roja_count || 1;
+  const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Reporte de Progreso — ${report.user_full_name || report.user_email}</title>
+  <style>
+    @media print { .no-print { display: none } body { background: #fff; color: #1a1a1a } }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f1117; color: #e2e8f0; margin: 0; padding: 24px }
+    h1 { font-size: 22px; margin-bottom: 4px }
+    h2 { font-size: 16px; color: #94a3b8; margin: 24px 0 8px }
+    .header { border-bottom: 1px solid #2d3748; padding-bottom: 16px; margin-bottom: 24px }
+    .brand { font-size: 12px; color: #64748b; margin-bottom: 8px }
+    .meta { font-size: 12px; color: #64748b }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 24px }
+    .stat { background: #1e2634; border: 1px solid #2d3748; border-radius: 8px; padding: 12px 14px }
+    .stat-value { font-size: 28px; font-weight: bold; margin-bottom: 2px }
+    .stat-label { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: .5px }
+    .score-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 24px }
+    .score-item { background: #1e2634; border: 1px solid #2d3748; border-radius: 6px; padding: 10px 14px }
+    .score-name { font-size: 12px; color: #94a3b8; margin-bottom: 6px }
+    table { width: 100%; border-collapse: collapse; font-size: 12px }
+    th { background: #1e2634; padding: 8px 6px; text-align: left; color: #94a3b8; font-weight: 600; border-bottom: 2px solid #2d3748 }
+    tr:hover { background: rgba(255,255,255,0.02) }
+    .zone-bar { display: grid; grid-template-columns: ${report.zone_verde_count}fr ${report.zone_amarilla_count || 0.01}fr ${report.zone_roja_count || 0.01}fr; height: 12px; border-radius: 6px; overflow: hidden; margin-bottom: 8px }
+    .zv { background: #22c55e } .za { background: #f59e0b } .zr { background: #ef4444 }
+    .zone-legend { display: flex; gap: 16px; font-size: 11px; color: #94a3b8 }
+    .footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid #2d3748; font-size: 11px; color: #475569 }
+    .btn-print { display: inline-block; margin-top: 16px; padding: 8px 20px; background: #3b82f6; color: #fff; border-radius: 6px; border: none; cursor: pointer; font-size: 14px }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="brand">Método BorgIA · Si te calentás, perdés</div>
+    <h1>📊 Reporte de Progreso</h1>
+    <div class="meta">
+      <strong>${report.user_full_name || report.user_email}</strong> &nbsp;·&nbsp; ${report.user_email}<br>
+      Generado: ${new Date(report.generated_at).toLocaleString("es-AR")}
+    </div>
+    <button class="btn-print no-print" onclick="window.print()">🖨️ Imprimir / Guardar como PDF</button>
+  </div>
+
+  <h2>Resumen general</h2>
+  <div class="stats-grid">
+    <div class="stat"><div class="stat-value">${report.total_cases}</div><div class="stat-label">Casos totales</div></div>
+    <div class="stat"><div class="stat-value">${report.closed_cases}</div><div class="stat-label">Casos cerrados</div></div>
+    <div class="stat"><div class="stat-value" style="color:#22c55e">${report.certified_cases}</div><div class="stat-label">Certificados</div></div>
+    <div class="stat"><div class="stat-value" style="color:#60a5fa">${fmt(report.avg_advanced_score)}</div><div class="stat-label">Score avanzado prom.</div></div>
+  </div>
+
+  <h2>Scores por pilar (promedio en casos cerrados)</h2>
+  <div class="score-grid">
+    <div class="score-item"><div class="score-name">Regulación emocional</div>${scoreBar(Math.round(report.avg_emotional_regulation))}</div>
+    <div class="score-item"><div class="score-name">Balance escucha/habla</div>${scoreBar(Math.round(report.avg_listening_balance))}</div>
+    <div class="score-item"><div class="score-name">Role-play B2B</div>${scoreBar(Math.round(report.avg_role_play))}</div>
+    <div class="score-item"><div class="score-name">Score avanzado</div>${scoreBar(Math.round(report.avg_advanced_score))}</div>
+  </div>
+
+  <h2>Distribución de zona de interacción (semáforo)</h2>
+  <div class="zone-bar"><div class="zv"></div><div class="za"></div><div class="zr"></div></div>
+  <div class="zone-legend">
+    <span>🟢 Verde: ${report.zone_verde_count} (${Math.round(report.zone_verde_count / totalZone * 100)}%)</span>
+    <span>🟡 Amarilla: ${report.zone_amarilla_count} (${Math.round(report.zone_amarilla_count / totalZone * 100)}%)</span>
+    <span>🔴 Roja: ${report.zone_roja_count} (${Math.round(report.zone_roja_count / totalZone * 100)}%)</span>
+  </div>
+
+  <h2>Detalle por caso</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Caso</th><th>Estado</th><th>Creado</th><th>Cerrado</th>
+        <th>Emoc.</th><th>Escucha</th><th>Role-p.</th><th>Avanz.</th>
+        <th>Zona</th><th>Certif.</th><th>Δ confianza</th>
+      </tr>
+    </thead>
+    <tbody>${caseRows}</tbody>
+  </table>
+
+  <div class="footer">
+    Reporte generado automáticamente por la plataforma RB Strategic Framework. Los datos reflejan el historial real de casos del participante. Para uso interno de piloto.
+  </div>
+</body>
+</html>`;
+
+  const w = window.open("", "_blank");
+  if (w) {
+    w.document.write(html);
+    w.document.close();
+  }
+}
+
 function App() {
   const mainScrollRef = useRef<HTMLElement | null>(null);
   const [authUser, setAuthUser] = useState<UserProfile | null>(null);
@@ -302,6 +506,8 @@ function App() {
   });
 
   const [studentMetrics, setStudentMetrics] = useState<StudentMetricsSummary | null>(null);
+  const [finalCertification, setFinalCertification] = useState<FinalCertificationReport | null>(null);
+  const [gamificationProgress, setGamificationProgress] = useState<StudentGamificationProgress | null>(null);
   const [adminAnonMetrics, setAdminAnonMetrics] = useState<AdminAnonymousMetricsSummary | null>(null);
   const [leaderEvaluations, setLeaderEvaluations] = useState<LeaderEvaluationRead[]>([]);
   const [myLeaderEvaluations, setMyLeaderEvaluations] = useState<LeaderEvaluationRead[]>([]);
@@ -344,6 +550,15 @@ function App() {
   const [showAdvancedPreparation, setShowAdvancedPreparation] = useState(false);
   const [showAdvancedDebrief, setShowAdvancedDebrief] = useState(false);
   const [showFullAnalysis, setShowFullAnalysis] = useState(false);
+  const [experienceFeedback, setExperienceFeedback] = useState<ExperienceFeedbackInput>({
+    case_id: null,
+    experience_level: "new",
+    ux_mode: "simple",
+    ease_of_use_score: 4,
+    usefulness_score: 4,
+    emotional_relevance_score: 4,
+    comment: "",
+  });
   const [experienceMode, setExperienceMode] = useState<ExperienceMode>("sesion_en_vivo");
   const [highlightStep, setHighlightStep] = useState<CaseStatus | "cerrado" | null>(null);
   const [showPathSelector, setShowPathSelector] = useState(false);
@@ -364,7 +579,35 @@ function App() {
   const currentExperienceMode: ExperienceMode = isAdmin ? "sesion_en_vivo" : experienceMode;
   const isLiveSession = currentExperienceMode === "sesion_en_vivo";
   const isTeacherPanel = isAdmin && adminViewMode === "profesor";
+  const isSimpleUx = true;
   const contextLabel = isTeacherPanel ? "Panel Profesor" : "Panel Alumno";
+  const currentInteractionZone = debrief.live_support.current_zone || "verde";
+  const interactionZonePalette: Record<"verde" | "amarilla" | "roja", { label: string; border: string; background: string }> = {
+    verde: { label: "Zona Verde (colaboración)", border: "#22c55e", background: "rgba(34, 197, 94, 0.12)" },
+    amarilla: { label: "Zona Amarilla (tensión)", border: "#f59e0b", background: "rgba(245, 158, 11, 0.14)" },
+    roja: { label: "Zona Roja (escalada)", border: "#ef4444", background: "rgba(239, 68, 68, 0.14)" },
+  };
+  const liveClarityScore = useMemo(() => {
+    const redAlerts = debrief.live_support.red_alert_count;
+    const resets = debrief.live_support.resets_used;
+    const transitions = debrief.live_support.semaphore_transitions;
+    const listening = debrief.live_support.listening_minutes;
+    const talking = debrief.live_support.talking_minutes;
+    const totalMinutes = listening + talking;
+    const listeningRatio = totalMinutes > 0 ? listening / totalMinutes : 0.5;
+
+    let score = 100;
+    score -= redAlerts * 12;
+    score += resets * 6;
+    score -= Math.max(0, transitions - 2) * 4;
+
+    if (currentInteractionZone === "amarilla") score -= 10;
+    if (currentInteractionZone === "roja") score -= 25;
+    if (listeningRatio < 0.4 || listeningRatio > 0.8) score -= 6;
+
+    return Math.max(0, Math.min(100, score));
+  }, [debrief.live_support, currentInteractionZone]);
+  const liveClarityLabel = liveClarityScore >= 75 ? "Alta" : liveClarityScore >= 50 ? "Media" : "Baja";
 
   const totalStudents = adminUsers.filter((item) => item.role === "student").length;
   const activeCohorts = adminCohorts.filter((item) => item.status === "active").length;
@@ -516,6 +759,57 @@ function App() {
     [templates, selectedTemplateId],
   );
 
+  const certificationJourney = useMemo(() => {
+    if (!studentMetrics || !finalCertification) return null;
+
+    const closedCases = studentMetrics.cases_closed;
+    const evaluatedByInstructor = myLeaderEvaluations.length > 0;
+    const exercisesReady =
+      finalCertification.cases_with_certification >= 4 &&
+      finalCertification.completed_exercises_total >= Math.max(4, Math.floor(finalCertification.required_exercises_total * 0.7));
+
+    const milestones = [
+      {
+        title: "Casos individuales",
+        completed: closedCases >= 4,
+        detail: `${Math.min(closedCases, 4)}/4 casos cerrados`,
+      },
+      {
+        title: "Puesta en común instructor",
+        completed: evaluatedByInstructor,
+        detail: evaluatedByInstructor ? "Feedback docente registrado" : "Falta 1 puesta en común",
+      },
+      {
+        title: "Ejercicios de certificación",
+        completed: exercisesReady,
+        detail: `${finalCertification.cases_with_certification}/4 casos con evidencia`,
+      },
+      {
+        title: "Graduación final",
+        completed: finalCertification.final_passed,
+        detail: finalCertification.final_passed ? "Certificación final aprobada" : "Aún en progreso",
+      },
+    ];
+
+    const completedCount = milestones.filter((item) => item.completed).length;
+    const progressPercentage = Math.round((completedCount / milestones.length) * 100);
+    const currentStep = milestones.find((item) => !item.completed)?.title ?? "Programa completado";
+
+    return {
+      milestones,
+      completedCount,
+      progressPercentage,
+      currentStep,
+    };
+  }, [studentMetrics, finalCertification, myLeaderEvaluations]);
+
+  const certificationStagePalette = [
+    { border: "#60a5fa", background: "rgba(59, 130, 246, 0.12)" },
+    { border: "#a78bfa", background: "rgba(139, 92, 246, 0.12)" },
+    { border: "#f59e0b", background: "rgba(245, 158, 11, 0.12)" },
+    { border: "#22c55e", background: "rgba(34, 197, 94, 0.12)" },
+  ] as const;
+
   const hasSavedDebrief = useMemo(() => {
     if (!selectedCase) return false;
     const rawDebrief = (selectedCase.debrief ?? {}) as {
@@ -592,8 +886,44 @@ function App() {
   async function loadCase(id: number) {
     const data = await api.getCase(id);
     setSelectedCase(data);
-    setPreparation({ ...emptyPreparation, ...(data.preparation as Partial<PreparationInput>) });
-    setDebrief({ ...emptyDebrief, ...(data.debrief as Partial<DebriefInput>) });
+    const preparationData = (data.preparation as Partial<PreparationInput>) ?? {};
+    setPreparation({
+      ...emptyPreparation,
+      ...preparationData,
+      context: { ...emptyPreparation.context, ...(preparationData.context ?? {}) },
+      objective: { ...emptyPreparation.objective, ...(preparationData.objective ?? {}) },
+      power_alternatives: { ...emptyPreparation.power_alternatives, ...(preparationData.power_alternatives ?? {}) },
+      strategy: { ...emptyPreparation.strategy, ...(preparationData.strategy ?? {}) },
+      risk: { ...emptyPreparation.risk, ...(preparationData.risk ?? {}) },
+    });
+
+    const debriefData = (data.debrief as Partial<DebriefInput>) ?? {};
+    setDebrief({
+      ...emptyDebrief,
+      ...debriefData,
+      real_result: { ...emptyDebrief.real_result, ...(debriefData.real_result ?? {}) },
+      observed_dynamics: { ...emptyDebrief.observed_dynamics, ...(debriefData.observed_dynamics ?? {}) },
+      self_diagnosis: { ...emptyDebrief.self_diagnosis, ...(debriefData.self_diagnosis ?? {}) },
+      emotional_cost: { ...emptyDebrief.emotional_cost, ...(debriefData.emotional_cost ?? {}) },
+      live_support: { ...emptyDebrief.live_support, ...(debriefData.live_support ?? {}) },
+      role_play: {
+        ...emptyDebrief.role_play,
+        ...(debriefData.role_play ?? {}),
+        practiced_discovery_questions: Array.isArray(debriefData.role_play?.practiced_discovery_questions)
+          ? debriefData.role_play?.practiced_discovery_questions
+          : emptyDebrief.role_play.practiced_discovery_questions,
+        cold_rapport_actions: Array.isArray(debriefData.role_play?.cold_rapport_actions)
+          ? debriefData.role_play?.cold_rapport_actions
+          : emptyDebrief.role_play.cold_rapport_actions,
+        dirty_tricks_detected: Array.isArray(debriefData.role_play?.dirty_tricks_detected)
+          ? debriefData.role_play?.dirty_tricks_detected
+          : emptyDebrief.role_play.dirty_tricks_detected,
+        exercise_results: Array.isArray(debriefData.role_play?.exercise_results) && debriefData.role_play?.exercise_results.length > 0
+          ? debriefData.role_play.exercise_results
+          : emptyDebrief.role_play.exercise_results,
+      },
+      incident_log: Array.isArray(debriefData.incident_log) ? debriefData.incident_log : [],
+    });
     setCloseMetrics({
       confidence_end: data.confidence_end ?? 7,
       agreement_quality_result: data.agreement_quality_result ?? 4,
@@ -634,6 +964,16 @@ function App() {
   async function loadStudentMetrics() {
     const data = await api.getMyMetrics();
     setStudentMetrics(data);
+  }
+
+  async function loadFinalCertification() {
+    const data = await api.getFinalCertification();
+    setFinalCertification(data);
+  }
+
+  async function loadGamificationProgress() {
+    const data = await api.getStudentGamificationProgress();
+    setGamificationProgress(data);
   }
 
   async function loadAdminAnonymousMetrics() {
@@ -706,6 +1046,8 @@ function App() {
     loadCases().catch((e) => setError(e.message));
     loadTemplates().catch((e) => setError(e.message));
     loadStudentMetrics().catch((e) => setError(e.message));
+    loadFinalCertification().catch((e) => setError(e.message));
+    loadGamificationProgress().catch((e) => setError(e.message));
     loadMyLeaderEvaluations().catch((e) => setError(e.message));
     if (authUser.role === "admin") {
       loadAdminPanel().catch((e) => setError(e.message));
@@ -713,6 +1055,15 @@ function App() {
       loadLeaderEvaluations().catch((e) => setError(e.message));
     }
   }, [authUser]);
+
+  useEffect(() => {
+    if (isSimpleUx) {
+      setShowAdvancedPreparation(false);
+      setShowAdvancedDebrief(false);
+      setShowFullAnalysis(false);
+    }
+    setExperienceFeedback((prev) => ({ ...prev, ux_mode: isSimpleUx ? "simple" : "advanced" }));
+  }, [isSimpleUx]);
 
   useEffect(() => {
     if (authUser?.role === "admin") {
@@ -969,6 +1320,8 @@ function App() {
       setSelectedId(created.id);
       await loadCase(created.id);
       await loadStudentMetrics();
+      await loadFinalCertification();
+      await loadGamificationProgress();
       setSuccess("Caso creado.");
     } catch (e) {
       setError((e as Error).message);
@@ -976,6 +1329,34 @@ function App() {
     } finally {
       setLoading(false);
     }
+  }
+
+  function applyTemplateQuickExample() {
+    if (!selectedTemplate) return;
+    const quick = templateQuickExamples[selectedTemplate.id];
+    if (!quick) return;
+
+    setTitle((prev) => (prev.trim() ? prev : selectedTemplate.title));
+    setPreparation((prev) => ({
+      ...prev,
+      context: {
+        ...prev.context,
+        negotiation_type: prev.context.negotiation_type || selectedTemplate.title,
+      },
+      objective: {
+        ...prev.objective,
+        explicit_objective: prev.objective.explicit_objective || quick.objective,
+      },
+      power_alternatives: {
+        ...prev.power_alternatives,
+        maan: prev.power_alternatives.maan || quick.maan,
+      },
+      risk: {
+        ...prev.risk,
+        main_risk: prev.risk.main_risk || quick.risk,
+      },
+    }));
+    setSuccess("Ejemplo rápido aplicado. Ahora podés crear el caso.");
   }
 
   async function handleSavePreparation() {
@@ -988,6 +1369,8 @@ function App() {
       await loadCase(selectedCase.id);
       await loadCases();
       await loadStudentMetrics();
+      await loadFinalCertification();
+      await loadGamificationProgress();
       // Auto-generar primer análisis
       try {
         const result = await api.analyzeCase(selectedCase.id);
@@ -1032,6 +1415,8 @@ function App() {
       await loadCase(selectedCase.id);
       await loadCases();
       await loadStudentMetrics();
+      await loadFinalCertification();
+      await loadGamificationProgress();
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -1100,6 +1485,8 @@ function App() {
       await loadCase(selectedCase.id);
       await loadCases();
       await loadStudentMetrics();
+      await loadFinalCertification();
+      await loadGamificationProgress();
       if (isAdmin) {
         await loadAdminAnonymousMetrics();
       }
@@ -1129,6 +1516,8 @@ function App() {
       setSelectedId(null);
       await loadCases();
       await loadStudentMetrics();
+      await loadFinalCertification();
+      await loadGamificationProgress();
       if (isAdmin) {
         await loadAdminAnonymousMetrics();
       }
@@ -1136,6 +1525,24 @@ function App() {
     } catch (e) {
       setError((e as Error).message);
       setSuccess("");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleSubmitExperienceFeedback() {
+    try {
+      setLoading(true);
+      setError("");
+      setSuccess("");
+      await api.submitExperienceFeedback({
+        ...experienceFeedback,
+        case_id: selectedCase?.id ?? null,
+      });
+      setSuccess("Gracias. Tu feedback quedó registrado.");
+      setExperienceFeedback((prev) => ({ ...prev, comment: "" }));
+    } catch (e) {
+      setError((e as Error).message);
     } finally {
       setLoading(false);
     }
@@ -1160,6 +1567,14 @@ function App() {
         return { ...prev, strategy: { ...prev.strategy, [field]: value } };
       }
       if (group === "risk") {
+        if (field === "hot_buttons") {
+          const parsed = value
+            .split(/\n|,/) 
+            .map((item) => item.trim())
+            .filter(Boolean)
+            .slice(0, 12);
+          return { ...prev, risk: { ...prev.risk, hot_buttons: parsed } };
+        }
         return { ...prev, risk: { ...prev.risk, [field]: value } };
       }
       return prev;
@@ -1167,8 +1582,9 @@ function App() {
   }
 
   function updateDebrief(path: string, value: string) {
-    const [group, field] = path.split(".");
-    if (field) {
+    const chunks = path.split(".");
+    if (chunks.length === 2) {
+      const [group, field] = chunks;
       setDebrief((prev) => {
         if (group === "real_result") {
           return { ...prev, real_result: { ...prev.real_result, [field]: value } };
@@ -1190,7 +1606,26 @@ function App() {
       return;
     }
 
-    setDebrief((prev) => ({ ...prev, [group]: value }));
+    if (chunks.length === 3) {
+      const [group, field, nested] = chunks;
+      setDebrief((prev) => {
+        const container = (prev as unknown as Record<string, Record<string, unknown>>)[group];
+        if (!container || typeof container !== "object") return prev;
+        return {
+          ...prev,
+          [group]: {
+            ...container,
+            [field]: {
+              ...(container[field] as Record<string, unknown>),
+              [nested]: value,
+            },
+          },
+        } as DebriefInput;
+      });
+      return;
+    }
+
+    setDebrief((prev) => ({ ...prev, [chunks[0]]: value }));
   }
 
   async function handleSubmitContact(event: FormEvent<HTMLFormElement>) {
@@ -1708,6 +2143,31 @@ function App() {
           <div className={`context-badge ${isTeacherPanel ? "teacher" : "student"}`}>
             {contextLabel}
           </div>
+          {!isTeacherPanel && (
+            <div
+              style={{
+                marginTop: 10,
+                border: `1px solid ${interactionZonePalette[currentInteractionZone].border}`,
+                background: interactionZonePalette[currentInteractionZone].background,
+                borderRadius: 8,
+                padding: "8px 10px",
+              }}
+            >
+              <p className="small" style={{ marginBottom: 4 }}>
+                <strong>Semáforo actual:</strong> {interactionZonePalette[currentInteractionZone].label}
+              </p>
+              <p className="small" style={{ marginBottom: 0 }}>
+                <strong>Nivel de claridad:</strong> {liveClarityScore}/100 ({liveClarityLabel})
+              </p>
+            </div>
+          )}
+          {!isTeacherPanel && preparation.risk.clarity_phrase.trim().length > 0 && (
+            <div style={{ marginTop: 8, border: "1px solid #2a2a2a", borderRadius: 8, padding: "8px 10px", background: "rgba(15, 23, 42, 0.6)" }}>
+              <p className="small" style={{ marginBottom: 0 }}>
+                <strong>Frase ancla:</strong> “{preparation.risk.clarity_phrase}”
+              </p>
+            </div>
+          )}
           {authUser.active_cohort_name && (
             <p className="small" style={{ marginBottom: 8 }}>
               Cohorte activa: {authUser.active_cohort_name}
@@ -1756,6 +2216,23 @@ function App() {
                 <p className="small" style={{ marginTop: 8 }}>
                   Ideal si querés: {selectedTemplate.ideal_for}
                 </p>
+              )}
+              {selectedTemplate && selectedTemplateId !== "__blank__" && templateQuickExamples[selectedTemplate.id] && (
+                <div style={{ marginTop: 8, padding: "8px 10px", border: "1px solid #2a2a2a", borderRadius: 8 }}>
+                  <p className="small" style={{ marginBottom: 6 }}><strong>Ejemplo exprés</strong></p>
+                  <p className="small" style={{ marginBottom: 4 }}>
+                    Objetivo: {templateQuickExamples[selectedTemplate.id].objective}
+                  </p>
+                  <p className="small" style={{ marginBottom: 4 }}>
+                    Plan B: {templateQuickExamples[selectedTemplate.id].maan}
+                  </p>
+                  <p className="small" style={{ marginBottom: 8 }}>
+                    Riesgo: {templateQuickExamples[selectedTemplate.id].risk}
+                  </p>
+                  <button className="secondary" onClick={applyTemplateQuickExample} disabled={loading}>
+                    Usar ejemplo rápido
+                  </button>
+                </div>
               )}
               <div style={{ height: 8 }} />
               <label className="small" htmlFor="confidence-start">Confianza inicial (1-10)</label>
@@ -2110,6 +2587,142 @@ function App() {
           </div>
         )}
 
+        {!isTeacherPanel && certificationJourney && (
+          <div className="card">
+            <h2>Marco teórico aplicado</h2>
+            <p className="small" style={{ marginBottom: 10 }}>
+              Referencia directa al método “Si te calentás, perdés”: cada métrica de certificación se apoya en estos 6 pilares.
+            </p>
+            <div style={{ display: "grid", gap: 8 }}>
+              <div style={{ border: "1px solid #2a2a2a", borderRadius: 8, padding: "8px 10px" }}>
+                <p className="small" style={{ margin: 0 }}><strong>1) Claridad estratégica</strong> → sale de semáforo + resets + balance escucha/habla.</p>
+                <p className="small" style={{ margin: "4px 0 0 0" }}>Ahora: {liveClarityScore}/100 ({liveClarityLabel}).</p>
+              </div>
+              <div style={{ border: "1px solid #2a2a2a", borderRadius: 8, padding: "8px 10px" }}>
+                <p className="small" style={{ margin: 0 }}><strong>2) Semáforo de interacción</strong> → lo cargás en Paso 2 y alimenta el análisis de ejecución.</p>
+                <p className="small" style={{ margin: "4px 0 0 0" }}>Zona actual: {interactionZonePalette[currentInteractionZone].label}.</p>
+              </div>
+              <div style={{ border: "1px solid #2a2a2a", borderRadius: 8, padding: "8px 10px" }}>
+                <p className="small" style={{ margin: 0 }}><strong>3) Mapa de poder real</strong> → MAAN, urgencia, hipótesis de contraparte y síntesis pre-negociación (Paso 1).</p>
+              </div>
+              <div style={{ border: "1px solid #2a2a2a", borderRadius: 8, padding: "8px 10px" }}>
+                <p className="small" style={{ margin: 0 }}><strong>4) Botones calientes</strong> → tags de riesgo + kit anti-escalada.</p>
+                <p className="small" style={{ margin: "4px 0 0 0" }}>Cargados: {preparation.risk.hot_buttons.length}.</p>
+              </div>
+              <div style={{ border: "1px solid #2a2a2a", borderRadius: 8, padding: "8px 10px" }}>
+                <p className="small" style={{ margin: 0 }}><strong>5) Margen de maniobra</strong> → mínimo aceptable + breakpoint + mapa de concesiones.</p>
+              </div>
+              <div style={{ border: "1px solid #2a2a2a", borderRadius: 8, padding: "8px 10px" }}>
+                <p className="small" style={{ margin: 0 }}><strong>6) Frase ancla</strong> → mantra personal visible para recuperación cognitiva.</p>
+                <p className="small" style={{ margin: "4px 0 0 0" }}>{preparation.risk.clarity_phrase ? `Actual: “${preparation.risk.clarity_phrase}”` : "Definila en Paso 1 para activarla toda la semana."}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {!isTeacherPanel && certificationJourney && (
+          <div className="card">
+            <h2>🧭 Ruta de Certificación</h2>
+            <p className="small" style={{ marginBottom: 8 }}>
+              Estado actual: <strong>{certificationJourney.currentStep}</strong>
+            </p>
+            <p className="small" style={{ marginBottom: 8 }}>
+              Avance general: {certificationJourney.progressPercentage}% ({certificationJourney.completedCount}/4 hitos)
+            </p>
+            <div style={{ width: "100%", height: "8px", background: "#2d3748", borderRadius: "4px", overflow: "hidden", marginBottom: "12px" }}>
+              <div
+                style={{
+                  width: `${certificationJourney.progressPercentage}%`,
+                  height: "100%",
+                  background: "linear-gradient(90deg, #22c55e, #60a5fa)",
+                  transition: "width 0.3s ease",
+                }}
+              />
+            </div>
+            <div style={{ display: "grid", gap: 8 }}>
+              {certificationJourney.milestones.map((milestone, index) => {
+                const palette = certificationStagePalette[index % certificationStagePalette.length];
+                return (
+                  <div
+                    key={milestone.title}
+                    style={{
+                      border: `1px solid ${palette.border}`,
+                      background: palette.background,
+                      borderRadius: 8,
+                      padding: "8px 10px",
+                      opacity: milestone.completed ? 1 : 0.8,
+                    }}
+                  >
+                    <p className="small" style={{ margin: 0 }}>
+                      {milestone.completed ? "✅" : "⬜"} <strong>{milestone.title}</strong>
+                    </p>
+                    <p className="small" style={{ margin: "4px 0 0 0" }}>{milestone.detail}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {!isTeacherPanel && finalCertification && (
+          <div className="card">
+            <h2>Certificación final acumulada</h2>
+            <p className="small">
+              Estado final: <strong>{finalCertification.final_passed ? "Graduado" : "Aún no graduado"}</strong>
+            </p>
+            <div className="row">
+              <div className="small">Casos cerrados considerados: {finalCertification.cases_considered}</div>
+              <div className="small">Casos con evidencia de certificación: {finalCertification.cases_with_certification}</div>
+              <div className="small">Casos aprobados: {finalCertification.passed_cases}</div>
+              <div className="small">Casos no aprobados: {finalCertification.failed_cases}</div>
+              <div className="small">Score avanzado promedio: {finalCertification.average_advanced_score}</div>
+              <div className="small">Control emocional promedio: {finalCertification.average_emotional_regulation_score}</div>
+              <div className="small">Balance escucha/habla promedio: {finalCertification.average_listening_balance_score}</div>
+              <div className="small">Role-play promedio: {finalCertification.average_role_play_score}</div>
+              <div className="small">Ejercicios acumulados: {finalCertification.completed_exercises_total}/{finalCertification.required_exercises_total}</div>
+              <div className="small">Preguntas de descubrimiento practicadas: {finalCertification.practiced_discovery_questions_count}</div>
+            </div>
+
+            {finalCertification.final_pass_reasons.length > 0 && (
+              <>
+                <p className="small" style={{ marginTop: 10 }}><strong>Por qué sí</strong></p>
+                <ul>
+                  {finalCertification.final_pass_reasons.map((item) => (
+                    <li key={`final-pass-${item}`} className="small">{item}</li>
+                  ))}
+                </ul>
+              </>
+            )}
+
+            {finalCertification.final_fail_reasons.length > 0 && (
+              <>
+                <p className="small" style={{ marginTop: 10 }}><strong>Por qué no</strong></p>
+                <ul>
+                  {finalCertification.final_fail_reasons.map((item) => (
+                    <li key={`final-fail-${item}`} className="small">{item}</li>
+                  ))}
+                </ul>
+              </>
+            )}
+
+            {finalCertification.case_results.length > 0 && (
+              <>
+                <p className="small" style={{ marginTop: 10 }}><strong>Detalle por caso</strong></p>
+                <ul>
+                  {finalCertification.case_results.map((item) => (
+                    <li key={`case-cert-${item.case_id}`} className="small">
+                      {item.case_title} · {item.passed ? "Aprobado" : "No aprobado"} · Score avanzado {item.score_advanced}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+
+            <p className="small" style={{ marginTop: 8 }}><strong>Evidencia:</strong> {finalCertification.evidence_note}</p>
+            <p className="small"><strong>Uso de IA:</strong> {finalCertification.ai_usage_note}</p>
+          </div>
+        )}
+
         {!isTeacherPanel && myLeaderEvaluations.length > 0 && (
           <div className="card">
             <h2>Evaluación del líder</h2>
@@ -2131,6 +2744,191 @@ function App() {
           </div>
         )}
 
+        {!isTeacherPanel && gamificationProgress && (
+          <div className="card">
+            <h2>🎮 Progreso de Aprendizaje</h2>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "16px" }}>
+              <div style={{ padding: "12px", background: "rgba(168, 85, 247, 0.1)", borderRadius: "8px", border: "1px solid #9333ea" }}>
+                <div className="small" style={{ color: "#d8b4fe" }}>Nivel</div>
+                <div style={{ fontSize: "28px", fontWeight: "bold", color: "#c084fc" }}>{gamificationProgress.level}</div>
+              </div>
+              <div style={{ padding: "12px", background: "rgba(59, 130, 246, 0.1)", borderRadius: "8px", border: "1px solid #3b82f6" }}>
+                <div className="small" style={{ color: "#93c5fd" }}>XP Total</div>
+                <div style={{ fontSize: "28px", fontWeight: "bold", color: "#60a5fa" }}>{gamificationProgress.total_xp}</div>
+              </div>
+            </div>
+            
+            <p className="small" style={{ marginBottom: "8px" }}>
+              Siguiente nivel: {gamificationProgress.next_level_xp} XP ({gamificationProgress.next_level_xp - gamificationProgress.total_xp} faltantes)
+            </p>
+            <div style={{ width: "100%", height: "8px", background: "#2d3748", borderRadius: "4px", overflow: "hidden", marginBottom: "16px" }}>
+              <div style={{ 
+                width: `${Math.min(100, (gamificationProgress.total_xp / gamificationProgress.next_level_xp) * 100)}%`,
+                height: "100%",
+                background: "linear-gradient(90deg, #60a5fa, #a855f7)",
+                transition: "width 0.3s ease"
+              }} />
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "16px" }}>
+              <div className="small">
+                🔥 Racha actual: <strong>{gamificationProgress.current_streak}</strong>
+              </div>
+              <div className="small">
+                🏆 Mejor racha: <strong>{gamificationProgress.highest_streak}</strong>
+              </div>
+            </div>
+            <p className="small" style={{ marginBottom: "12px" }}>
+              🌡️ Termómetro emocional: <strong>{gamificationProgress.thermal_phase.toUpperCase()}</strong> · Nivel {gamificationProgress.heat_level}/5
+            </p>
+
+            {gamificationProgress.achievements.length > 0 && (
+              <>
+                <p className="small" style={{ marginBottom: "8px", fontWeight: "bold" }}>
+                  🏅 Logros Desbloqueados ({gamificationProgress.unlocked_badges_count})
+                </p>
+                <div style={{ display: "grid", gridTemplateColumns: "auto auto auto", gap: "8px", marginBottom: "16px" }}>
+                  {gamificationProgress.achievements.map((ach) => (
+                    <div
+                      key={ach.id}
+                      title={ach.description}
+                      style={{
+                        padding: "8px 12px",
+                        background: "rgba(34, 197, 94, 0.1)",
+                        border: "1px solid #22c55e",
+                        borderRadius: "6px",
+                        textAlign: "center",
+                        fontSize: "20px",
+                        cursor: "pointer",
+                        transition: "all 0.2s"
+                      }}
+                    >
+                      {ach.name.split(" ")[0]} {ach.icon}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {gamificationProgress.next_badge_hint && (
+              <p className="small" style={{ padding: "8px", background: "rgba(251, 146, 60, 0.1)", border: "1px solid #f97316", borderRadius: "4px", color: "#fbad3f" }}>
+                💡 {gamificationProgress.next_badge_hint}
+              </p>
+            )}
+
+            <p className="small" style={{ marginTop: "12px", marginBottom: "8px", fontWeight: "bold" }}>📊 Progreso por Fase</p>
+            {gamificationProgress.phase_progress.map((phase) => (
+              <div key={phase.phase_name} style={{ marginBottom: "12px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
+                  <span className="small">{phase.phase_label}</span>
+                  <span className="small">{phase.completion_percentage}%</span>
+                </div>
+                <div style={{ width: "100%", height: "6px", background: "#2d3748", borderRadius: "3px", overflow: "hidden" }}>
+                  <div style={{ 
+                    width: `${phase.completion_percentage}%`,
+                    height: "100%",
+                    background: phase.completion_percentage >= 100 ? "#22c55e" : "#f59e0b",
+                    transition: "width 0.3s ease"
+                  }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!isTeacherPanel && (
+          <div className="card">
+            <h2>� Reporte de Progreso</h2>
+            <p className="small" style={{ marginBottom: 12 }}>
+              Exportá tu historial completo: scores, zonas de interacción, certificaciones y evolución de confianza. Ideal para piloto y seguimiento.
+            </p>
+            <button
+              className="btn"
+              style={{ width: "100%" }}
+              onClick={async () => {
+                try {
+                  const report = await api.getProgressReport();
+                  openPilotReport(report);
+                } catch (err) {
+                  setError(err instanceof Error ? err.message : "Error al generar el reporte");
+                }
+              }}
+            >
+              📥 Generar reporte (abre en nueva pestaña)
+            </button>
+            <p className="small" style={{ marginTop: 8, color: "#64748b" }}>
+              Desde la nueva pestaña podés imprimir o guardar como PDF con Ctrl/Cmd + P.
+            </p>
+          </div>
+        )}
+
+        {!isTeacherPanel && (
+          <div className="card">
+            <h2>�🗣️ Tu feedback de experiencia</h2>
+            <p className="small">¿Qué tan útil te resultó para practicar hoy?</p>
+            <div className="row">
+              <select
+                value={experienceFeedback.experience_level}
+                onChange={(e) =>
+                  setExperienceFeedback((prev) => ({
+                    ...prev,
+                    experience_level: e.target.value as "new" | "experienced",
+                  }))
+                }
+              >
+                <option value="new">Soy nuevo/a en ventas</option>
+                <option value="experienced">Tengo experiencia</option>
+              </select>
+              <input
+                type="number"
+                min={1}
+                max={5}
+                value={experienceFeedback.ease_of_use_score}
+                onChange={(e) =>
+                  setExperienceFeedback((prev) => ({
+                    ...prev,
+                    ease_of_use_score: Math.min(5, Math.max(1, Number(e.target.value) || 1)),
+                  }))
+                }
+                placeholder="Facilidad (1-5)"
+              />
+              <input
+                type="number"
+                min={1}
+                max={5}
+                value={experienceFeedback.usefulness_score}
+                onChange={(e) =>
+                  setExperienceFeedback((prev) => ({
+                    ...prev,
+                    usefulness_score: Math.min(5, Math.max(1, Number(e.target.value) || 1)),
+                  }))
+                }
+                placeholder="Utilidad (1-5)"
+              />
+              <input
+                type="number"
+                min={1}
+                max={5}
+                value={experienceFeedback.emotional_relevance_score}
+                onChange={(e) =>
+                  setExperienceFeedback((prev) => ({
+                    ...prev,
+                    emotional_relevance_score: Math.min(5, Math.max(1, Number(e.target.value) || 1)),
+                  }))
+                }
+                placeholder="Relevancia emocional (1-5)"
+              />
+              <textarea
+                placeholder="Qué mejorarías de la experiencia"
+                value={experienceFeedback.comment}
+                onChange={(e) => setExperienceFeedback((prev) => ({ ...prev, comment: e.target.value.slice(0, 900) }))}
+              />
+            </div>
+            <div style={{ marginTop: 10 }}>
+              <button onClick={handleSubmitExperienceFeedback} disabled={loading}>Enviar feedback</button>
+            </div>
+          </div>
+        )}
         {!selectedCase ? (
           <div className="card">Seleccioná o creá un caso.</div>
         ) : (
@@ -2198,9 +2996,9 @@ function App() {
             </div>
 
             <div className="card">
-              <h2>Preparación</h2>
+              <h2>Paso 1 · Preparación</h2>
               {isCaseClosed && <span className="readonly-badge">Solo lectura</span>}
-              <p className="small">Cargá rápido: completá 4 campos críticos. El resto es opcional.</p>
+              <p className="small">Completá estos campos rápidos (2-4 min).</p>
               {isPreparationLocked && (
                 <p className="small" style={{ marginBottom: 12 }}>
                   Preparación cerrada para este caso.
@@ -2211,7 +3009,7 @@ function App() {
                 style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}
               >
               <div className="row">
-                <label className="small">Tipo de negociación</label>
+                <label className="small">Tipo de caso</label>
                 <select
                   value={preparation.context.negotiation_type}
                   onChange={(e) => updatePreparation("context.negotiation_type", e.target.value)}
@@ -2223,7 +3021,7 @@ function App() {
                   <option value="Renegociación comercial">Renegociación comercial</option>
                   <option value="Otro">Otro</option>
                 </select>
-                <label className="small">Nivel de impacto</label>
+                <label className="small">Impacto</label>
                 <select
                   value={preparation.context.impact_level}
                   onChange={(e) => updatePreparation("context.impact_level", e.target.value)}
@@ -2234,7 +3032,7 @@ function App() {
                   <option value="Alto">Alto</option>
                   <option value="Crítico">Crítico</option>
                 </select>
-                <label className="small">Relación con contraparte</label>
+                <label className="small">Relación con cliente</label>
                 <select
                   value={preparation.context.counterpart_relationship}
                   onChange={(e) => updatePreparation("context.counterpart_relationship", e.target.value)}
@@ -2245,26 +3043,26 @@ function App() {
                   <option value="Largo plazo">Largo plazo</option>
                   <option value="Tensionada">Tensionada</option>
                 </select>
-                <label className="small">Objetivo explícito</label>
+                <label className="small">Objetivo</label>
                 <textarea
-                  placeholder="Qué querés lograr en esta negociación"
+                  placeholder="Qué querés lograr"
                   value={preparation.objective.explicit_objective}
                   onChange={(e) => updatePreparation("objective.explicit_objective", e.target.value)}
                 />
-                <label className="small">MAAN concreta</label>
+                <label className="small">Plan B (MAAN)</label>
                 <textarea
-                  placeholder="Tu mejor alternativa si no hay acuerdo"
+                  placeholder="Qué harías si no hay acuerdo"
                   value={preparation.power_alternatives.maan}
                   onChange={(e) => updatePreparation("power_alternatives.maan", e.target.value)}
                 />
                 <label className="small">Riesgo principal</label>
                 <textarea
-                  placeholder="Qué podría hacer fracasar esta negociación"
+                  placeholder="Qué podría salir mal"
                   value={preparation.risk.main_risk}
                   onChange={(e) => updatePreparation("risk.main_risk", e.target.value)}
                 />
               </div>
-              {!isLiveSession && (
+              {!isLiveSession && !isSimpleUx && (
                 <div style={{ marginTop: 12 }}>
                   <button
                     className="secondary"
@@ -2331,12 +3129,24 @@ function App() {
                   value={preparation.risk.key_signal}
                   onChange={(e) => updatePreparation("risk.key_signal", e.target.value)}
                 />
+                <label className="small">Botones calientes (separados por coma o salto de línea)</label>
+                <textarea
+                  placeholder="Ej: tu precio es ridículo, la competencia es mejor, silencios prolongados"
+                  value={preparation.risk.hot_buttons.join("\n")}
+                  onChange={(e) => updatePreparation("risk.hot_buttons", e.target.value)}
+                />
+                <label className="small">Frase de claridad (botón reset)</label>
+                <textarea
+                  placeholder="Ej: Si te calentás, perdés. Tomá pausa y volvé al objetivo real."
+                  value={preparation.risk.clarity_phrase}
+                  onChange={(e) => updatePreparation("risk.clarity_phrase", e.target.value)}
+                />
               </div>
               )}
               {!isPreparationLocked && (
                 <div style={{ marginTop: 16, textAlign: 'right' }}>
                   <button onClick={handleSavePreparation} disabled={loading}>
-                    Guardar preparación
+                    Guardar paso 1
                   </button>
                 </div>
               )}
@@ -2344,7 +3154,7 @@ function App() {
             </div>
 
             <div className="card">
-              <h2>Análisis de tu preparación</h2>
+              <h2>Aprendizaje IA (Paso 1)</h2>
               {isCaseClosed && <span className="readonly-badge">Solo lectura</span>}
               {isCaseClosed && (
                 <p className="small" style={{ marginBottom: 12 }}>
@@ -2367,12 +3177,24 @@ function App() {
                   </div>
                 </div>
               ) : !analysis ? (
-                <p className="small">Todavía no generaste el análisis.</p>
+                <p className="small">Guardá el paso 1 para ver sugerencias automáticas.</p>
               ) : (
                 <>
                   <p>
                     <strong>Nivel de preparación:</strong> {analysis.preparation_level}
                   </p>
+
+                  {(preparation.risk.clarity_phrase || preparation.risk.hot_buttons.length > 0) && (
+                    <div style={{ marginBottom: 14, border: "1px solid #2a2a2a", borderRadius: 10, padding: 12, background: "rgba(15, 23, 42, 0.6)" }}>
+                      <p style={{ marginBottom: 8 }}><strong>Kit anti-escalada (Fase 1)</strong></p>
+                      {preparation.risk.clarity_phrase && (
+                        <p className="small" style={{ marginBottom: 8 }}><strong>Frase de claridad:</strong> {preparation.risk.clarity_phrase}</p>
+                      )}
+                      {preparation.risk.hot_buttons.length > 0 && (
+                        <p className="small" style={{ marginBottom: 0 }}><strong>Botones calientes:</strong> {preparation.risk.hot_buttons.join(" · ")}</p>
+                      )}
+                    </div>
+                  )}
 
                   {/* Dashboards Estratégicos */}
                   {analysis.pre_negotiation_summary && (
@@ -2541,9 +3363,9 @@ function App() {
 
             {(selectedCase.status === "ejecutado_pendiente_debrief" || selectedCase.status === "cerrado") && (
               <div className="card">
-                <h2>Resultado de la ejecución</h2>
+                <h2>Paso 2 · Resultado</h2>
                 {isCaseClosed && <span className="readonly-badge">Solo lectura</span>}
-                <p className="small">Cargá rápido: estado y resultado obtenido.</p>
+                <p className="small">Contá cómo te fue (1-2 min).</p>
                 {selectedCase.status === "cerrado" && (
                   <p className="small" style={{ marginBottom: 12 }}>
                     Caso cerrado: revisá resultado y memo final. Para continuar, creá un nuevo caso.
@@ -2554,7 +3376,7 @@ function App() {
                   style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}
                 >
                 <div className="row">
-                  <label className="small">Estado</label>
+                  <label className="small">¿Cómo salió?</label>
                   <select
                     value={debrief.real_result.explicit_objective_achieved}
                     onChange={(e) =>
@@ -2566,14 +3388,14 @@ function App() {
                     <option value="Parcial">Parcial</option>
                     <option value="No logrado">No logrado</option>
                   </select>
-                  <label className="small">Resultado obtenido</label>
+                  <label className="small">Aprendizaje clave</label>
                   <textarea
-                    placeholder="Qué lograste y qué aprendiste de esta negociación"
+                    placeholder="Qué lograste y qué harías mejor"
                     value={debrief.transferable_lesson}
                     onChange={(e) => updateDebrief("transferable_lesson", e.target.value)}
                   />
                 </div>
-                {!isLiveSession && (
+                {!isLiveSession && !isSimpleUx && (
                   <div style={{ marginTop: 12 }}>
                     <button
                       className="secondary"
@@ -2640,6 +3462,435 @@ function App() {
                     value={debrief.free_disclaimer}
                     onChange={(e) => updateDebrief("free_disclaimer", e.target.value)}
                   />
+
+                  <label className="small">Bitácora de incidentes (verde → amarillo)</label>
+                  {(debrief.incident_log.length === 0 ? [emptyDebrief.incident_log] : [debrief.incident_log]).flat().map((_, idx) => {
+                    const item = debrief.incident_log[idx] ?? { moment_label: "", trigger: "", reaction: "", recovery_action: "" };
+                    return (
+                      <div key={`incident-${idx}`} style={{ border: "1px solid #2a2a2a", borderRadius: 8, padding: 10, marginBottom: 8 }}>
+                        <input
+                          placeholder="Momento (ej: min 12, objeción de precio)"
+                          value={item.moment_label}
+                          onChange={(e) => setDebrief((prev) => {
+                            const next = [...prev.incident_log];
+                            next[idx] = { ...item, moment_label: e.target.value };
+                            return { ...prev, incident_log: next };
+                          })}
+                        />
+                        <textarea
+                          placeholder="Trigger"
+                          value={item.trigger}
+                          onChange={(e) => setDebrief((prev) => {
+                            const next = [...prev.incident_log];
+                            next[idx] = { ...item, trigger: e.target.value };
+                            return { ...prev, incident_log: next };
+                          })}
+                        />
+                        <textarea
+                          placeholder="Cómo reaccionaste"
+                          value={item.reaction}
+                          onChange={(e) => setDebrief((prev) => {
+                            const next = [...prev.incident_log];
+                            next[idx] = { ...item, reaction: e.target.value };
+                            return { ...prev, incident_log: next };
+                          })}
+                        />
+                        <textarea
+                          placeholder="Acción de recuperación"
+                          value={item.recovery_action}
+                          onChange={(e) => setDebrief((prev) => {
+                            const next = [...prev.incident_log];
+                            next[idx] = { ...item, recovery_action: e.target.value };
+                            return { ...prev, incident_log: next };
+                          })}
+                        />
+                        <button
+                          type="button"
+                          className="secondary"
+                          onClick={() => setDebrief((prev) => ({
+                            ...prev,
+                            incident_log: prev.incident_log.filter((_, removeIdx) => removeIdx !== idx),
+                          }))}
+                        >
+                          Eliminar incidente
+                        </button>
+                      </div>
+                    );
+                  })}
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() =>
+                      setDebrief((prev) => ({
+                        ...prev,
+                        incident_log: [
+                          ...prev.incident_log,
+                          { moment_label: "", trigger: "", reaction: "", recovery_action: "" },
+                        ],
+                      }))
+                    }
+                  >
+                    Agregar incidente
+                  </button>
+
+                  <label className="small">Costo del enojo (margen)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={debrief.emotional_cost.estimated_margin_without_anger}
+                    onChange={(e) =>
+                      setDebrief((prev) => ({
+                        ...prev,
+                        emotional_cost: {
+                          ...prev.emotional_cost,
+                          estimated_margin_without_anger: Math.max(0, Number(e.target.value) || 0),
+                        },
+                      }))
+                    }
+                    placeholder="Margen esperado sin enojo"
+                  />
+                  <input
+                    type="number"
+                    min={0}
+                    value={debrief.emotional_cost.actual_margin_after_anger}
+                    onChange={(e) =>
+                      setDebrief((prev) => ({
+                        ...prev,
+                        emotional_cost: {
+                          ...prev.emotional_cost,
+                          actual_margin_after_anger: Math.max(0, Number(e.target.value) || 0),
+                        },
+                      }))
+                    }
+                    placeholder="Margen real luego de tensión"
+                  />
+                  <input
+                    value={debrief.emotional_cost.currency}
+                    onChange={(e) =>
+                      setDebrief((prev) => ({
+                        ...prev,
+                        emotional_cost: { ...prev.emotional_cost, currency: e.target.value || "USD" },
+                      }))
+                    }
+                    placeholder="Moneda (USD, ARS, EUR...)"
+                  />
+
+                  <label className="small">Semáforo en vivo (manual) + ratio habla/escucha</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={debrief.live_support.red_alert_count}
+                    onChange={(e) =>
+                      setDebrief((prev) => ({
+                        ...prev,
+                        live_support: { ...prev.live_support, red_alert_count: Math.max(0, Number(e.target.value) || 0) },
+                      }))
+                    }
+                    placeholder="Veces que entraste en rojo"
+                  />
+                  <input
+                    type="number"
+                    min={0}
+                    value={debrief.live_support.resets_used}
+                    onChange={(e) =>
+                      setDebrief((prev) => ({
+                        ...prev,
+                        live_support: { ...prev.live_support, resets_used: Math.max(0, Number(e.target.value) || 0) },
+                      }))
+                    }
+                    placeholder="Resets aplicados"
+                  />
+                  <input
+                    type="number"
+                    min={0}
+                    value={debrief.live_support.listening_minutes}
+                    onChange={(e) =>
+                      setDebrief((prev) => ({
+                        ...prev,
+                        live_support: { ...prev.live_support, listening_minutes: Math.max(0, Number(e.target.value) || 0) },
+                      }))
+                    }
+                    placeholder="Minutos escuchando"
+                  />
+                  <input
+                    type="number"
+                    min={0}
+                    value={debrief.live_support.talking_minutes}
+                    onChange={(e) =>
+                      setDebrief((prev) => ({
+                        ...prev,
+                        live_support: { ...prev.live_support, talking_minutes: Math.max(0, Number(e.target.value) || 0) },
+                      }))
+                    }
+                    placeholder="Minutos hablando"
+                  />
+                  <select
+                    value={debrief.live_support.current_zone}
+                    onChange={(e) =>
+                      setDebrief((prev) => ({
+                        ...prev,
+                        live_support: {
+                          ...prev.live_support,
+                          current_zone: e.target.value as "verde" | "amarilla" | "roja",
+                        },
+                      }))
+                    }
+                  >
+                    <option value="verde">Zona Verde (colaboración)</option>
+                    <option value="amarilla">Zona Amarilla (tensión)</option>
+                    <option value="roja">Zona Roja (escalada)</option>
+                  </select>
+                  <input
+                    type="number"
+                    min={0}
+                    value={debrief.live_support.semaphore_transitions}
+                    onChange={(e) =>
+                      setDebrief((prev) => ({
+                        ...prev,
+                        live_support: { ...prev.live_support, semaphore_transitions: Math.max(0, Number(e.target.value) || 0) },
+                      }))
+                    }
+                    placeholder="Cantidad de cambios de zona"
+                  />
+                  <div
+                    style={{
+                      marginTop: 4,
+                      border: `1px solid ${interactionZonePalette[currentInteractionZone].border}`,
+                      background: interactionZonePalette[currentInteractionZone].background,
+                      borderRadius: 8,
+                      padding: "8px 10px",
+                    }}
+                  >
+                    <p className="small" style={{ marginBottom: 4 }}>
+                      <strong>Semáforo actual:</strong> {interactionZonePalette[currentInteractionZone].label}
+                    </p>
+                    <p className="small" style={{ marginBottom: 0 }}>
+                      <strong>Nivel de claridad en vivo:</strong> {liveClarityScore}/100 ({liveClarityLabel})
+                    </p>
+                  </div>
+
+                  <label className="small">Role-play IA + scoring</label>
+                  <select
+                    value={debrief.role_play.scenario_type}
+                    onChange={(e) => setDebrief((prev) => ({ ...prev, role_play: { ...prev.role_play, scenario_type: e.target.value } }))}
+                  >
+                    <option value="cliente_dificil">Cliente difícil</option>
+                    <option value="cliente_frio">Cliente frío</option>
+                    <option value="comprador_agresivo">Comprador agresivo</option>
+                    <option value="ataque_precio">Ataque al precio</option>
+                    <option value="urgencia_falsa">Treta sucia: urgencia falsa</option>
+                    <option value="pedido_extra_cierre">Treta sucia: pedido extra al cierre</option>
+                  </select>
+                  <select
+                    value={debrief.role_play.counterpart_temperature}
+                    onChange={(e) => setDebrief((prev) => ({ ...prev, role_play: { ...prev.role_play, counterpart_temperature: e.target.value } }))}
+                  >
+                    <option value="frio">Contraparte fría</option>
+                    <option value="neutro">Contraparte neutra</option>
+                    <option value="tenso">Contraparte tensa</option>
+                  </select>
+                  <select
+                    value={debrief.role_play.difficulty}
+                    onChange={(e) => setDebrief((prev) => ({ ...prev, role_play: { ...prev.role_play, difficulty: e.target.value } }))}
+                  >
+                    <option value="baja">Baja</option>
+                    <option value="media">Media</option>
+                    <option value="alta">Alta</option>
+                  </select>
+                  <label className="small" style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <input
+                      type="checkbox"
+                      checked={debrief.role_play.completed}
+                      onChange={(e) =>
+                        setDebrief((prev) => ({
+                          ...prev,
+                          role_play: { ...prev.role_play, completed: e.target.checked },
+                        }))
+                      }
+                    />
+                    Role-play completado
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={debrief.role_play.self_score}
+                    onChange={(e) =>
+                      setDebrief((prev) => ({
+                        ...prev,
+                        role_play: { ...prev.role_play, self_score: Math.min(100, Math.max(0, Number(e.target.value) || 0)) },
+                      }))
+                    }
+                    placeholder="Auto-score (0-100)"
+                  />
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={debrief.role_play.response_quality_score}
+                    onChange={(e) =>
+                      setDebrief((prev) => ({
+                        ...prev,
+                        role_play: { ...prev.role_play, response_quality_score: Math.min(100, Math.max(0, Number(e.target.value) || 0)) },
+                      }))
+                    }
+                    placeholder="Calidad de respuesta (0-100)"
+                  />
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={debrief.role_play.emotional_control_score}
+                    onChange={(e) =>
+                      setDebrief((prev) => ({
+                        ...prev,
+                        role_play: { ...prev.role_play, emotional_control_score: Math.min(100, Math.max(0, Number(e.target.value) || 0)) },
+                      }))
+                    }
+                    placeholder="Control emocional (0-100)"
+                  />
+
+                  <label className="small">Serie de ejercicios de certificación (B2B por tamaño de empresa)</label>
+                  {debrief.role_play.exercise_results.map((exercise, idx) => (
+                    <div key={exercise.exercise_id} style={{ border: "1px solid #2a2a2a", borderRadius: 8, padding: 10, marginBottom: 8 }}>
+                      <p className="small" style={{ marginBottom: 8 }}>
+                        <strong>{exercise.exercise_label}</strong> · Segmento: {exercise.segment}
+                      </p>
+                      <label className="small" style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                        <input
+                          type="checkbox"
+                          checked={exercise.completed}
+                          onChange={(e) =>
+                            setDebrief((prev) => {
+                              const next = [...prev.role_play.exercise_results];
+                              next[idx] = { ...next[idx], completed: e.target.checked };
+                              return { ...prev, role_play: { ...prev.role_play, exercise_results: next } };
+                            })
+                          }
+                        />
+                        Ejercicio completado
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={exercise.calmness_score}
+                        onChange={(e) =>
+                          setDebrief((prev) => {
+                            const next = [...prev.role_play.exercise_results];
+                            next[idx] = {
+                              ...next[idx],
+                              calmness_score: Math.min(100, Math.max(0, Number(e.target.value) || 0)),
+                            };
+                            return { ...prev, role_play: { ...prev.role_play, exercise_results: next } };
+                          })
+                        }
+                        placeholder="Calma bajo presión (0-100)"
+                      />
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={exercise.signal_reading_score}
+                        onChange={(e) =>
+                          setDebrief((prev) => {
+                            const next = [...prev.role_play.exercise_results];
+                            next[idx] = {
+                              ...next[idx],
+                              signal_reading_score: Math.min(100, Math.max(0, Number(e.target.value) || 0)),
+                            };
+                            return { ...prev, role_play: { ...prev.role_play, exercise_results: next } };
+                          })
+                        }
+                        placeholder="Lectura de señales (0-100)"
+                      />
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={exercise.discovery_question_score}
+                        onChange={(e) =>
+                          setDebrief((prev) => {
+                            const next = [...prev.role_play.exercise_results];
+                            next[idx] = {
+                              ...next[idx],
+                              discovery_question_score: Math.min(100, Math.max(0, Number(e.target.value) || 0)),
+                            };
+                            return { ...prev, role_play: { ...prev.role_play, exercise_results: next } };
+                          })
+                        }
+                        placeholder="Preguntas de descubrimiento (0-100)"
+                      />
+                    </div>
+                  ))}
+
+                  <label className="small">Preguntas practicadas para develar problemas subyacentes (1 por línea)</label>
+                  <textarea
+                    placeholder="Ej: ¿Qué riesgo interno tendría elegir esta alternativa?"
+                    value={debrief.role_play.practiced_discovery_questions.join("\n")}
+                    onChange={(e) =>
+                      setDebrief((prev) => ({
+                        ...prev,
+                        role_play: {
+                          ...prev.role_play,
+                          practiced_discovery_questions: e.target.value
+                            .split("\n")
+                            .map((item) => item.trim())
+                            .filter(Boolean)
+                            .slice(0, 10),
+                        },
+                      }))
+                    }
+                  />
+                  <label className="small">Acciones usadas para destrabar cliente frío (1 por línea)</label>
+                  <textarea
+                    placeholder="Ej: validé su contexto, reduje presión de cierre"
+                    value={debrief.role_play.cold_rapport_actions.join("\n")}
+                    onChange={(e) =>
+                      setDebrief((prev) => ({
+                        ...prev,
+                        role_play: {
+                          ...prev.role_play,
+                          cold_rapport_actions: e.target.value
+                            .split("\n")
+                            .map((item) => item.trim())
+                            .filter(Boolean)
+                            .slice(0, 10),
+                        },
+                      }))
+                    }
+                  />
+                  <label className="small">Tretas sucias detectadas (1 por línea)</label>
+                  <textarea
+                    placeholder="Ej: urgencia falsa, pedido extra al cierre"
+                    value={debrief.role_play.dirty_tricks_detected.join("\n")}
+                    onChange={(e) =>
+                      setDebrief((prev) => ({
+                        ...prev,
+                        role_play: {
+                          ...prev.role_play,
+                          dirty_tricks_detected: e.target.value
+                            .split("\n")
+                            .map((item) => item.trim())
+                            .filter(Boolean)
+                            .slice(0, 10),
+                        },
+                      }))
+                    }
+                  />
+                  <textarea
+                    placeholder="Cómo respondiste las tretas sin entrar en escalada"
+                    value={debrief.role_play.dirty_tricks_response_notes}
+                    onChange={(e) =>
+                      setDebrief((prev) => ({
+                        ...prev,
+                        role_play: {
+                          ...prev.role_play,
+                          dirty_tricks_response_notes: e.target.value,
+                        },
+                      }))
+                    }
+                  />
                 </div>
                 )}
                 </fieldset>
@@ -2649,7 +3900,7 @@ function App() {
                       Compararemos plan vs ejecución para obtener aprendizajes accionables.
                     </p>
                     <button onClick={handleSaveDebrief} disabled={loading || !canSubmitDebrief}>
-                      Guardar resultado y analizar
+                      Guardar paso 2
                     </button>
                     {!canSubmitDebrief && (
                       <p className="small" style={{ marginTop: 8 }}>
@@ -2738,6 +3989,61 @@ function App() {
                     ))}
                   </ul>
                 </div>
+
+                {(debriefAnalysis?.certification || typeof debriefAnalysis?.role_play_score === "number") && (
+                  <div style={{ marginBottom: 12, border: "1px solid #e5e7eb", borderRadius: 10, padding: 12 }}>
+                    <p style={{ marginBottom: 8, fontWeight: 600, fontSize: "13px" }}>🏅 Scoring avanzado y certificación</p>
+                    <ul style={{ marginBottom: 8 }}>
+                      <li className="small">Control emocional: {debriefAnalysis?.emotional_regulation_score ?? 0}/100</li>
+                      <li className="small">Balance escucha/habla: {debriefAnalysis?.listening_balance_score ?? 0}/100</li>
+                      <li className="small">Role-play IA: {debriefAnalysis?.role_play_score ?? 0}/100</li>
+                      <li className="small">Activación de rapport: {debriefAnalysis?.rapport_activation_score ?? 0}/100</li>
+                      <li className="small">Detección de tretas: {debriefAnalysis?.trap_detection_score ?? 0}/100</li>
+                      <li className="small">Control de límites: {debriefAnalysis?.boundary_control_score ?? 0}/100</li>
+                      <li className="small">Nivel de claridad: {debriefAnalysis?.certification?.clarity_level_score ?? 0}/100</li>
+                      <li className="small">Score avanzado: {debriefAnalysis?.certification?.advanced_score ?? 0}/100</li>
+                      <li className="small">
+                        Ejercicios completados: {debriefAnalysis?.certification?.completed_exercises ?? 0}/{debriefAnalysis?.certification?.required_exercises ?? 0}
+                      </li>
+                    </ul>
+                    <p className="small" style={{ marginBottom: 6 }}>
+                      Estado: <strong>{debriefAnalysis?.certification?.certified ? "Certificado" : "En progreso"}</strong>
+                    </p>
+                    {(debriefAnalysis?.certification?.pass_reasons?.length ?? 0) > 0 && (
+                      <>
+                        <p className="small" style={{ marginBottom: 6 }}><strong>Por qué sí aprobó</strong></p>
+                        <ul style={{ marginBottom: 8 }}>
+                          {debriefAnalysis?.certification?.pass_reasons.map((reason) => (
+                            <li key={`pass-${reason}`} className="small">{reason}</li>
+                          ))}
+                        </ul>
+                      </>
+                    )}
+                    {(debriefAnalysis?.certification?.fail_reasons?.length ?? 0) > 0 && (
+                      <>
+                        <p className="small" style={{ marginBottom: 6 }}><strong>Por qué no aprobó</strong></p>
+                        <ul style={{ marginBottom: 8 }}>
+                          {debriefAnalysis?.certification?.fail_reasons.map((reason) => (
+                            <li key={`fail-${reason}`} className="small">{reason}</li>
+                          ))}
+                        </ul>
+                      </>
+                    )}
+                    {(debriefAnalysis?.certification?.recommended_questions?.length ?? 0) > 0 && (
+                      <>
+                        <p className="small" style={{ marginBottom: 6 }}><strong>Preguntas recomendadas para confianza y problemas subyacentes</strong></p>
+                        <ul style={{ marginBottom: 8 }}>
+                          {debriefAnalysis?.certification?.recommended_questions.map((question) => (
+                            <li key={`q-${question}`} className="small">{question}</li>
+                          ))}
+                        </ul>
+                      </>
+                    )}
+                    <p className="small" style={{ marginBottom: 0 }}>
+                      {debriefAnalysis?.certification?.certification_basis ?? "La certificación se calcula sobre práctica acumulada en ejercicios."}
+                    </p>
+                  </div>
+                )}
 
                 {selectedCase.status !== "cerrado" && (
                   <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid #e5e7eb" }}>

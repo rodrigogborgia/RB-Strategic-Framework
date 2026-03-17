@@ -154,3 +154,16 @@ class PublicLeadCapture(SQLModel, table=True):
     tamaño_equipo: Optional[str] = Field(default=None, max_length=50)
     preocupacion: Optional[str] = Field(default=None, max_length=900)
     created_at: datetime = Field(default_factory=utc_now)
+
+
+class ExperienceFeedback(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="user.id", index=True)
+    case_id: Optional[int] = Field(default=None, foreign_key="case.id", index=True)
+    experience_level: str = Field(default="new", max_length=20)  # new | experienced
+    ux_mode: str = Field(default="simple", max_length=20)  # simple | advanced
+    ease_of_use_score: int = Field(default=3, ge=1, le=5)
+    usefulness_score: int = Field(default=3, ge=1, le=5)
+    emotional_relevance_score: int = Field(default=3, ge=1, le=5)
+    comment: str = Field(default="", max_length=900)
+    created_at: datetime = Field(default_factory=utc_now)

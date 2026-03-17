@@ -167,6 +167,8 @@ class RiskBlock(BaseModel):
     emotional_variable: str = Field(default="", max_length=MAX_CHAR)
     main_risk: str = Field(min_length=3, max_length=MAX_CHAR)
     key_signal: str = Field(default="", max_length=MAX_CHAR)
+    hot_buttons: list[str] = Field(default_factory=list)
+    clarity_phrase: str = Field(default="", max_length=MAX_CHAR)
 
 
 class PreparationInput(BaseModel):
@@ -293,6 +295,71 @@ class DebriefInput(BaseModel):
     self_diagnosis: SelfDiagnosisBlock
     transferable_lesson: str = Field(min_length=3, max_length=MAX_CHAR)
     free_disclaimer: str = Field(default="", max_length=900)
+    incident_log: list["IncidentLogItem"] = Field(default_factory=list)
+    emotional_cost: "EmotionalCostInput" = Field(default_factory=lambda: EmotionalCostInput())
+    live_support: "LiveSupportManualInput" = Field(default_factory=lambda: LiveSupportManualInput())
+    role_play: "RolePlayPracticeInput" = Field(default_factory=lambda: RolePlayPracticeInput())
+
+
+class IncidentLogItem(BaseModel):
+    moment_label: str = Field(default="", max_length=120)
+    trigger: str = Field(default="", max_length=MAX_CHAR)
+    reaction: str = Field(default="", max_length=MAX_CHAR)
+    recovery_action: str = Field(default="", max_length=MAX_CHAR)
+
+
+class EmotionalCostInput(BaseModel):
+    estimated_margin_without_anger: float = Field(default=0, ge=0)
+    actual_margin_after_anger: float = Field(default=0, ge=0)
+    currency: str = Field(default="USD", max_length=10)
+    notes: str = Field(default="", max_length=MAX_CHAR)
+
+
+class LiveSupportManualInput(BaseModel):
+    red_alert_count: int = Field(default=0, ge=0, le=50)
+    resets_used: int = Field(default=0, ge=0, le=50)
+    listening_minutes: int = Field(default=0, ge=0, le=600)
+    talking_minutes: int = Field(default=0, ge=0, le=600)
+    semaphore_transitions: int = Field(default=0, ge=0, le=200)
+    current_zone: str = Field(default="verde", pattern="^(verde|amarilla|roja)$")
+
+
+class RolePlayPracticeInput(BaseModel):
+    scenario_type: str = Field(default="cliente_dificil", max_length=60)
+    difficulty: str = Field(default="media", max_length=30)
+    counterpart_temperature: str = Field(default="neutro", max_length=20)  # frio | neutro | tenso
+    completed: bool = False
+    self_score: int = Field(default=0, ge=0, le=100)
+    response_quality_score: int = Field(default=0, ge=0, le=100)
+    emotional_control_score: int = Field(default=0, ge=0, le=100)
+    practiced_discovery_questions: list[str] = Field(default_factory=list)
+    cold_rapport_actions: list[str] = Field(default_factory=list)
+    dirty_tricks_detected: list[str] = Field(default_factory=list)
+    dirty_tricks_response_notes: str = Field(default="", max_length=MAX_CHAR)
+    exercise_results: list["RolePlayExerciseResult"] = Field(default_factory=list)
+    notes: str = Field(default="", max_length=MAX_CHAR)
+
+
+class RolePlayExerciseResult(BaseModel):
+    exercise_id: str
+    exercise_label: str
+    segment: str  # smb | mid_market | enterprise
+    completed: bool = False
+    calmness_score: int = Field(default=0, ge=0, le=100)
+    signal_reading_score: int = Field(default=0, ge=0, le=100)
+    discovery_question_score: int = Field(default=0, ge=0, le=100)
+
+
+class CertificationSnapshot(BaseModel):
+    clarity_level_score: int = Field(default=0, ge=0, le=100)
+    advanced_score: int = Field(default=0, ge=0, le=100)
+    certified: bool = False
+    certification_basis: str = Field(default="", max_length=MAX_CHAR)
+    completed_exercises: int = Field(default=0, ge=0)
+    required_exercises: int = Field(default=0, ge=0)
+    pass_reasons: list[str] = Field(default_factory=list)
+    fail_reasons: list[str] = Field(default_factory=list)
+    recommended_questions: list[str] = Field(default_factory=list)
 
 
 class DebriefAnalysis(BaseModel):
@@ -304,6 +371,13 @@ class DebriefAnalysis(BaseModel):
     personal_patterns: list[str]  # Patrones en tu comportamiento (si aplica)
     # Nuevo: comparativa visual
     debrief_comparative: DebriefComparative | None = None
+    emotional_regulation_score: int = Field(default=0, ge=0, le=100)
+    listening_balance_score: int = Field(default=0, ge=0, le=100)
+    role_play_score: int = Field(default=0, ge=0, le=100)
+    rapport_activation_score: int = Field(default=0, ge=0, le=100)
+    trap_detection_score: int = Field(default=0, ge=0, le=100)
+    boundary_control_score: int = Field(default=0, ge=0, le=100)
+    certification: CertificationSnapshot | None = None
 
 
 class FinalMemo(BaseModel):
@@ -395,6 +469,142 @@ class AdminAnonymousMetricsSummary(BaseModel):
     confidence_delta_avg: float | None = None
     confidence_delta_trend: list[MetricsTrendPoint]
     active_students_with_cases: int
+
+
+class CertificationCaseResult(BaseModel):
+    case_id: int
+    case_title: str
+    case_closed_at: datetime | None = None
+    passed: bool
+    score_advanced: int = Field(default=0, ge=0, le=100)
+    pass_reasons: list[str] = Field(default_factory=list)
+    fail_reasons: list[str] = Field(default_factory=list)
+
+
+class FinalCertificationReport(BaseModel):
+    user_id: int
+    cases_considered: int
+    cases_with_certification: int
+    passed_cases: int
+    failed_cases: int
+    final_passed: bool
+    average_advanced_score: float = 0
+    average_emotional_regulation_score: float = 0
+    average_listening_balance_score: float = 0
+    average_role_play_score: float = 0
+    completed_exercises_total: int = 0
+    required_exercises_total: int = 0
+    covered_segments: list[str] = Field(default_factory=list)
+    practiced_discovery_questions_count: int = 0
+    final_pass_reasons: list[str] = Field(default_factory=list)
+    final_fail_reasons: list[str] = Field(default_factory=list)
+    evidence_note: str = ""
+    ai_usage_note: str = ""
+    case_results: list[CertificationCaseResult] = Field(default_factory=list)
+
+
+class Achievement(BaseModel):
+    """Logro/badge desbloqueado por el estudiante"""
+    id: str  # "first_case", "all_segments", "certified_case", etc.
+    name: str  # "Primer Caso", "Explorador de Segmentos", etc.
+    description: str  # Descripción del logro
+    icon: str  # "🎯", "🗺️", "✅", etc.
+    xp_reward: int  # Puntos otorgados por este logro
+    unlocked_at: datetime  # Cuándo se desbloqueó
+
+
+class PhaseProgress(BaseModel):
+    """Progreso en una fase del aprendizaje (Preparación, Ejecución, Debrief, Certificación)"""
+    phase_name: str  # "preparacion", "ejecucion", "debrief", "certificacion"
+    phase_label: str  # "Preparación Pre-Negociación", etc.
+    completion_percentage: int  # 0-100
+    cases_completed: int  # Casos completados en esta fase
+    next_milestone: str | None = None  # "Completar 3 casos de Preparación"
+    xp_earned: int  # XP que ya ganó en esta fase
+
+
+class StudentGamificationProgress(BaseModel):
+    """Dashboard completo de gamificación del estudiante"""
+    user_id: int
+    total_xp: int = 0
+    level: int = 1  # 1 = 0-499 XP, 2 = 500-1249, etc.
+    next_level_xp: int = 500  # XP necesarios para siguiente nivel
+    current_streak: int = 0  # Casos consecutivos cerrados sin fallar
+    highest_streak: int = 0  # Record personal
+    cases_closed: int = 0
+    cases_certified: int = 0
+    achievements: list[Achievement] = Field(default_factory=list)
+    phase_progress: list[PhaseProgress] = Field(default_factory=list)
+    unlocked_badges_count: int = 0
+    next_badge_hint: str | None = None  # "Completa 5 ejercicios más para desbloquear 'Explorador'"
+    heat_level: int = 0
+    thermal_phase: str = "cool"
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+
+class CaseProgressItem(BaseModel):
+    case_id: int
+    title: str
+    status: str
+    created_at: datetime
+    closed_at: datetime | None = None
+    confidence_start: int | None = None
+    confidence_end: int | None = None
+    confidence_delta: int | None = None
+    emotional_regulation_score: int = 0
+    listening_balance_score: int = 0
+    role_play_score: int = 0
+    rapport_activation_score: int = 0
+    trap_detection_score: int = 0
+    boundary_control_score: int = 0
+    advanced_score: int = 0
+    certified: bool = False
+    current_zone: str = "verde"
+    semaphore_transitions: int = 0
+    red_alerts: int = 0
+    resets_used: int = 0
+
+
+class PilotProgressReport(BaseModel):
+    user_id: int
+    user_email: str
+    user_full_name: str
+    generated_at: datetime
+    total_cases: int
+    closed_cases: int
+    certified_cases: int
+    avg_emotional_regulation: float = 0.0
+    avg_listening_balance: float = 0.0
+    avg_role_play: float = 0.0
+    avg_advanced_score: float = 0.0
+    zone_verde_count: int = 0
+    zone_amarilla_count: int = 0
+    zone_roja_count: int = 0
+    cases: list[CaseProgressItem] = Field(default_factory=list)
+
+
+class ExperienceFeedbackInput(BaseModel):
+    case_id: int | None = None
+    experience_level: str = Field(default="new", pattern="^(new|experienced)$")
+    ux_mode: str = Field(default="simple", pattern="^(simple|advanced)$")
+    ease_of_use_score: int = Field(default=3, ge=1, le=5)
+    usefulness_score: int = Field(default=3, ge=1, le=5)
+    emotional_relevance_score: int = Field(default=3, ge=1, le=5)
+    comment: str = Field(default="", max_length=900)
+
+
+class ExperienceFeedbackRead(BaseModel):
+    id: int
+    user_id: int
+    case_id: int | None = None
+    experience_level: str
+    ux_mode: str
+    ease_of_use_score: int
+    usefulness_score: int
+    emotional_relevance_score: int
+    comment: str
+    created_at: datetime
 
 
 class LeaderEvaluationCreate(BaseModel):

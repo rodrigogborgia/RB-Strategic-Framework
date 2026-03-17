@@ -11,12 +11,17 @@ import type {
   DebriefInput,
   FeedbackMode,
   FinalMemo,
+  FinalCertificationReport,
   LeaderEvaluationCreate,
   LeaderEvaluationRead,
+  PilotProgressReport,
   PreparationInput,
   DemoStartResponse,
+  ExperienceFeedbackInput,
+  ExperienceFeedbackRead,
   PublicLeadCaptureResponse,
   StudentMetricsSummary,
+  StudentGamificationProgress,
   TokenResponse,
   UserProfile,
 } from "./types";
@@ -201,6 +206,9 @@ export const api = {
       body: JSON.stringify(payload),
     }),
   getMyMetrics: () => request<StudentMetricsSummary>("/api/metrics/me"),
+  getFinalCertification: () => request<FinalCertificationReport>("/api/certification/final"),
+  getAdminFinalCertification: (userId: number) =>
+    request<FinalCertificationReport>(`/api/admin/certification/final/${userId}`),
   getAdminAnonymousMetrics: (cohortId?: number | null) =>
     request<AdminAnonymousMetricsSummary>(
       cohortId ? `/api/admin/metrics/anonymous?cohort_id=${cohortId}` : "/api/admin/metrics/anonymous",
@@ -219,4 +227,11 @@ export const api = {
     return request<LeaderEvaluationRead[]>(`/api/admin/leader-evaluations${suffix}`);
   },
   listMyLeaderEvaluations: () => request<LeaderEvaluationRead[]>("/api/leader-evaluations/me"),
+  getStudentGamificationProgress: () => request<StudentGamificationProgress>("/api/gamification/progress"),
+  getProgressReport: () => request<PilotProgressReport>("/api/progress/report"),
+  submitExperienceFeedback: (payload: ExperienceFeedbackInput) =>
+    request<ExperienceFeedbackRead>("/api/experience-feedback", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
 };
