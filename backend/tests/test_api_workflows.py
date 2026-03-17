@@ -639,3 +639,42 @@ def test_debrief_rejects_invalid_current_zone_value(monkeypatch, tmp_path: Path)
         headers=_auth_headers(admin_token),
     )
     assert invalid_response.status_code == 422
+
+
+def test_gamification_progress_returns_valid_schema_after_achieving_first_case(monkeypatch, tmp_path: Path):
+    """Regression: Achievement must serialize correctly when a user has closed cases.
+    Previously failed with ValidationError (missing icon / xp vs xp_reward mismatch)."""
+    client = _build_test_client(tmp_path, monkeypatch)
+    admin_token = _login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
+
+    # Full case lifecycle to unlock 'first_case' achievement
+    case_response = client.post(
+        "/api/cases",
+        json={"title": "Gamification regression case", "mode": "curso", "confidence_start": 5},
+        headers=_auth_headers(admin_token),
+    )
+    assert case_response.status_code == 200
+    case_id = case_response.json()["id"]
+
+    client.put(f"/api/cases/{case_id}/preparation", json=REQUIRED_PREPARATION, headers=_auth_headers(admin_token))
+    client.post(f"/api/cases/{case_id}/analyze", headers=_auth_headers(admin_token))
+    client.post(f"/api/cases/{case_id}/execute", headers=_auth_headers(admin_token))
+    client.put(f"/api/cases/{case_id}/debrief", json=VALID_DEBRIEF, headers=_auth_headers(admin_token))
+    close_response = client.post(
+        f"/api/cases/{case_id}/close",
+        json={"confidence_end": 8, "agreement_quality_result": 4, "agreement_quality_relationship": 4, "agreement_quality_sustainability": 4},
+        headers=_auth_headers(admin_token),
+    )
+    assert close_response.status_code == 200
+
+    # This must return 200 with a valid Achievement list, not 500
+    progress_response = client.get("/api/gamification/progress", headers=_auth_headers(admin_token))
+    assert progress_response.status_code == 200, progress_response.text
+    data = progress_response.json()
+    assert data["cases_closed"] >= 1
+    assert isinstance(data["achievements"], list)
+    assert len(data["achievements"]) >= 1
+    first_ach = data["achievements"][0]
+    assert "id" in first_ach
+    assert "name" in first_ach
+    assert "xp_reward" in first_ach

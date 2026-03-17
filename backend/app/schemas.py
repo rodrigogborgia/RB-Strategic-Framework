@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 from .models import CaseStatus, CohortStatus, FeedbackMode, UserRole
 
@@ -508,8 +508,8 @@ class Achievement(BaseModel):
     id: str  # "first_case", "all_segments", "certified_case", etc.
     name: str  # "Primer Caso", "Explorador de Segmentos", etc.
     description: str  # Descripción del logro
-    icon: str  # "🎯", "🗺️", "✅", etc.
-    xp_reward: int  # Puntos otorgados por este logro
+    icon: str = ""  # "🎯", "🗺️", "✅", etc.
+    xp_reward: int = Field(default=0, validation_alias=AliasChoices("xp_reward", "xp"))  # Puntos otorgados por este logro
     unlocked_at: datetime  # Cuándo se desbloqueó
 
 
