@@ -3,7 +3,8 @@ import { createRoot } from "react-dom/client";
 import { HelmetProvider } from "react-helmet-async";
 import App from "./App";
 import { ErrorBoundary } from "./components/ErrorBoundary";
-import "./index.css";
+import "../index.css";
+import "../animations.css";
 
 // Defensive redirect: if nginx/static hosting serves index.html for SEO pages,
 // forward users to the dedicated static entry points.
@@ -27,6 +28,6 @@ if (redirectTarget) {
           <App />
         </ErrorBoundary>
       </HelmetProvider>
-    </StrictMode>
+    </StrictMode>,
   );
 }

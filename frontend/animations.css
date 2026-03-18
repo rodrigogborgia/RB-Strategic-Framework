@@ -1,0 +1,125 @@
+/* Animaciones y microinteracciones para la landing */
+
+/* Fade-in para bloques principales */
+.section-fade {
+  opacity: 0;
+  transform: translateY(24px);
+  transition:
+    opacity 0.7s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.section-fade.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* AnimatedCounter: escala y sombra al hover */
+.counter-block {
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
+}
+.counter-block:hover {
+  transform: scale(1.08);
+  box-shadow: 0 4px 18px #60a5fa33;
+}
+
+/* Logos: escala y sombra al hover */
+.authority-logos img {
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
+}
+.authority-logos img:hover {
+  transform: scale(1.12);
+  box-shadow: 0 4px 18px #a3e63533;
+}
+
+/* Social links: color animado al hover */
+.social-link {
+  transition: color 0.2s;
+}
+.social-link:hover {
+  color: #a3e635;
+}
+
+/* Botón CTA: gradiente animado y escala al hover */
+.cta-btn {
+  transition:
+    transform 0.2s,
+    background 0.4s;
+  background-size: 200% 100%;
+}
+.cta-btn:hover {
+  transform: scale(1.06);
+  background-position: 100% 0;
+}
+
+/* WhatsApp: vibrar/pulsar al hover */
+.contact-section a {
+  transition: transform 0.2s;
+}
+.contact-section a:hover {
+  animation: vibrar 0.4s linear;
+}
+@keyframes vibrar {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-3px);
+  }
+  40% {
+    transform: translateX(3px);
+  }
+  60% {
+    transform: translateX(-2px);
+  }
+  80% {
+    transform: translateX(2px);
+  }
+}
+
+/* Títulos: subrayado animado al hover */
+.section-title {
+  position: relative;
+  cursor: pointer;
+}
+.section-title:hover::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -4px;
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(90deg, #60a5fa 0%, #a3e635 100%);
+  border-radius: 2px;
+  animation: underlineFade 0.4s;
+}
+@keyframes underlineFade {
+  from {
+    width: 0;
+    opacity: 0;
+  }
+  to {
+    width: 100%;
+    opacity: 1;
+  }
+}
+
+/* Mensaje de éxito animado */
+.success-message {
+  animation: pulseSuccess 1.2s;
+  color: #a3e635;
+  font-weight: bold;
+}
+@keyframes pulseSuccess {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}

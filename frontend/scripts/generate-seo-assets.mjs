@@ -27,7 +27,11 @@ const buildDate = new Date().toISOString().slice(0, 10);
 const allowedUrls = [
   { path: "/", changefreq: "weekly", priority: 1.0 },
   { path: "/negociar-bajo-presion", changefreq: "monthly", priority: 0.8 },
-  { path: "/negociacion-bajo-presion-guia", changefreq: "monthly", priority: 0.7 },
+  {
+    path: "/negociacion-bajo-presion-guia",
+    changefreq: "monthly",
+    priority: 0.7,
+  },
 ];
 
 // Filtrar y validar URLs
@@ -50,7 +54,9 @@ const validatedUrls = allowedUrls.filter((url) => {
 
   // Rechazar URLs con www o http
   if (url.path.includes("www") || url.path.includes("http")) {
-    console.warn(`⚠️ [seo] URL inválida ignorada (contiene www o http): ${url.path}`);
+    console.warn(
+      `⚠️ [seo] URL inválida ignorada (contiene www o http): ${url.path}`,
+    );
     return false;
   }
 
@@ -92,7 +98,7 @@ ${validatedUrls
     <lastmod>${buildDate}</lastmod>
     <changefreq>${url.changefreq}</changefreq>
     <priority>${url.priority}</priority>
-  </url>`
+  </url>`,
   )
   .join("\n")}
 </urlset>
@@ -101,8 +107,12 @@ ${validatedUrls
 writeFileSync(path.join(publicDir, "robots.txt"), robotsTxt, "utf8");
 writeFileSync(path.join(publicDir, "sitemap.xml"), sitemapXml, "utf8");
 
-console.log(`✅ [seo] robots.txt generado (${validatedUrls.length} URLs validadas)`);
-console.log(`✅ [seo] sitemap.xml generado con ${validatedUrls.length} URLs validas`);
+console.log(
+  `✅ [seo] robots.txt generado (${validatedUrls.length} URLs validadas)`,
+);
+console.log(
+  `✅ [seo] sitemap.xml generado con ${validatedUrls.length} URLs validas`,
+);
 console.log(`ℹ️  [seo] Sitemap URL: ${siteUrl}/sitemap.xml`);
 
 async function generateOgPng() {

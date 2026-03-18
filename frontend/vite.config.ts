@@ -14,8 +14,14 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: resolve(__dirname, "index.html"),
-        "negociar-bajo-presion": resolve(__dirname, "negociar-bajo-presion.html"),
-        "negociacion-bajo-presion-guia": resolve(__dirname, "negociacion-bajo-presion-guia.html"),
+        "negociar-bajo-presion": resolve(
+          __dirname,
+          "negociar-bajo-presion.html",
+        ),
+        "negociacion-bajo-presion-guia": resolve(
+          __dirname,
+          "negociacion-bajo-presion-guia.html",
+        ),
       },
     },
   },

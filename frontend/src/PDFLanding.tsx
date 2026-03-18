@@ -1,11 +1,14 @@
-import { useState, type FormEvent } from "react";
+import React, { useState, type FormEvent } from "react";
 import { trackEvent, trackError, trackWhatsappLead } from "./lib/analytics";
 import { api } from "./lib/api";
 import brandLogo from "./assets/rb-logo.svg";
+import Testimonials from "./components/Testimonials";
+// import { trackAsesoriaSubmitted } from "./lib/analytics";
 
 export default function PDFLanding() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  // Unused asesoria states removed for lint cleanup
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
@@ -45,8 +48,8 @@ export default function PDFLanding() {
       });
 
       // Meta Pixel - Lead conversion
-      if (typeof window !== 'undefined' && (window as any).fbq) {
-        (window as any).fbq('track', 'Lead', {
+      if (typeof window !== 'undefined' && (window as unknown as { fbq?: (...args: unknown[]) => void }).fbq) {
+        (window as unknown as { fbq: (...args: unknown[]) => void }).fbq('track', 'Lead', {
           content_name: 'si_te_calentas_perdes',
           content_category: 'pdf_download',
           value: 0,
@@ -65,6 +68,7 @@ export default function PDFLanding() {
         error_message: errorMessage,
       });
       trackError("pdf_download_error", errorMessage);
+      // eslint-disable-next-line no-console
       console.error("Error al enviar formulario PDF:", err);
     } finally {
       setLoading(false);
@@ -75,8 +79,8 @@ export default function PDFLanding() {
     trackWhatsappLead("pdf_landing_consultation", "pdf_cta");
 
     // Meta Pixel - Contact conversion
-    if (typeof window !== 'undefined' && (window as any).fbq) {
-      (window as any).fbq('track', 'Contact', {
+    if (typeof window !== 'undefined' && (window as unknown as { fbq?: (...args: unknown[]) => void }).fbq) {
+      (window as unknown as { fbq: (...args: unknown[]) => void }).fbq('track', 'Contact', {
         content_name: 'consultation_request',
         content_category: 'pdf_landing'
       });
@@ -92,7 +96,13 @@ export default function PDFLanding() {
         {/* HERO */}
         <section className="pdf-hero">
           <div className="pdf-brand">
-            <img src={brandLogo} alt="RB" width="32" height="32" />
+            <img
+              src={brandLogo || ""}
+              alt="RB"
+              width="32"
+              height="32"
+              onError={e => { e.currentTarget.style.display = 'none'; }}
+            />
             <span className="pdf-brand-name">RB Strategic Framework</span>
           </div>
 
@@ -125,54 +135,7 @@ export default function PDFLanding() {
           </div>
 
           <div className="pdf-quote-block">
-            <p className="pdf-quote">
-              Las conversaciones que definen tu carrera no se improvisan.
-            </p>
-          </div>
-        </section>
-
-        {/* PROBLEMA */}
-        <section className="pdf-section">
-          <div className="pdf-card">
-            <h2 className="pdf-section-title">
-              Las negociaciones más importantes rara vez fallan por falta de argumentos.
-            </h2>
-
-            <p className="pdf-section-text">
-              Fallan cuando la conversación se vuelve emocional.
-            </p>
-
-            <ul className="pdf-problem-list">
-              <li>Clientes que presionan.</li>
-              <li>Ataques personales.</li>
-              <li>Decisiones que escalan.</li>
-            </ul>
-
-            <p className="pdf-section-text">
-              Cuando eso ocurre, incluso profesionales muy capaces pierden claridad estratégica.
-            </p>
-          </div>
-        </section>
-
-        {/* CONTENIDO */}
-        <section className="pdf-section">
-          <div className="pdf-card">
-            <h2 className="pdf-section-title">Qué vas a encontrar en el documento</h2>
-
-            <ul className="pdf-content-list">
-              <li>
-                <span className="pdf-list-icon">✓</span>
-                <span>Cómo detectar cuándo una negociación está escalando emocionalmente</span>
-              </li>
-              <li>
-                <span className="pdf-list-icon">✓</span>
-                <span>Cómo recuperar control estratégico de la conversación</span>
-              </li>
-              <li>
-                <span className="pdf-list-icon">✓</span>
-                <span>Cómo preparar conversaciones críticas antes de que ocurran</span>
-              </li>
-            </ul>
+            {/* Aquí puedes agregar una cita o bloque destacado si lo necesitas */}
           </div>
         </section>
 
@@ -206,7 +169,8 @@ export default function PDFLanding() {
               <>
                 <h2 className="pdf-section-title">Descargar el documento</h2>
                 <p className="pdf-form-subtitle">
-                  Completá tus datos y te enviamos el PDF por email.
+                  Completá tus datos y te enviamos el PDF por email.<br />
+                  <span style={{ color: '#a3e635', fontWeight: 700 }}>Cupos limitados: sólo 4 empresas por mes.</span>
                 </p>
 
                 <form onSubmit={handleSubmitPDF} className="pdf-form">
@@ -247,22 +211,27 @@ export default function PDFLanding() {
                     className="pdf-btn-submit"
                     disabled={loading}
                   >
-                    {loading ? "Enviando..." : "Descargar el documento"}
+                    {loading ? <span className="loading-spinner" /> : "Descargar el documento"}
                   </button>
                 </form>
               </>
             ) : (
-              <div className="pdf-success">
+              <div className="pdf-success success-message">
                 <div className="pdf-success-icon">✓</div>
                 <h2 className="pdf-success-title">¡Listo!</h2>
                 <p className="pdf-success-text">
                   Te enviamos el PDF a <strong>{email}</strong>
                 </p>
                 <p className="pdf-success-subtext">
-                  Revisá tu bandeja de entrada (y spam por las dudas).
+                  ¡Gracias por sumarte! Pronto recibirás tips exclusivos para negociar bajo presión.
                 </p>
               </div>
             )}
+            {/* Carrusel de testimonios debajo del formulario */}
+            <div style={{ marginTop: 48 }}>
+              <h2 className="pdf-section-title">Testimonios reales</h2>
+              <Testimonials />
+            </div>
           </div>
         </section>
 

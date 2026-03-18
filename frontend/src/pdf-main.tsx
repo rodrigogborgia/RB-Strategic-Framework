@@ -8,6 +8,6 @@ if (rootElement) {
   createRoot(rootElement).render(
     <StrictMode>
       <PDFLanding />
-    </StrictMode>
+    </StrictMode>,
   );
 }

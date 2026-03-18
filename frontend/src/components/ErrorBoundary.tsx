@@ -8,7 +8,10 @@ interface ErrorBoundaryState {
   hasError: boolean;
 }
 
-export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+export class ErrorBoundary extends Component<
+  ErrorBoundaryProps,
+  ErrorBoundaryState
+> {
   public state: ErrorBoundaryState = { hasError: false };
 
   public static getDerivedStateFromError(): ErrorBoundaryState {
@@ -24,7 +27,10 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       return (
         <div style={{ padding: 24, fontFamily: "Inter, sans-serif" }}>
           <h2>Ocurrió un error en la interfaz</h2>
-          <p>Recargá la página. Si persiste, revisamos juntos el caso y lo corregimos.</p>
+          <p>
+            Recargá la página. Si persiste, revisamos juntos el caso y lo
+            corregimos.
+          </p>
         </div>
       );
     }

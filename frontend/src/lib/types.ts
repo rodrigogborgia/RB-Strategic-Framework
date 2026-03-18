@@ -1,3 +1,76 @@
+export const emptyDebrief: DebriefInput = {
+  real_result: {
+    explicit_objective_achieved: "",
+    real_objective_achieved: "",
+    what_remains_open: "",
+  },
+  observed_dynamics: {
+    where_power_shifted: "",
+    decisive_objection: "",
+    concession_that_changed_structure: "",
+  },
+  self_diagnosis: {
+    main_strategic_error: "",
+    main_strategic_success: "",
+    decision_to_change: "",
+  },
+  transferable_lesson: "",
+  free_disclaimer: "",
+  incident_log: [],
+  emotional_cost: {
+    estimated_margin_without_anger: 0,
+    actual_margin_after_anger: 0,
+    currency: "USD",
+    notes: "",
+  },
+  live_support: {
+    red_alert_count: 0,
+    resets_used: 0,
+    listening_minutes: 0,
+    talking_minutes: 0,
+    semaphore_transitions: 0,
+    current_zone: "verde",
+  },
+  role_play: {
+    scenario_type: "cliente_dificil",
+    difficulty: "media",
+    counterpart_temperature: "neutro",
+  },
+};
+
+export function normalizeDebriefAnalysis(): unknown {
+  // Dummy function, not used currently
+  return null;
+}
+export const emptyPreparation: PreparationInput = {
+  context: {
+    negotiation_type: "",
+    impact_level: "",
+    counterpart_relationship: "",
+  },
+  objective: {
+    explicit_objective: "",
+    real_objective: "",
+    minimum_acceptable_result: "",
+  },
+  power_alternatives: {
+    maan: "",
+    counterpart_perceived_strength: "",
+    breakpoint: "",
+  },
+  strategy: {
+    estimated_zopa: "",
+    concession_sequence: "",
+    counterpart_hypothesis: "",
+  },
+  risk: {
+    emotional_variable: "",
+    main_risk: "",
+    key_signal: "",
+    hot_buttons: [],
+    clarity_phrase: "",
+  },
+};
 export interface CohortMembership {
   id: number;
   user_id: number;

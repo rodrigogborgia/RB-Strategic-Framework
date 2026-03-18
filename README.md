@@ -5,12 +5,14 @@ Plataforma de entrenamiento para negociaciones estratégicas con análisis visua
 ## Stack
 
 **Frontend:**
+
 - React 19
 - TypeScript
 - Vite
 - React Helmet Async (Canonical Tags + SEO)
 
 **Backend:**
+
 - FastAPI (Python)
 - SQLModel + SQLite
 - OpenAI API integration
@@ -22,4 +24,3 @@ Plataforma de entrenamiento para negociaciones estratégicas con análisis visua
 - Feedback automatizado
 - PDF generation
 - Demo mode con casos precargados
-

@@ -1,7 +1,7 @@
 /**
  * Google Analytics 4 Event Tracking
  * Automatic event dispatch for lead capture flows
- * 
+ *
  * Events tracked:
  * - demo_modal_viewed: User clicks on "Explorar Framework" button
  * - demo_started: User submits demo email
@@ -19,16 +19,16 @@ declare global {
 }
 
 export const GA4_EVENTS = {
-  DEMO_MODAL_VIEWED: 'demo_modal_viewed',
-  DEMO_STARTED: 'demo_started',
-  LEAD_CAPTURED_DEMO: 'lead_captured_demo',
-  LEAD_CAPTURED_ASESORIA: 'lead_captured_asesoria',
-  LEAD_CAPTURED_WHATSAPP: 'lead_captured_whatsapp',
-  LEAD_CAPTURED_PROTOCOLO: 'lead_captured_protocolo',
-  SESSION_BOOKED: 'session_booked',
-  ASESORIA_MODAL_VIEWED: 'asesoria_modal_viewed',
-  PROTOCOLO_MODAL_VIEWED: 'protocolo_modal_viewed',
-  ERROR_OCCURRED: 'error_occurred',
+  DEMO_MODAL_VIEWED: "demo_modal_viewed",
+  DEMO_STARTED: "demo_started",
+  LEAD_CAPTURED_DEMO: "lead_captured_demo",
+  LEAD_CAPTURED_ASESORIA: "lead_captured_asesoria",
+  LEAD_CAPTURED_WHATSAPP: "lead_captured_whatsapp",
+  LEAD_CAPTURED_PROTOCOLO: "lead_captured_protocolo",
+  SESSION_BOOKED: "session_booked",
+  ASESORIA_MODAL_VIEWED: "asesoria_modal_viewed",
+  PROTOCOLO_MODAL_VIEWED: "protocolo_modal_viewed",
+  ERROR_OCCURRED: "error_occurred",
 };
 
 /**
@@ -36,15 +36,18 @@ export const GA4_EVENTS = {
  * @param eventName - Event name (use GA4_EVENTS constants)
  * @param params - Event parameters (optional)
  */
-export function trackEvent(eventName: string, params?: Record<string, unknown>) {
-  if (typeof window === 'undefined' || !window.gtag) {
-    console.warn('GA4 not loaded or gtag not available');
+export function trackEvent(
+  eventName: string,
+  params?: Record<string, unknown>,
+) {
+  if (typeof window === "undefined" || !window.gtag) {
+    console.warn("GA4 not loaded or gtag not available");
     return;
   }
 
   try {
-    window.gtag('event', eventName, {
-      'timestamp': new Date().toISOString(),
+    window.gtag("event", eventName, {
+      timestamp: new Date().toISOString(),
       ...params,
     });
     console.log(`[GA4] Event: ${eventName}`, params);
@@ -58,8 +61,8 @@ export function trackEvent(eventName: string, params?: Record<string, unknown>) 
  */
 export function trackDemoModalViewed() {
   trackEvent(GA4_EVENTS.DEMO_MODAL_VIEWED, {
-    'location': 'landing_hero',
-    'button_text': 'Explorar Framework Demo',
+    location: "landing_hero",
+    button_text: "Explorar Framework Demo",
   });
 }
 
@@ -70,8 +73,8 @@ export function trackDemoModalViewed() {
 export function trackDemoStarted(email: string) {
   const emailHash = btoa(email).substring(0, 16); // simple hash for privacy
   trackEvent(GA4_EVENTS.DEMO_STARTED, {
-    'email_hash': emailHash,
-    'source': 'landing',
+    email_hash: emailHash,
+    source: "landing",
   });
 }
 
@@ -80,8 +83,8 @@ export function trackDemoStarted(email: string) {
  */
 export function trackAsesoriaModalViewed() {
   trackEvent(GA4_EVENTS.ASESORIA_MODAL_VIEWED, {
-    'location': 'landing_hero',
-    'button_text': 'Asesoría para Equipos',
+    location: "landing_hero",
+    button_text: "Asesoría para Equipos",
   });
 }
 
@@ -90,9 +93,9 @@ export function trackAsesoriaModalViewed() {
  */
 export function trackAsesoriaSubmitted(nombre: string) {
   trackEvent(GA4_EVENTS.LEAD_CAPTURED_ASESORIA, {
-    'nombre_hash': btoa(nombre).substring(0, 16),
-    'source': 'modal_asesoria',
-    'source_label': 'Solicitud: Asesoría Directa',
+    nombre_hash: btoa(nombre).substring(0, 16),
+    source: "modal_asesoria",
+    source_label: "Solicitud: Asesoría Directa",
   });
 }
 
@@ -103,7 +106,7 @@ export function trackWhatsappLead(source: string, section?: string) {
   trackEvent(GA4_EVENTS.LEAD_CAPTURED_WHATSAPP, {
     source,
     section,
-    channel: 'whatsapp',
+    channel: "whatsapp",
   });
 }
 
@@ -112,8 +115,8 @@ export function trackWhatsappLead(source: string, section?: string) {
  */
 export function trackProtocolo48hSubmitted() {
   trackEvent(GA4_EVENTS.LEAD_CAPTURED_PROTOCOLO, {
-    'source': 'protocolo_48h',
-    'source_label': 'Lead Magnet: Protocolo 48h',
+    source: "protocolo_48h",
+    source_label: "Lead Magnet: Protocolo 48h",
   });
 }
 
@@ -122,9 +125,9 @@ export function trackProtocolo48hSubmitted() {
  */
 export function trackSessionBooked(email: string, sessionType: string) {
   trackEvent(GA4_EVENTS.SESSION_BOOKED, {
-    'email_hash': btoa(email).substring(0, 16),
-    'session_type': sessionType,
-    'timestamp': new Date().toISOString(),
+    email_hash: btoa(email).substring(0, 16),
+    session_type: sessionType,
+    timestamp: new Date().toISOString(),
   });
 }
 
@@ -133,9 +136,9 @@ export function trackSessionBooked(email: string, sessionType: string) {
  */
 export function trackError(errorMessage: string, context?: string) {
   trackEvent(GA4_EVENTS.ERROR_OCCURRED, {
-    'error_message': errorMessage,
-    'context': context,
-    'timestamp': new Date().toISOString(),
+    error_message: errorMessage,
+    context: context,
+    timestamp: new Date().toISOString(),
   });
 }
 
@@ -143,8 +146,8 @@ export function trackError(errorMessage: string, context?: string) {
  * Track page view (automatically called by GA4 config, but can be manual)
  */
 export function trackPageView(pagePath: string, pageTitle?: string) {
-  trackEvent('page_view', {
-    'page_path': pagePath,
-    'page_title': pageTitle || document.title,
+  trackEvent("page_view", {
+    page_path: pagePath,
+    page_title: pageTitle || document.title,
   });
 }

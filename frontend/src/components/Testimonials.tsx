@@ -33,17 +33,23 @@ export default function Testimonials() {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const goToPrev = () => {
-    setCurrentIndex((prev) => (prev === 0 ? testimonials.length - 1 : prev - 1));
+    setCurrentIndex((prev) =>
+      prev === 0 ? testimonials.length - 1 : prev - 1,
+    );
   };
 
   const goToNext = () => {
-    setCurrentIndex((prev) => (prev === testimonials.length - 1 ? 0 : prev + 1));
+    setCurrentIndex((prev) =>
+      prev === testimonials.length - 1 ? 0 : prev + 1,
+    );
   };
 
   return (
     <section className="testimonials-section">
       <div className="testimonials-container">
-        <h2 className="testimonials-title">Evidencia de transformación: del concepto al hábito real</h2>
+        <h2 className="testimonials-title">
+          Evidencia de transformación: del concepto al hábito real
+        </h2>
 
         {/* Grid Desktop */}
         <div className="testimonials-grid">
@@ -52,7 +58,7 @@ export default function Testimonials() {
               key={index}
               className={`testimonial-card ${testimonial.highlighted ? "testimonial-highlighted" : ""}`}
             >
-              <p className="testimonial-quote">"{testimonial.quote}"</p>
+              <p className="testimonial-quote">&quot;{testimonial.quote}&quot;</p>
               <div className="testimonial-author">
                 <p className="testimonial-author-name">{testimonial.author}</p>
                 <p className="testimonial-author-role">{testimonial.role}</p>
@@ -63,7 +69,11 @@ export default function Testimonials() {
 
         {/* Carrusel Mobile */}
         <div className="testimonials-carousel">
-          <button onClick={goToPrev} className="carousel-btn prev-btn" aria-label="Testimonio anterior">
+          <button
+            onClick={goToPrev}
+            className="carousel-btn prev-btn"
+            aria-label="Testimonio anterior"
+          >
             ←
           </button>
 
@@ -71,15 +81,25 @@ export default function Testimonials() {
             <div
               className={`testimonial-card ${testimonials[currentIndex].highlighted ? "testimonial-highlighted" : ""}`}
             >
-              <p className="testimonial-quote">"{testimonials[currentIndex].quote}"</p>
+              <p className="testimonial-quote">
+                &quot;{testimonials[currentIndex].quote}&quot;
+              </p>
               <div className="testimonial-author">
-                <p className="testimonial-author-name">{testimonials[currentIndex].author}</p>
-                <p className="testimonial-author-role">{testimonials[currentIndex].role}</p>
+                <p className="testimonial-author-name">
+                  {testimonials[currentIndex].author}
+                </p>
+                <p className="testimonial-author-role">
+                  {testimonials[currentIndex].role}
+                </p>
               </div>
             </div>
           </div>
 
-          <button onClick={goToNext} className="carousel-btn next-btn" aria-label="Siguiente testimonio">
+          <button
+            onClick={goToNext}
+            className="carousel-btn next-btn"
+            aria-label="Siguiente testimonio"
+          >
             →
           </button>
 
