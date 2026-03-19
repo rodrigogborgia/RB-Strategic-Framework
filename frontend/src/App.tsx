@@ -39,6 +39,14 @@ const FinalCtaBlock = () => (
       target="_blank"
       rel="noopener noreferrer"
       className="cta-btn"
+      onClick={() => {
+        if (typeof window !== 'undefined' && window.gtag) {
+          window.gtag('event', 'lead_captured_asesoria', {
+            'event_category': 'conversion',
+            'event_label': 'Diagnóstico BorgIA'
+          });
+        }
+      }}
     >
       Quiero mi diagnóstico gratis
     </a>

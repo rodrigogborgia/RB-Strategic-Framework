@@ -112,6 +112,20 @@ export default function PDFLanding() {
             Cómo mantener claridad estratégica cuando la presión, el ego o los ataques 
             personales amenazan el resultado comercial.
           </p>
+                        {(() => {
+                          // Evento Analytics y Meta Pixel al mostrar confirmación
+                          if (typeof window !== 'undefined') {
+                            if (window.gtag) {
+                              window.gtag('event', 'pdf_download_success', {
+                                'event_category': 'conversion',
+                                'event_label': 'Protocolo Negociacion Presion'
+                              });
+                            }
+                            if (window.fbq) {
+                              window.fbq('track', 'Lead', { content_name: 'Protocolo PDF' });
+                            }
+                          }
+                          return (
 
           <p className="pdf-description">
             Un breve manual sobre cómo preparar negociaciones de alto valor cuando la 
@@ -122,6 +136,8 @@ export default function PDFLanding() {
             <a
               href="#download-form"
               className="pdf-btn-primary"
+                          );
+                        })()}
               onClick={() =>
                 trackEvent("pdf_download_cta_clicked", {
                   source: "hero",

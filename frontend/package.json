@@ -17,12 +17,15 @@
     "test:unit:ci": "jest --ci --coverage --runInBand --testPathIgnorePatterns=src/__tests__/integration"
   },
   "dependencies": {
+    "@babel/core": "^7.29.0",
+    "babel-jest": "^30.3.0",
+    "identity-obj-proxy": "^3.0.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-helmet-async": "^3.0.0"
   },
   "devDependencies": {
-    "@testing-library/jest-dom": "^6.8.0",
+    "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.3.0",
