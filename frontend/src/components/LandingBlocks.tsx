@@ -137,21 +137,7 @@ export const LeadMagnetSection = () => (
                 </p>
               </div>
             )}
-              React.useEffect(() => {
-                if (success) {
-                  if (typeof window !== 'undefined') {
-                    if (window.gtag) {
-                      window.gtag('event', 'pdf_download_success', {
-                        'event_category': 'conversion',
-                        'event_label': 'Protocolo Negociacion Presion'
-                      });
-                    }
-                    if (window.fbq) {
-                      window.fbq('track', 'Lead', { content_name: 'Protocolo PDF' });
-                    }
-                  }
-                }
-              }, [success]);
+              {/* useEffect está fuera del JSX, no debe ir aquí */}
           </form>
         )}
       </section>

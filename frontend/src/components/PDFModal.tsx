@@ -134,8 +134,8 @@ export function PDFModal({ open, onClose }: { open: boolean; onClose: () => void
                       'event_label': 'Protocolo Negociacion Presion'
                     });
                   }
-                  if (window.fbq) {
-                    window.fbq('track', 'Lead', { content_name: 'Protocolo PDF' });
+                  if ((window as unknown as { fbq?: (...args: unknown[]) => void }).fbq) {
+                    (window as unknown as { fbq: (...args: unknown[]) => void }).fbq('track', 'Lead', { content_name: 'Protocolo PDF' });
                   }
                 }
                 return (
