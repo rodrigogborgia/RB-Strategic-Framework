@@ -167,9 +167,9 @@ export default function PDFLanding() {
           <div className="pdf-card pdf-form-card">
             {!success ? (
               <>
-                <h2 className="pdf-section-title">Descargar el documento</h2>
+                <h2 className="pdf-section-title">Recibí el PDF y tips exclusivos</h2>
                 <p className="pdf-form-subtitle">
-                  Completá tus datos y te enviamos el PDF por email.<br />
+                  Dejame tu nombre y email, y recibí el PDF <b>+ mi newsletter con tips para mejorar tus cierres de ventas y tus resultados de negociación efectiva.</b><br />
                   <span style={{ color: '#a3e635', fontWeight: 700 }}>Cupos limitados: sólo 4 empresas por mes.</span>
                 </p>
 
@@ -203,7 +203,7 @@ export default function PDFLanding() {
                   </div>
 
                   {error && (
-                    <div className="pdf-error">{error}</div>
+                    <div className="pdf-error" role="alert">{typeof error === "string" ? error : (error && error.toString())}</div>
                   )}
 
                   <button
@@ -211,7 +211,7 @@ export default function PDFLanding() {
                     className="pdf-btn-submit"
                     disabled={loading}
                   >
-                    {loading ? <span className="loading-spinner" /> : "Descargar el documento"}
+                    {loading ? <span className="loading-spinner" /> : "Recibir PDF y tips"}
                   </button>
                 </form>
               </>

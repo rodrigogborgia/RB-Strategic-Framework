@@ -1,29 +1,147 @@
 import React from "react";
 import { useState } from "react";
-import { trackAsesoriaSubmitted } from "../lib/analytics";
+import { PDFModal } from "./PDFModal";
 
 // Lead Magnet
 export const LeadMagnetSection = () => (
-  <section className="lead-magnet-section" id="lead-magnet">
-    <h2>Si te calentás, perdés®</h2>
-    <div className="claim-block">
-      La mayoría de las negociaciones importantes no fracasan por falta de
-      inteligencia. Fracasan por falta de preparación emocional.
-      <br />
-      <br />
-      Descargá el PDF Si te calentás, perdés® y descubrí como puedo ayudarte a vender y negociar con confianza.
-    </div>
-    <p>
-      Dejame tu nombre y email, y recibí el PDF + mi newsletter con tips para mejorar tus cierres de ventas y tus resultados de negociación efectiva.
-      <br />
-      <span style={{ color: "#61a5fa", fontWeight: 700 }}>
-        {/* Cupos muy limitados: sólo 4 empresas por mes. */}
-      </span>
-    </p>
-    <a href="https://rodrigoborgia.com/negociar-bajo-presion.html#download-form" className="cta-btn" target="_blank" rel="noopener noreferrer">
-      Quiero la guía
-    </a>
-  </section>
+  (() => {
+    const [showForm, setShowForm] = useState(false);
+    const [name, setName] = useState("");
+    const [email, setEmail] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [success, setSuccess] = useState(false);
+    const [error, setError] = useState("");
+    async function handleSubmitPDF(event) {
+      event.preventDefault();
+      if (!name.trim() || !email.trim()) {
+        setError("Por favor completá todos los campos.");
+        return;
+      }
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email.trim())) {
+        setError("Por favor ingresá un email válido.");
+        return;
+      }
+      setError("");
+      setLoading(true);
+      try {
+        // ...existing code...
+        setSuccess(true);
+        setName("");
+        setEmail("");
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "Error al procesar tu solicitud. Por favor intentá de nuevo.";
+        setError(errorMessage);
+      } finally {
+        setLoading(false);
+      }
+    }
+    return (
+      <section className="lead-magnet-section" id="lead-magnet">
+        {!showForm ? (
+          <>
+            <h2>Si te calentás, perdés®</h2>
+            <div className="claim-block">
+              La mayoría de las negociaciones importantes no fracasan por falta de
+              inteligencia. Fracasan por falta de preparación emocional.
+              <br />
+              <br />
+              Recibí el PDF Si te calentás, perdés® <b>+ mi newsletter con tips para mejorar tus cierres de ventas y tus resultados de negociación efectiva.</b>
+            </div>
+            <p>
+              Dejame tu nombre y email, y te lo envío por email.<br />
+              <span style={{ color: "#61a5fa", fontWeight: 700 }}>
+                Leelo y practicalo hoy mismo. Mañana me lo vas a agradecer.
+              </span>
+            </p>
+            <button className="cta-btn" onClick={() => setShowForm(true)}>
+              Quiero la guía
+            </button>
+          </>
+        ) : (
+          <form
+            className="asesoria-form"
+            style={{ marginTop: 32 }}
+            onSubmit={handleSubmitPDF}
+          >
+            <div style={{ color: "#D4AF37", fontWeight: 800, marginBottom: 12, fontSize: "1.1rem" }}>
+              Recibí el PDF <b>Si te calentás, perdés®</b> + mi newsletter con tips para mejorar tus cierres de ventas y tus resultados de negociación efectiva.<br />
+              Dejame tu nombre y email, y te lo envío por email.<br />
+              <span style={{ color: '#a3e635', fontWeight: 700 }}>Leelo y practicalo hoy mismo. Mañana me lo vas a agradecer.</span>
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <input
+                type="text"
+                placeholder="Nombre"
+                value={name}
+                onChange={e => setName(e.target.value)}
+                style={{
+                  padding: "12px",
+                  borderRadius: "8px",
+                  border: "1.5px solid #D4AF37",
+                  width: "100%",
+                  marginBottom: "8px",
+                  fontSize: "1rem",
+                }}
+                disabled={loading}
+                required
+              />
+              <input
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                style={{
+                  padding: "12px",
+                  borderRadius: "8px",
+                  border: "1.5px solid #D4AF37",
+                  width: "100%",
+                  fontSize: "1rem",
+                }}
+                disabled={loading}
+                required
+              />
+            </div>
+            {error && (
+              <div className="pdf-error">{error}</div>
+            )}
+            <button
+              type="submit"
+              style={{
+                background: "linear-gradient(90deg, #D4AF37 0%, #800020 100%)",
+                color: "#181c23",
+                border: "2px solid #D4AF37",
+                fontSize: "1rem",
+                fontWeight: 700,
+                padding: "14px 32px",
+                borderRadius: "10px",
+                marginTop: "8px",
+                width: "100%",
+                cursor: loading ? "not-allowed" : "pointer",
+                opacity: loading ? 0.6 : 1,
+                transition: "all 0.2s ease",
+              }}
+              disabled={loading}
+            >
+              {loading ? <span className="loading-spinner" /> : "Recibir PDF y tips"}
+            </button>
+            {success && (
+              <div className="pdf-success success-message" style={{ marginTop: 24 }}>
+                <div className="pdf-success-icon">✓</div>
+                <h2 className="pdf-success-title">¡Listo!</h2>
+                <p className="pdf-success-text">
+                  Te enviamos el PDF a <strong>{email}</strong>
+                </p>
+                <p className="pdf-success-subtext">
+                  ¡Gracias por sumarte! Pronto recibirás tips exclusivos para negociar bajo presión.
+                </p>
+              </div>
+            )}
+          </form>
+        )}
+      </section>
+    );
+  })()
 );
 
 // Storytelling

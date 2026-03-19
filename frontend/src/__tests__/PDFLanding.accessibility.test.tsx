@@ -7,7 +7,7 @@ describe("PDFLanding accessibility", () => {
     render(<PDFLanding />);
     expect(screen.getByLabelText(/Nombre/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Email/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Descargar el documento/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Recibir PDF y tips/i })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: /RB/i })).toBeInTheDocument();
   });
 });

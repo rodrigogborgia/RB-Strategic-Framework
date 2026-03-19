@@ -1,0 +1,43 @@
+.pdf-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(24, 28, 35, 0.85);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pdf-modal {
+  background: linear-gradient(135deg, #181c23 0%, #1a2236 100%);
+  border: 2px solid #e5c07b;
+  border-radius: 18px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.45);
+  padding: 40px 32px;
+  min-width: 340px;
+  max-width: 95vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+}
+
+.pdf-modal-close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  background: none;
+  border: none;
+  color: #e5c07b;
+  font-size: 32px;
+  font-weight: 700;
+  cursor: pointer;
+  z-index: 10;
+  transition: color 0.2s;
+}
+
+.pdf-modal-close:hover {
+  color: #800020;
+}

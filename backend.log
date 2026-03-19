@@ -1,6 +1,38 @@
 INFO:     Will watch for changes in these directories: ['/Users/rodrigoborgia/RB/RB-Strategic-Framework/backend']
 INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
-INFO:     Started reloader process [3181] using WatchFiles
-INFO:     Started server process [3210]
+INFO:     Started reloader process [2454] using WatchFiles
+INFO:     Started server process [2482]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
+Dependencia sib_api_v3_sdk no instalada: No module named 'sib_api_v3_sdk'
+Dependencia sib_api_v3_sdk no instalada: No module named 'sib_api_v3_sdk'
+⚠️ No se pudo enviar PDF por email (test@email.com): Dependencia sib_api_v3_sdk no instalada
+INFO:     127.0.0.1:57862 - "POST /api/public/pdf-download HTTP/1.1" 200 OK
+Dependencia sib_api_v3_sdk no instalada: No module named 'sib_api_v3_sdk'
+Dependencia sib_api_v3_sdk no instalada: No module named 'sib_api_v3_sdk'
+⚠️ No se pudo enviar PDF por email (test@email.com): Dependencia sib_api_v3_sdk no instalada
+INFO:     127.0.0.1:59136 - "POST /api/public/pdf-download HTTP/1.1" 200 OK
+Dependencia sib_api_v3_sdk no instalada: No module named 'sib_api_v3_sdk'
+Dependencia sib_api_v3_sdk no instalada: No module named 'sib_api_v3_sdk'
+⚠️ No se pudo enviar PDF por email (test@email.com): Dependencia sib_api_v3_sdk no instalada
+INFO:     127.0.0.1:59749 - "POST /api/public/pdf-download HTTP/1.1" 200 OK
+Dependencia sib_api_v3_sdk no instalada: No module named 'sib_api_v3_sdk'
+Dependencia sib_api_v3_sdk no instalada: No module named 'sib_api_v3_sdk'
+⚠️ No se pudo enviar PDF por email (test@email.com): Dependencia sib_api_v3_sdk no instalada
+INFO:     127.0.0.1:60560 - "POST /api/public/pdf-download HTTP/1.1" 200 OK
+Dependencia sib_api_v3_sdk no instalada: No module named 'sib_api_v3_sdk'
+Dependencia sib_api_v3_sdk no instalada: No module named 'sib_api_v3_sdk'
+⚠️ No se pudo enviar PDF por email (test@email.com): Dependencia sib_api_v3_sdk no instalada
+INFO:     127.0.0.1:60994 - "POST /api/public/pdf-download HTTP/1.1" 200 OK
+Dependencia sib_api_v3_sdk no instalada: No module named 'sib_api_v3_sdk'
+Dependencia sib_api_v3_sdk no instalada: No module named 'sib_api_v3_sdk'
+⚠️ No se pudo enviar PDF por email (test@email.com): Dependencia sib_api_v3_sdk no instalada
+INFO:     127.0.0.1:61408 - "POST /api/public/pdf-download HTTP/1.1" 200 OK
+Dependencia sib_api_v3_sdk no instalada: No module named 'sib_api_v3_sdk'
+Dependencia sib_api_v3_sdk no instalada: No module named 'sib_api_v3_sdk'
+⚠️ No se pudo enviar PDF por email (test@email.com): Dependencia sib_api_v3_sdk no instalada
+INFO:     127.0.0.1:61750 - "POST /api/public/pdf-download HTTP/1.1" 200 OK
+Dependencia sib_api_v3_sdk no instalada: No module named 'sib_api_v3_sdk'
+Dependencia sib_api_v3_sdk no instalada: No module named 'sib_api_v3_sdk'
+⚠️ No se pudo enviar PDF por email (test@email.com): Dependencia sib_api_v3_sdk no instalada
+INFO:     127.0.0.1:61952 - "POST /api/public/pdf-download HTTP/1.1" 200 OK

@@ -5,19 +5,20 @@ import { LeadMagnetSection } from "../components/LandingBlocks";
 describe("LeadMagnetSection end-to-end quality", () => {
   it("renders lead magnet section, claim, CTA", () => {
     render(<LeadMagnetSection />);
-    expect(screen.getByText(/PDF exclusivo/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Si te calentás, perdés/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/La mayoría de las negociaciones/i)).toBeInTheDocument();
-    expect(screen.getByText(/¿Querés negociar bajo presión/i)).toBeInTheDocument();
-    expect(screen.getByText(/Cupos muy limitados/i)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Quiero la guía/i })).toBeInTheDocument();
+    expect(screen.getByText(/Recibí el PDF Si te calentás, perdés/i)).toBeInTheDocument();
+    expect(screen.getByText(/Leelo y practicalo hoy mismo/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Quiero la guía/i })).toBeInTheDocument();
   });
 
-  it("fires analytics event on CTA click", () => {
-    const originalTrackEvent = require("../lib/analytics").trackEvent;
-    require("../lib/analytics").trackEvent = jest.fn();
+  it("shows form after CTA click", () => {
     render(<LeadMagnetSection />);
-    fireEvent.click(screen.getByRole("link", { name: /Quiero la guía/i }));
-    expect(require("../lib/analytics").trackEvent).toHaveBeenCalled();
-    require("../lib/analytics").trackEvent = originalTrackEvent;
+    fireEvent.click(screen.getByRole("button", { name: /Quiero la guía/i }));
+    const pdfTexts = screen.getAllByText(/Si te calentás, perdés/i);
+    expect(pdfTexts.length).toBeGreaterThan(0);
+    expect(screen.getByPlaceholderText(/Nombre/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/Email/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Recibir PDF y tips/i })).toBeInTheDocument();
   });
 });
