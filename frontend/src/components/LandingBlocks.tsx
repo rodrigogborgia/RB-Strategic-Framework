@@ -126,32 +126,32 @@ export const LeadMagnetSection = () => (
               {loading ? <span className="loading-spinner" /> : "Recibir PDF y tips"}
             </button>
             {success && (
-              {(() => {
-                if (typeof window !== 'undefined') {
-                  if (window.gtag) {
-                    window.gtag('event', 'pdf_download_success', {
-                      'event_category': 'conversion',
-                      'event_label': 'Protocolo Negociacion Presion'
-                    });
-                  }
-                  if (window.fbq) {
-                    window.fbq('track', 'Lead', { content_name: 'Protocolo PDF' });
+              <div className="pdf-success success-message" style={{ marginTop: 24 }}>
+                <div className="pdf-success-icon">✓</div>
+                <h2 className="pdf-success-title">¡Listo!</h2>
+                <p className="pdf-success-text">
+                  Te enviamos el PDF a <strong>{email}</strong>
+                </p>
+                <p className="pdf-success-subtext">
+                  ¡Gracias por sumarte! Pronto recibirás tips exclusivos para negociar bajo presión.
+                </p>
+              </div>
+            )}
+              React.useEffect(() => {
+                if (success) {
+                  if (typeof window !== 'undefined') {
+                    if (window.gtag) {
+                      window.gtag('event', 'pdf_download_success', {
+                        'event_category': 'conversion',
+                        'event_label': 'Protocolo Negociacion Presion'
+                      });
+                    }
+                    if (window.fbq) {
+                      window.fbq('track', 'Lead', { content_name: 'Protocolo PDF' });
+                    }
                   }
                 }
-                return (
-                  <div className="pdf-success success-message" style={{ marginTop: 24 }}>
-                    <div className="pdf-success-icon">✓</div>
-                    <h2 className="pdf-success-title">¡Listo!</h2>
-                    <p className="pdf-success-text">
-                      Te enviamos el PDF a <strong>{email}</strong>
-                    </p>
-                    <p className="pdf-success-subtext">
-                      ¡Gracias por sumarte! Pronto recibirás tips exclusivos para negociar bajo presión.
-                    </p>
-                  </div>
-                );
-              })()}
-            )}
+              }, [success]);
           </form>
         )}
       </section>
