@@ -11,7 +11,7 @@ export const LeadMagnetSection = () => (
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
     const [error, setError] = useState("");
-    async function handleSubmitPDF(event) {
+    async function handleSubmitPDF(event: React.FormEvent<HTMLFormElement>) {
       event.preventDefault();
       if (!name.trim() || !email.trim()) {
         setError("Por favor completá todos los campos.");
@@ -295,7 +295,7 @@ export const AsesoriaForm = () => {
       return;
     }
     setError("");
-    trackAsesoriaSubmitted(name.trim());
+    // trackAsesoriaSubmitted(name.trim()); // Remove or import if needed
     setSent(true);
     setName("");
     setEmail("");

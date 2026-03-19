@@ -203,7 +203,7 @@ export default function PDFLanding() {
                   </div>
 
                   {error && (
-                    <div className="pdf-error" role="alert">{typeof error === "string" ? error : (error && error.toString())}</div>
+                    <div className="pdf-error" role="alert">{error}</div>
                   )}
 
                   <button
