@@ -93,7 +93,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
         errorDetail = JSON.stringify(errorDetail);
       }
       errorMessage = `Error en la API. Path: ${path}, Método: ${options?.method || "GET"}. Status: ${response.status}. Detalle: ${errorDetail}`;
-    } catch {
+    } catch (err) {
       // Si no es JSON, usar mensaje genérico
       errorMessage = `Error en la API. Path: ${path}, Método: ${options?.method || "GET"}. Status: ${response.status}.`;
       console.error("No se pudo parsear el error como JSON:", err);

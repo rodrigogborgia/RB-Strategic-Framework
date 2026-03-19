@@ -11,7 +11,7 @@ import {
 } from "./components/LandingBlocks";
 import { CaseStoryBlock } from "./components/AuthorityBlocks";
 
-function useFadeInOnScroll(ref) {
+function useFadeInOnScroll(ref: React.RefObject<HTMLDivElement | null>) {
   React.useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -46,15 +46,15 @@ const FinalCtaBlock = () => (
 );
 
 function App() {
-  const leadMagnetRef = useRef(null);
-  const storyPainRef = useRef(null);
-  const storyPromiseRef = useRef(null);
-  const authorityCountersRef = useRef(null);
-  const authorityLogosRef = useRef(null);
-  const caseStoryRef = useRef(null);
-  const contactRef = useRef(null);
-  const metodoRef = useRef(null);
-  const finalCtaRef = useRef(null);
+  const leadMagnetRef = useRef<HTMLDivElement>(null);
+  const storyPainRef = useRef<HTMLDivElement>(null);
+  const storyPromiseRef = useRef<HTMLDivElement>(null);
+  const authorityCountersRef = useRef<HTMLDivElement>(null);
+  const authorityLogosRef = useRef<HTMLDivElement>(null);
+  const caseStoryRef = useRef<HTMLDivElement>(null);
+  const contactRef = useRef<HTMLDivElement>(null);
+  const metodoRef = useRef<HTMLDivElement>(null);
+  const finalCtaRef = useRef<HTMLDivElement>(null);
 
   useFadeInOnScroll(leadMagnetRef);
   useFadeInOnScroll(storyPainRef);

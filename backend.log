@@ -32,3 +32,8 @@ Dependencia sib_api_v3_sdk no instalada: No module named 'sib_api_v3_sdk'
 Dependencia sib_api_v3_sdk no instalada: No module named 'sib_api_v3_sdk'
 ⚠️ No se pudo enviar PDF por email (test@email.com): Dependencia sib_api_v3_sdk no instalada
 INFO:     127.0.0.1:54193 - "POST /api/public/pdf-download HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [3260]
+INFO:     Stopping reloader process [3257]

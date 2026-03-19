@@ -35,6 +35,16 @@ export const emptyDebrief: DebriefInput = {
     scenario_type: "cliente_dificil",
     difficulty: "media",
     counterpart_temperature: "neutro",
+    completed: false,
+    self_score: 0,
+    response_quality_score: 0,
+    emotional_control_score: 0,
+    practiced_discovery_questions: [],
+    cold_rapport_actions: [],
+    dirty_tricks_detected: [],
+    dirty_tricks_response_notes: "",
+    exercise_results: [],
+    notes: "",
   },
 };
 
