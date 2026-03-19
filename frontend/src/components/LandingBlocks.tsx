@@ -5,26 +5,22 @@ import { trackAsesoriaSubmitted } from "../lib/analytics";
 // Lead Magnet
 export const LeadMagnetSection = () => (
   <section className="lead-magnet-section" id="lead-magnet">
-    <h2>PDF exclusivo: Si te calentás, perdés®</h2>
+    <h2>Si te calentás, perdés®</h2>
     <div className="claim-block">
       La mayoría de las negociaciones importantes no fracasan por falta de
       inteligencia. Fracasan por falta de preparación emocional.
       <br />
       <br />
-      ¿Listo para dejar de perder ventas? Reservá tu diagnóstico gratis y
-      descubrí cómo el Método BorgIA puede ayudarte a negociar y vender con
-      confianza, incluso bajo presión.
+      Descargá el PDF Si te calentás, perdés® y descubrí como puedo ayudarte a vender y negociar con confianza.
     </div>
     <p>
-      ¿Querés negociar bajo presión y ganar claridad estratégica? Dejá tu nombre
-      y email y recibí el PDF + tips exclusivos para ventas y negociación
-      emocionalmente efectiva.
+      Dejame tu nombre y email, y recibí el PDF + mi newsletter con tips para mejorar tus cierres de ventas y tus resultados de negociación efectiva.
       <br />
       <span style={{ color: "#61a5fa", fontWeight: 700 }}>
-        Cupos muy limitados: sólo 4 empresas por mes.
+        {/* Cupos muy limitados: sólo 4 empresas por mes. */}
       </span>
     </p>
-    <a href="/negociar-bajo-presion.html" className="cta-btn">
+    <a href="https://rodrigoborgia.com/negociar-bajo-presion.html#download-form" className="cta-btn" target="_blank" rel="noopener noreferrer">
       Quiero la guía
     </a>
   </section>
